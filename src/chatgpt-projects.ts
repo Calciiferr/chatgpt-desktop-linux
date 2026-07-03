@@ -72,6 +72,7 @@ export interface ProjectScanOptions {
   navigationTimeoutMs?: number;
   scanId?: string;
   onProgress?: (progress: ProjectScanProgress) => void;
+  signal?: AbortSignal;
 }
 
 const CHATGPT_ORIGIN = "https://chatgpt.com";
@@ -442,14 +443,22 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function throwIfProjectScanAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    throw new Error("La synchronisation des projets a été interrompue.");
+  }
+}
+
 async function waitForProjectUrl(
   webContents: WebContents,
   timeoutMs: number,
   previousUrl?: string,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   const deadline = Date.now() + timeoutMs;
   const previous = previousUrl ? normalizeProjectUrl(previousUrl) : null;
   while (Date.now() < deadline) {
+    throwIfProjectScanAborted(signal);
     const url = normalizeProjectUrl(webContents.getURL());
     if (url && (!previous || url !== previous)) return url;
     await delay(200);
@@ -680,17 +689,20 @@ async function visibleProjectDescriptors(
 
 export async function snapshotChatGptProjectOrder(
   webContents: WebContents,
-  options: Pick<ProjectScanOptions, "maxShowMoreClicks" | "maxProjects"> = {},
+  options: Pick<ProjectScanOptions, "maxShowMoreClicks" | "maxProjects" | "signal"> = {},
 ): Promise<{ names: string[]; descriptors: ProjectRowDescriptor[]; showMoreClicks: number }> {
   const maxShowMoreClicks = Math.min(20, Math.max(0, options.maxShowMoreClicks ?? 20));
   const maxProjects = Math.min(200, Math.max(1, options.maxProjects ?? 200));
+  throwIfProjectScanAborted(options.signal);
   await prepareProjectsSidebar(webContents);
+  throwIfProjectScanAborted(options.signal);
   let showMoreClicks = await expandVisibleProjects(webContents, maxShowMoreClicks, maxProjects);
   let descriptors: ProjectRowDescriptor[] = [];
   let previousSignature = "";
   let stablePasses = 0;
   let passes = 0;
   while (stablePasses < 3 && passes < 12) {
+    throwIfProjectScanAborted(options.signal);
     passes += 1;
     if (showMoreClicks < maxShowMoreClicks) {
       showMoreClicks += await expandVisibleProjects(
@@ -709,6 +721,7 @@ export async function snapshotChatGptProjectOrder(
       if (scroller) scroller.scrollTop = scroller.scrollHeight;
     })()`, true);
     await delay(400);
+    throwIfProjectScanAborted(options.signal);
     descriptors = await visibleProjectDescriptors(webContents, maxProjects);
     const signature = descriptors.map((item) => `${item.name}:${item.occurrence}`).join("\u0000");
     if (signature === previousSignature) stablePasses += 1;
@@ -774,6 +787,7 @@ export async function scanChatGptProjects(
   if (!CHATGPT_PROJECTS_DOM_AUTOMATION_ENABLED) {
     throw new Error("L’automatisation DOM des projets est désactivée.");
   }
+  throwIfProjectScanAborted(options.signal);
   const maxShowMoreClicks = Math.min(20, Math.max(0, options.maxShowMoreClicks ?? 20));
   const maxProjects = Math.min(200, Math.max(1, options.maxProjects ?? 200));
   const navigationTimeoutMs = Math.min(30_000, Math.max(2_000, options.navigationTimeoutMs ?? 12_000));
@@ -785,6 +799,7 @@ export async function scanChatGptProjects(
   const snapshot = await snapshotChatGptProjectOrder(webContents, {
     maxShowMoreClicks,
     maxProjects,
+    signal: options.signal,
   });
   const descriptors = snapshot.descriptors;
   if (descriptors.length === 0) {
@@ -817,6 +832,7 @@ export async function scanChatGptProjects(
     percent: 0,
   });
   for (const descriptor of descriptors) {
+    throwIfProjectScanAborted(options.signal);
     const startedAt = Date.now();
     let resolvedProject: ChatGptProject | null = null;
     let sawDuplicateUrl = false;
@@ -833,7 +849,12 @@ export async function scanChatGptProjects(
       ))) {
         lastError = `bouton d’accueil introuvable (index ${descriptor.initialIndex + 1})`;
       } else {
-        let url = await waitForProjectUrl(webContents, navigationTimeoutMs, previousUrl);
+        let url = await waitForProjectUrl(
+          webContents,
+          navigationTimeoutMs,
+          previousUrl,
+          options.signal,
+        );
         if (!url) url = normalizeProjectUrl(webContents.getURL());
         if (!url) {
           lastError = `navigation expirée (index ${descriptor.initialIndex + 1})`;
@@ -853,6 +874,7 @@ export async function scanChatGptProjects(
         }
       }
     } catch (error) {
+      throwIfProjectScanAborted(options.signal);
       lastError = error instanceof Error ? error.message : "échec inconnu";
     }
     const durationMs = Date.now() - startedAt;
@@ -883,6 +905,7 @@ export async function scanChatGptProjects(
       etaMs: Math.max(0, Math.round(averageMs * (descriptors.length - completed))),
       currentProjectName: descriptor.name,
     });
+    throwIfProjectScanAborted(options.signal);
   }
   const status = projects.length === 0 ? "error" : failures.length > 0 ? "partial" : "ok";
   const message =

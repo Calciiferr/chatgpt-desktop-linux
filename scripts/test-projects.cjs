@@ -253,6 +253,10 @@ async function testInjectedScriptSyntax() {
     scanChatGptProjects(inaccessibleSidebar, { maxShowMoreClicks: 1, maxProjects: 2 }),
     /Impossible d’ouvrir la sidebar ChatGPT/,
   );
+  await assert.rejects(
+    scanChatGptProjects(inaccessibleSidebar, { signal: AbortSignal.abort() }),
+    /interrompue/,
+  );
 
   const captureContents = {
     getURL: () => absolute,
@@ -265,12 +269,28 @@ async function testInjectedScriptSyntax() {
 }
 
 const mainSource = fs.readFileSync(path.join(__dirname, "../src/main.ts"), "utf8");
+const scanWindowFunction = mainSource.match(
+  /async function createHiddenProjectScanWindow[\s\S]*?\n}\n\nasync function synchronizeProjectCache/,
+)?.[0] || "";
+const synchronizeFunction = mainSource.match(
+  /async function synchronizeProjectCache[\s\S]*?\n}\n\nasync function synchronizeProjectsInBackground/,
+)?.[0] || "";
+const backgroundFunction = mainSource.match(
+  /async function synchronizeProjectsInBackground[\s\S]*?\n}/,
+)?.[0] || "";
 assert.match(mainSource, /show:\s*false,[\s\S]*focusable:\s*false,[\s\S]*backgroundThrottling:\s*false/);
 assert.match(mainSource, /PROJECT_SYNC_INTERVAL_MS\s*=\s*5\s*\*\s*60\s*\*\s*1000/);
-assert.match(mainSource, /reloadIgnoringCache\(\)/);
+assert.match(scanWindowFunction, /width: isBackground \? 800 : 1280/);
+assert.match(scanWindowFunction, /height: isBackground \? 600 : 900/);
+assert.match(scanWindowFunction, /if \(isBackground\) return window;[\s\S]*reloadIgnoringCache\(\)/);
 assert.match(mainSource, /projects:reset-all/);
 assert.doesNotMatch(mainSource, /reorderProjectsFromSidebar\(/);
 assert.match(mainSource, /maxShowMoreClicks:\s*1,\s*maxProjects:\s*10/);
+assert.match(synchronizeFunction, /runProjectSyncWithTimeout\(/);
+assert.match(synchronizeFunction, /destroyProjectScanWindow\(\);[\s\S]*projectSyncInProgress = false/);
+assert.match(synchronizeFunction, /previousProjects[\s\S]*cache conservé/);
+assert.match(backgroundFunction, /powerMonitor\.getSystemIdleTime\(\)/);
+assert.match(backgroundFunction, /projectSyncSkipReason\("background"/);
 assert.match(mainSource, /nativeTheme\.themeSource\s*=\s*mode/);
 const companionSource = fs.readFileSync(path.join(__dirname, "../renderer/companion.js"), "utf8");
 assert.match(companionSource, /projectsSyncing:\s*"Synchronisation des projets…"/);

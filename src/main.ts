@@ -9,6 +9,7 @@ import {
   nativeImage,
   nativeTheme,
   Notification,
+  powerMonitor,
   type Input,
   type Rectangle,
   screen,
@@ -50,10 +51,16 @@ import {
   mergeProjects,
   reconcileProjectsFromSidebar,
   scanChatGptProjects,
-  snapshotChatGptProjectOrder,
 } from "./chatgpt-projects";
 import { syncKateTextIntegration } from "./text-integrations";
 import { parseClipboardFileUris } from "./clipboard-files";
+import {
+  ProjectSyncTimeoutError,
+  type ProjectSyncTrigger,
+  projectSyncSkipReason,
+  projectSyncTimeoutMs,
+  runProjectSyncWithTimeout,
+} from "./project-sync-policy";
 import {
   type AppLanguage,
   type AppSettings,
@@ -162,6 +169,7 @@ let companionMeasuredHeight = MAGIC_BAR_FALLBACK_HEIGHT;
 let windowStateTimer: ReturnType<typeof setTimeout> | null = null;
 let shellReady = false;
 let showWhenReady = true;
+let mainWindowHiddenSince: number | null = null;
 let isQuitting = false;
 let hasPromptedUpgradeRestart = false;
 let hasShownHideNotification = false;
@@ -405,6 +413,16 @@ function visibleWindowUsesTaskbar(
   return mode === "taskbar" || mode === "both";
 }
 
+function markMainWindowVisible(): void {
+  mainWindowHiddenSince = null;
+  updateTrayMenu();
+}
+
+function markMainWindowHidden(): void {
+  mainWindowHiddenSince ??= Date.now();
+  updateTrayMenu();
+}
+
 function showWindow(): void {
   if (!mainWindow) {
     pendingRequest = { command: "show", files: [] };
@@ -418,6 +436,7 @@ function showWindow(): void {
   }
 
   const wasVisible = mainWindow.isVisible();
+  mainWindowHiddenSince = null;
   mainWindow.show();
   mainWindow.focus();
   updateTrayMenu();
@@ -488,6 +507,7 @@ function syncResponseMonitor(): void {
 
 function hideWindow(notify = false): void {
   showWhenReady = false;
+  mainWindowHiddenSince ??= Date.now();
   if (searchVisible) {
     hideSearch();
   }
@@ -1141,11 +1161,11 @@ function destroyProjectScanWindow(): void {
   projectScanWindow = null;
 }
 
-async function createHiddenProjectScanWindow(): Promise<BrowserWindow> {
+async function createHiddenProjectScanWindow(isBackground: boolean): Promise<BrowserWindow> {
   destroyProjectScanWindow();
   const window = new BrowserWindow({
-    width: 1280,
-    height: 900,
+    width: isBackground ? 800 : 1280,
+    height: isBackground ? 600 : 900,
     show: false,
     focusable: false,
     skipTaskbar: true,
@@ -1181,6 +1201,7 @@ async function createHiddenProjectScanWindow(): Promise<BrowserWindow> {
     if (loadTimeout) clearTimeout(loadTimeout);
   }
   if (window.isDestroyed()) throw new Error("La fenêtre de scan s’est fermée prématurément.");
+  if (isBackground) return window;
   let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
   try {
     await Promise.race([
@@ -1202,7 +1223,7 @@ async function createHiddenProjectScanWindow(): Promise<BrowserWindow> {
   return window;
 }
 
-async function synchronizeProjectCache(trigger: "settings" | "magic-bar" | "background"): Promise<{
+async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
   ok: boolean;
   error?: string;
   result?: Awaited<ReturnType<typeof scanChatGptProjects>>;
@@ -1213,6 +1234,8 @@ async function synchronizeProjectCache(trigger: "settings" | "magic-bar" | "back
   projectSyncInProgress = true;
   const scanId = randomUUID();
   const isBackground = trigger === "background";
+  const timeoutMs = projectSyncTimeoutMs(trigger);
+  let syncTimedOut = false;
   const previousProjects = currentSettings.chatGptProjects.map((project) => ({ ...project }));
   if (!isBackground) {
     broadcastProjectScanProgress({
@@ -1227,15 +1250,32 @@ async function synchronizeProjectCache(trigger: "settings" | "magic-bar" | "back
   }
   log.info(`[projects:${scanId}] Synchronisation ${trigger} démarrée; cache avant=${previousProjects.length}.`);
   try {
-    const window = await createHiddenProjectScanWindow();
-    const backgroundSnapshot = isBackground
-      ? await snapshotChatGptProjectOrder(window.webContents)
-      : null;
-    const result = await scanChatGptProjects(window.webContents, {
-      scanId,
-      ...(isBackground ? { maxShowMoreClicks: 1, maxProjects: 10 } : {}),
-      ...(!isBackground ? { onProgress: broadcastProjectScanProgress } : {}),
-    });
+    const result = await runProjectSyncWithTimeout(
+      timeoutMs,
+      async (signal) => {
+        const window = await createHiddenProjectScanWindow(isBackground);
+        return scanChatGptProjects(window.webContents, {
+          scanId,
+          signal,
+          ...(isBackground ? { maxShowMoreClicks: 1, maxProjects: 10 } : {}),
+          ...(!isBackground
+            ? {
+                onProgress: (progress: ProjectScanProgress) => {
+                  if (!syncTimedOut) broadcastProjectScanProgress(progress);
+                },
+              }
+            : {}),
+        });
+      },
+      () => {
+        syncTimedOut = true;
+        log.warn(
+          `[projects:${scanId}] Timeout global après ${Math.round(timeoutMs / 60_000)} minute(s), ` +
+            "destruction de la fenêtre de scan.",
+        );
+        destroyProjectScanWindow();
+      },
+    );
     const at = new Date().toISOString();
     for (const project of result.projects) {
       const index = project.sidebarOrder ?? -1;
@@ -1285,7 +1325,7 @@ async function synchronizeProjectCache(trigger: "settings" | "magic-bar" | "back
     const mergedProjects = reconcileProjectsFromSidebar(
       currentSettings.chatGptProjects,
       result.projects,
-      backgroundSnapshot?.names ?? result.sidebarNames,
+      result.sidebarNames,
       at,
       !isBackground && result.status === "ok" && result.failures.length === 0,
     );
@@ -1373,7 +1413,11 @@ async function synchronizeProjectCache(trigger: "settings" | "magic-bar" | "back
         percent: last?.scanId === scanId ? last.percent : 0,
       });
     }
-    log.warn(`[projects:${scanId}] Synchronisation impossible, cache conservé :`, error);
+    log.warn(
+      `[projects:${scanId}] ${error instanceof ProjectSyncTimeoutError ? "Synchronisation expirée" : "Synchronisation impossible"}, ` +
+        "cache conservé :",
+      error,
+    );
     return { ok: false, error: message };
   } finally {
     destroyProjectScanWindow();
@@ -1383,6 +1427,23 @@ async function synchronizeProjectCache(trigger: "settings" | "magic-bar" | "back
 
 async function synchronizeProjectsInBackground(): Promise<void> {
   if (isQuitting || projectSyncInProgress || currentSettings.chatGptProjects.length === 0) return;
+  const now = Date.now();
+  const idleSeconds = powerMonitor.getSystemIdleTime();
+  const skipReason = projectSyncSkipReason("background", {
+    idleSeconds,
+    hiddenSince: mainWindowHiddenSince,
+    now,
+  });
+  if (skipReason === "idle") {
+    log.info(
+      `[projects] Contrôle automatique ignoré : utilisateur inactif depuis ${idleSeconds} seconde(s).`,
+    );
+    return;
+  }
+  if (skipReason === "hidden") {
+    log.info("[projects] Contrôle automatique ignoré : fenêtre principale cachée depuis plus de 15 minutes.");
+    return;
+  }
   const result = await synchronizeProjectCache("background");
   if (result.ok) {
     log.info("[projects] Resynchronisation automatique cachée terminée.");
@@ -2836,6 +2897,7 @@ function initializeChatTabs(): void {
 
 function createMainWindow(startHidden: boolean): void {
   showWhenReady = !startHidden;
+  mainWindowHiddenSince = startHidden ? Date.now() : null;
   const startMinimized = startHidden && currentSettings.windowDisplayMode === "taskbar";
   shellReady = false;
 
@@ -2885,10 +2947,10 @@ function createMainWindow(startHidden: boolean): void {
   mainWindow.removeMenu();
   createSearchView();
   createRefreshView();
-  mainWindow.on("show", updateTrayMenu);
-  mainWindow.on("hide", updateTrayMenu);
-  mainWindow.on("minimize", updateTrayMenu);
-  mainWindow.on("restore", updateTrayMenu);
+  mainWindow.on("show", markMainWindowVisible);
+  mainWindow.on("hide", markMainWindowHidden);
+  mainWindow.on("minimize", markMainWindowHidden);
+  mainWindow.on("restore", markMainWindowVisible);
   mainWindow.on("move", scheduleWindowBoundsSave);
   mainWindow.on("resize", () => {
     scheduleWindowBoundsSave();
@@ -2920,6 +2982,7 @@ function createMainWindow(startHidden: boolean): void {
     refreshView = null;
     searchVisible = false;
     mainWindow = null;
+    mainWindowHiddenSince = Date.now();
   });
 
   mainWindow.on("page-title-updated", (event) => {
