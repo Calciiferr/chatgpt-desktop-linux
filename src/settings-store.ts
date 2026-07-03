@@ -39,6 +39,7 @@ export interface AppSettings {
   lastTabCloseBehavior: LastTabCloseBehavior;
   companionEnabled: boolean;
   companionShortcut: string;
+  companionPromptMaxLines: number;
   themeMode: ThemeMode;
   responseNotificationsEnabled: boolean;
   windowDisplayMode: WindowDisplayMode;
@@ -80,6 +81,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   lastTabCloseBehavior: "home",
   companionEnabled: true,
   companionShortcut: "Ctrl+Shift+Space",
+  companionPromptMaxLines: 3,
   themeMode: "system",
   responseNotificationsEnabled: true,
   windowDisplayMode: "both",
@@ -100,6 +102,8 @@ const MIN_WIDTH = 420;
 const MAX_WIDTH = 3840;
 const MIN_HEIGHT = 560;
 const MAX_HEIGHT = 2160;
+const MIN_COMPANION_PROMPT_LINES = 1;
+const MAX_COMPANION_PROMPT_LINES = 10;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -169,6 +173,9 @@ function normalizeStoredSettings(value: unknown): AppSettings {
   const defaultHeight = isFiniteNumber(value.defaultHeight)
     ? Math.round(value.defaultHeight)
     : DEFAULT_SETTINGS.defaultHeight;
+  const companionPromptMaxLines = isFiniteNumber(value.companionPromptMaxLines)
+    ? Math.round(value.companionPromptMaxLines)
+    : DEFAULT_SETTINGS.companionPromptMaxLines;
   const windowBounds = parseWindowBounds(value.windowBounds);
   const chatGptProjects = normalizeStoredProjects(value.chatGptProjects);
   const projectIds = new Set(chatGptProjects.map((project) => project.id));
@@ -237,6 +244,11 @@ function normalizeStoredSettings(value: unknown): AppSettings {
       typeof value.companionShortcut === "string" && value.companionShortcut.trim()
         ? value.companionShortcut.trim()
         : DEFAULT_SETTINGS.companionShortcut,
+    companionPromptMaxLines:
+      companionPromptMaxLines >= MIN_COMPANION_PROMPT_LINES &&
+      companionPromptMaxLines <= MAX_COMPANION_PROMPT_LINES
+        ? companionPromptMaxLines
+        : DEFAULT_SETTINGS.companionPromptMaxLines,
     themeMode:
       value.themeMode === "system" || value.themeMode === "light" || value.themeMode === "dark"
         ? value.themeMode
@@ -350,6 +362,16 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
   if (!companionShortcut || companionShortcut.length > 64) {
     throw new Error("Le raccourci de la Magic Bar est invalide.");
   }
+  const companionPromptMaxLines = Number(input.companionPromptMaxLines);
+  if (
+    !Number.isInteger(companionPromptMaxLines) ||
+    companionPromptMaxLines < MIN_COMPANION_PROMPT_LINES ||
+    companionPromptMaxLines > MAX_COMPANION_PROMPT_LINES
+  ) {
+    throw new Error(
+      `Le nombre de lignes de la Magic Bar doit être compris entre ${MIN_COMPANION_PROMPT_LINES} et ${MAX_COMPANION_PROMPT_LINES}.`,
+    );
+  }
   if (input.companionEnabled && companionShortcut === shortcut) {
     throw new Error("Les deux raccourcis globaux doivent être différents.");
   }
@@ -430,6 +452,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     lastTabCloseBehavior: input.lastTabCloseBehavior,
     companionEnabled: input.companionEnabled,
     companionShortcut,
+    companionPromptMaxLines,
     themeMode: input.themeMode,
     responseNotificationsEnabled: input.responseNotificationsEnabled,
     windowDisplayMode: input.windowDisplayMode,

@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-desktop-linux",
-  "version": "0.7.0-beta.5",
+  "version": "0.7.0-beta.6",
   "private": true,
   "description": "Personal ChatGPT desktop wrapper for Linux, KDE Plasma and Wayland",
   "homepage": "https://chatgpt.com/",

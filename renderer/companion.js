@@ -80,6 +80,7 @@ let knownProjects = [];
 let projectSyncing = false;
 let lastProjectSelection = "";
 let statusTimer = 0;
+let promptMaxLines = 3;
 
 function tr(key) { return translations[language]?.[key] || translations.fr[key] || key; }
 
@@ -179,7 +180,11 @@ function scheduleLayoutReport() {
 
 function resizePrompt() {
   promptInput.style.height = "auto";
-  const maxHeight = Number.parseFloat(window.getComputedStyle(promptInput).maxHeight) || 80;
+  const style = window.getComputedStyle(promptInput);
+  const lineHeight = Number.parseFloat(style.lineHeight) || 23;
+  const verticalPadding =
+    (Number.parseFloat(style.paddingTop) || 0) + (Number.parseFloat(style.paddingBottom) || 0);
+  const maxHeight = Math.ceil(lineHeight * promptMaxLines + verticalPadding);
   const nextHeight = Math.min(promptInput.scrollHeight, maxHeight);
   promptInput.style.height = `${nextHeight}px`;
   promptInput.style.overflowY = promptInput.scrollHeight > maxHeight ? "auto" : "hidden";
@@ -344,6 +349,10 @@ function applyState(state) {
   currentItems = Array.isArray(state.items) ? state.items : [];
   knownProjects = Array.isArray(state.projects) ? state.projects : [];
   hasLastChat = state.hasLastChat === true;
+  promptMaxLines =
+    Number.isInteger(state.promptMaxLines) && state.promptMaxLines >= 1 && state.promptMaxLines <= 10
+      ? state.promptMaxLines
+      : 3;
   const noticeKey = ["captureError", "imageMissing"].includes(state.notice) ? state.notice : "";
   const notice = noticeKey ? tr(noticeKey) : typeof state.notice === "string" ? state.notice : "";
   const noticeId = Number.isInteger(state.noticeId) ? state.noticeId : 0;
@@ -355,11 +364,11 @@ function applyState(state) {
     hydratingDraft = true;
     lastDraftVersion = draftVersion;
     promptInput.value = typeof draft.prompt === "string" ? draft.prompt : "";
-    resizePrompt();
     auditSecurityInput.checked = draft.securityAudit === true;
     auditQualityInput.checked = draft.qualityAudit === true;
     selectChatMode(draft.chatMode === "resume" ? "resume" : "new");
   }
+  resizePrompt();
   applyTranslations();
   renderProjectPicker(state, hydrateDraft);
   hydratingDraft = false;

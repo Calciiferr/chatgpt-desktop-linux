@@ -145,6 +145,11 @@
             <small data-i18n="companionShortcutHint">Par défaut : Ctrl+Shift+Space.</small>
             <small id="companion-shortcut-status" class="runtime-status"></small>
           </label>
+          <label class="field" for="companion-prompt-max-lines">
+            <span data-i18n="companionPromptLinesLabel">Lignes maximales du message</span>
+            <input id="companion-prompt-max-lines" type="number" min="1" max="10" step="1" />
+            <small data-i18n="companionPromptLinesHint">La barre grandit jusqu’à cette limite, puis le message défile. Par défaut : 3.</small>
+          </label>
           <label class="field" for="theme-mode">
             <span data-i18n="themeModeLabel">Thème global</span>
             <select id="theme-mode">

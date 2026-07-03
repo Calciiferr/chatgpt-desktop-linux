@@ -1043,6 +1043,7 @@ function companionPublicState(): object {
     notice: companionNotice,
     noticeId: companionNoticeId,
     transientStatus: companionTransientStatus,
+    promptMaxLines: currentSettings.companionPromptMaxLines,
     projects: currentSettings.chatGptProjects.map(({ id, name, url }) => ({ id, name, url })),
     defaultProjectId: currentSettings.defaultChatGptProjectId ?? null,
     lastSelectedProjectId: currentSettings.lastSelectedChatGptProjectId ?? null,

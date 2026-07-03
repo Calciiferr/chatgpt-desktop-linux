@@ -15,6 +15,7 @@ const restoreTabsOnStartupInput = document.querySelector("#restore-tabs-on-start
 const lastTabCloseBehaviorInput = document.querySelector("#last-tab-close-behavior");
 const companionEnabledInput = document.querySelector("#companion-enabled");
 const companionShortcutInput = document.querySelector("#companion-shortcut");
+const companionPromptMaxLinesInput = document.querySelector("#companion-prompt-max-lines");
 const themeModeInput = document.querySelector("#theme-mode");
 const responseNotificationsInput = document.querySelector("#response-notifications");
 const closeBehaviorInput = document.querySelector("#close-behavior");
@@ -89,6 +90,7 @@ const translations = {
     companionTitle: "Magic Bar", companionEnabledLabel: "Activer la Magic Bar",
     companionEnabledHint: "Ouvre une barre locale pour préparer du texte, des fichiers et des captures avant de les envoyer.",
     companionShortcutLabel: "Raccourci de la Magic Bar", companionShortcutHint: "Par défaut : Ctrl+Shift+Space.",
+    companionPromptLinesLabel: "Lignes maximales du message", companionPromptLinesHint: "La barre grandit jusqu’à cette limite, puis le message défile. Par défaut : 3.",
     responseNotificationsLabel: "Notifier à la fin d’une réponse",
     responseNotificationsHint: "Uniquement lorsque la fenêtre ChatGPT est cachée, réduite ou sans focus.",
     themeModeLabel: "Thème global", themeSystem: "Automatique (système)", themeLight: "Clair", themeDark: "Sombre",
@@ -140,6 +142,7 @@ const translations = {
     companionTitle: "Companion", companionEnabledLabel: "Enable quick companion",
     companionEnabledHint: "Opens a local popup to prepare text, files and screenshots before transferring them.",
     companionShortcutLabel: "Companion shortcut", companionShortcutHint: "Default: Ctrl+Shift+Space.",
+    companionPromptLinesLabel: "Maximum message lines", companionPromptLinesHint: "The bar grows to this limit, then the message scrolls. Default: 3.",
     responseNotificationsLabel: "Notify when a response finishes",
     responseNotificationsHint: "Only when the ChatGPT window is hidden, minimized, or unfocused.",
     themeModeLabel: "Global theme", themeSystem: "Automatic (system)", themeLight: "Light", themeDark: "Dark",
@@ -190,6 +193,7 @@ const translations = {
     companionTitle: "Asistente", companionEnabledLabel: "Activar el asistente rápido",
     companionEnabledHint: "Abre un popup local para preparar texto, archivos y capturas antes de transferirlos.",
     companionShortcutLabel: "Atajo del asistente", companionShortcutHint: "Predeterminado: Ctrl+Shift+Space.",
+    companionPromptLinesLabel: "Líneas máximas del mensaje", companionPromptLinesHint: "La barra crece hasta este límite y después el mensaje se desplaza. Predeterminado: 3.",
     responseNotificationsLabel: "Notificar al terminar una respuesta",
     responseNotificationsHint: "Solo cuando la ventana de ChatGPT está oculta, minimizada o sin foco.",
     themeModeLabel: "Tema global", themeSystem: "Automático (sistema)", themeLight: "Claro", themeDark: "Oscuro",
@@ -430,6 +434,7 @@ function fillForm(payload) {
   companionShortcut = settings.companionShortcut;
   companionShortcutInput.value = companionShortcut;
   companionEnabledInput.checked = settings.companionEnabled;
+  companionPromptMaxLinesInput.value = String(settings.companionPromptMaxLines || 3);
   themeModeInput.value = settings.themeMode || "system";
   responseNotificationsInput.checked = settings.responseNotificationsEnabled;
   closeBehaviorInput.value = settings.closeBehavior;
@@ -607,6 +612,7 @@ form.addEventListener("submit", async (event) => {
     lastTabCloseBehavior: lastTabCloseBehaviorInput.value,
     companionEnabled: companionEnabledInput.checked,
     companionShortcut,
+    companionPromptMaxLines: Number(companionPromptMaxLinesInput.value),
     themeMode: themeModeInput.value,
     responseNotificationsEnabled: responseNotificationsInput.checked,
     windowDisplayMode: windowDisplayModeInput.value,
