@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChatGPT Magic Bar</title>
+    <link rel="stylesheet" href="companion.css" />
+  </head>
+  <body>
+    <section id="bar" class="chat-bar">
+      <div class="drag-handle" aria-hidden="true"></div>
+      <button id="close" class="close-button" type="button" data-i18n-aria="close" aria-label="Fermer">×</button>
+
+      <div id="items" class="context-strip" aria-live="polite"></div>
+
+      <label class="composer" for="prompt">
+        <textarea
+          id="prompt"
+          rows="1"
+          maxlength="12000"
+          data-i18n-placeholder="requestPlaceholder"
+          placeholder="Message ChatGPT"
+        ></textarea>
+      </label>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button id="toggle-tools" class="round-button" type="button" data-i18n-aria="addContext" aria-label="Ajouter du contexte">＋</button>
+          <label class="audit-toggle" for="audit-security">
+            <input id="audit-security" type="checkbox" />
+            <span data-i18n="securityAudit">Audit sécurité</span>
+          </label>
+          <label class="audit-toggle" for="audit-quality">
+            <input id="audit-quality" type="checkbox" />
+            <span data-i18n="qualityAudit">Audit qualité</span>
+          </label>
+          <label class="audit-toggle project-toggle" for="project-enabled">
+            <input id="project-enabled" type="checkbox" />
+            <span data-i18n="projectLabel">Projet</span>
+          </label>
+          <div id="project-picker" class="project-picker" hidden>
+            <select id="project-select" aria-label="Projet ChatGPT"></select>
+            <input id="new-project-name" type="text" maxlength="120" autocomplete="off" data-i18n-placeholder="newProjectPlaceholder" placeholder="Nom du nouveau projet" hidden />
+          </div>
+          <span id="source-indicator" class="source-indicator" hidden></span>
+        </div>
+
+        <div class="toolbar-right">
+          <div class="chat-mode" role="group" data-i18n-aria="chatDestination" aria-label="Conversation cible">
+            <button id="new-chat" class="mode-button selected" type="button" data-mode="new" data-i18n="newChat">Nouveau</button>
+            <button id="resume-chat" class="mode-button" type="button" data-mode="resume" data-i18n="resumeChat">Dernier</button>
+          </div>
+          <button id="prepare" class="send-button" type="button" data-i18n-aria="prepare" aria-label="Préparer dans ChatGPT">↑</button>
+        </div>
+      </div>
+
+      <p id="status" role="status"></p>
+    </section>
+    <dialog id="preview-dialog" class="preview-dialog" aria-label="Aperçu image">
+      <button id="preview-close" class="preview-close" type="button" data-i18n-aria="close" aria-label="Fermer">×</button>
+      <img id="preview-image" alt="" />
+      <p id="preview-title"></p>
+    </dialog>
+    <script src="companion.js"></script>
+  </body>
+</html>

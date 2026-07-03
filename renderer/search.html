@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rechercher</title>
+    <link rel="stylesheet" href="search.css" />
+  </head>
+  <body>
+    <form id="search-form" role="search">
+      <input id="query" type="search" autocomplete="off" spellcheck="false" placeholder="Rechercher…" aria-label="Rechercher dans la conversation" />
+      <output id="matches" aria-live="polite">0/0</output>
+      <button id="previous" type="button" aria-label="Résultat précédent">↑</button>
+      <button id="next" type="button" aria-label="Résultat suivant">↓</button>
+      <button id="close" type="button" aria-label="Fermer">×</button>
+    </form>
+    <script src="search.js"></script>
+  </body>
+</html>

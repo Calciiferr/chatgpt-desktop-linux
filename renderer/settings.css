@@ -1,0 +1,368 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --background: #11141b;
+  --surface: #181c24;
+  --surface-subtle: #10131a;
+  --surface-row: #12161d;
+  --footer: rgba(17, 20, 27, 0.96);
+  --border: #2a303b;
+  --control-border: #343c49;
+  --text: #f4f6f9;
+  --field-text: #dce1e9;
+  --muted: #858fa0;
+  --muted-strong: #9099a9;
+  --diagnostic-text: #aeb7c6;
+  --primary-background: #edf1f7;
+  --primary-text: #11141b;
+  --secondary-background: #202631;
+  --secondary-text: #e9edf3;
+  --status: #92a0b4;
+  --success: #86d6ad;
+  --error: #fca5a5;
+  --code: #b9c8e5;
+  --project-url: #7f8ba0;
+  --project-meta: #909aaa;
+  --badge: #e9bf6a;
+  background: var(--background);
+  color: var(--text);
+}
+
+:root.light {
+  color-scheme: light;
+  --background: #f4f6f9;
+  --surface: #ffffff;
+  --surface-subtle: #f8f9fb;
+  --surface-row: #f1f3f6;
+  --footer: rgba(244, 246, 249, 0.96);
+  --border: #d8dde6;
+  --control-border: #c7ced9;
+  --text: #20242c;
+  --field-text: #303744;
+  --muted: #667085;
+  --muted-strong: #5f6877;
+  --diagnostic-text: #4f5b6d;
+  --primary-background: #242a34;
+  --primary-text: #ffffff;
+  --secondary-background: #eef1f5;
+  --secondary-text: #303744;
+  --status: #596579;
+  --success: #16794e;
+  --error: #b42334;
+  --code: #425b83;
+  --project-url: #53637b;
+  --project-meta: #667085;
+  --badge: #8a5a00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 480px;
+  margin: 0;
+  background: var(--background);
+}
+
+header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 26px 30px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+header img {
+  border-radius: 14px;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1 {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+
+header p,
+.danger-card p {
+  margin-top: 3px;
+  color: var(--muted-strong);
+  font-size: 13px;
+}
+
+main {
+  padding: 22px 30px 100px;
+}
+
+form {
+  display: grid;
+  gap: 16px;
+}
+
+.card {
+  display: grid;
+  gap: 18px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.card h2 {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+  color: var(--field-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--control-border);
+  border-radius: 9px;
+  outline: none;
+  background: var(--surface-subtle);
+  color: var(--text);
+}
+
+input:focus,
+select:focus {
+  border-color: #769ee8;
+  box-shadow: 0 0 0 3px rgba(118, 158, 232, 0.14);
+}
+
+#shortcut,
+#companion-shortcut,
+#search-shortcut,
+#search-next-shortcut,
+#search-previous-shortcut {
+  cursor: pointer;
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+}
+
+.toggle {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle span {
+  display: grid;
+  gap: 4px;
+}
+
+.toggle strong {
+  font-size: 13px;
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #84aaf0;
+}
+
+.size-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.danger-card {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+button {
+  min-height: 38px;
+  padding: 0 15px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: var(--primary-background);
+  color: var(--primary-text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+button:focus-visible {
+  outline: 2px solid #8bb4ff;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+button.secondary {
+  border-color: var(--control-border);
+  background: var(--secondary-background);
+  color: var(--secondary-text);
+}
+
+button.danger {
+  border-color: rgba(248, 113, 113, 0.32);
+  background: rgba(248, 113, 113, 0.1);
+  color: var(--error);
+}
+
+footer {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 76px;
+  padding: 16px 30px;
+  border-top: 1px solid var(--border);
+  background: var(--footer);
+}
+
+footer > div {
+  display: flex;
+  gap: 10px;
+}
+
+#status {
+  color: var(--status);
+  font-size: 12px;
+}
+
+#status.success {
+  color: var(--success);
+}
+
+#status.error {
+  color: var(--error);
+}
+
+.runtime-status.success {
+  color: var(--success);
+}
+
+.runtime-status.error {
+  color: var(--error);
+}
+
+.diagnostics-card p {
+  color: var(--diagnostic-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+code {
+  color: var(--code);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.card-title-row,
+.project-actions,
+.project-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-title-row {
+  justify-content: space-between;
+}
+
+.experimental-badge {
+  padding: 4px 8px;
+  border: 1px solid rgba(245, 190, 83, 0.35);
+  border-radius: 999px;
+  background: rgba(245, 190, 83, 0.08);
+  color: var(--badge);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.card-copy,
+.empty-copy {
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.project-actions {
+  flex-wrap: wrap;
+}
+
+.project-list {
+  display: grid;
+  gap: 10px;
+}
+
+.project-row {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-row);
+}
+
+.project-row-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.project-row input {
+  height: 34px;
+}
+
+.project-row-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.project-url {
+  color: var(--project-url);
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.project-meta {
+  color: var(--project-meta);
+  font-size: 10px;
+}

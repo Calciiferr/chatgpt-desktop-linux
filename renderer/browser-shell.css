@@ -1,0 +1,15 @@
+:root { color-scheme: dark; --bg:#202124; --tab:#292b2f; --active:#34363b; --text:#e8eaed; --muted:#9aa0a6; --border:#3c4043; }
+:root.light { color-scheme: light; --bg:#eef0f3; --tab:#e4e7eb; --active:#fff; --text:#25272b; --muted:#666b73; --border:#cbd0d7; }
+* { box-sizing:border-box; }
+html, body { margin:0; width:100%; height:100%; overflow:hidden; background:var(--bg); font:12px system-ui,sans-serif; color:var(--text); }
+#tab-bar { height:38px; display:flex; align-items:end; gap:4px; padding:5px 7px 0; border-bottom:1px solid var(--border); }
+#tab-bar[hidden] { display:none; }
+#tabs { min-width:0; flex:1; display:flex; gap:3px; overflow:hidden; }
+.tab { min-width:72px; max-width:210px; flex:1 1 140px; height:32px; display:flex; align-items:center; gap:7px; padding:0 7px 0 10px; border:1px solid transparent; border-radius:9px 9px 0 0; background:var(--tab); color:var(--text); cursor:pointer; }
+.tab.active { background:var(--active); border-color:var(--border); border-bottom-color:var(--active); }
+.tab-title { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; }
+.spinner { width:9px; height:9px; border:1.5px solid var(--muted); border-right-color:transparent; border-radius:50%; animation:spin .8s linear infinite; flex:none; }
+.close { width:20px; height:20px; border:0; border-radius:50%; background:transparent; color:var(--muted); cursor:pointer; line-height:18px; }
+.close:hover, #new-tab:hover { background:color-mix(in srgb, var(--text) 12%, transparent); color:var(--text); }
+#new-tab { flex:none; width:29px; height:29px; margin-bottom:3px; border:0; border-radius:50%; background:transparent; color:var(--text); font-size:20px; cursor:pointer; }
+@keyframes spin { to { transform:rotate(360deg); } }

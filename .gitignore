@@ -1,0 +1,17 @@
+/node_modules/
+/dist/
+/release/
+/out/
+/coverage/
+/.cache/
+/.parcel-cache/
+/.vite/
+/main.js
+*.deb
+*.AppImage
+*.asar
+*.log
+.env
+.env.*
+*.tsbuildinfo
+.DS_Store

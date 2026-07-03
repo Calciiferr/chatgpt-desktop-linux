@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChatGPT Magic Bar Menu</title>
+    <link rel="stylesheet" href="companion-menu.css" />
+  </head>
+  <body>
+    <nav class="tools-menu" aria-label="Ajouter du contexte">
+      <button id="add-files" type="button"><span>↥</span><span data-i18n="files">Ajouter des fichiers</span></button>
+      <button id="capture-region" type="button"><span>▱</span><span data-i18n="region">Capturer une zone</span></button>
+      <button id="capture-window" type="button"><span>▣</span><span data-i18n="window">Capturer une fenêtre</span></button>
+      <button id="capture-screen" type="button"><span>▦</span><span data-i18n="screen">Capturer l’écran</span></button>
+      <button id="clipboard-text" type="button"><span>¶</span><span data-i18n="clipboardText">Ajouter le presse-papiers</span></button>
+      <button id="clipboard-image" type="button"><span>▧</span><span data-i18n="clipboardImage">Ajouter les fichiers/images copiés</span></button>
+    </nav>
+    <script src="companion-menu.js"></script>
+  </body>
+</html>
