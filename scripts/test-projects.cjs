@@ -143,10 +143,15 @@ async function testInjectedScriptSyntax() {
         : [];
     let delayedBatchIndex = 0;
     const clickedIndexes = [];
+    const clickAttemptIndexes = [];
+    const remainingClickFailures = new Map(
+      Object.entries(options.clickFailuresByIndex || {}).map(([index, count]) => [Number(index), Number(count)]),
+    );
     return {
       getURL: () => url,
       state: () => ({ sidebarOpen, projectsExpanded, clickedIndexes }),
       expansionCalls: () => expandCalls,
+      clickAttempts: () => [...clickAttemptIndexes],
       executeJavaScript: async (code) => {
         compile(code);
         if (code.includes("const scored =")) {
@@ -197,6 +202,12 @@ async function testInjectedScriptSyntax() {
         }
         if (code.includes("const expected =")) {
           const initialIndex = Number(code.match(/const initialIndex = (\d+)/)?.[1] || 0);
+          clickAttemptIndexes.push(initialIndex);
+          const remainingFailures = remainingClickFailures.get(initialIndex) || 0;
+          if (remainingFailures > 0) {
+            remainingClickFailures.set(initialIndex, remainingFailures - 1);
+            return false;
+          }
           clickedIndexes.push(initialIndex);
           url = urls[initialIndex] || urls[0] || absolute;
           return true;
@@ -254,6 +265,20 @@ async function testInjectedScriptSyntax() {
   assert.deepEqual(homonymScan.projects.map((project) => project.name), homonymNames);
   assert.deepEqual(homonymScan.projects.map((project) => project.url), homonymUrls);
   assert.deepEqual(homonymContents.state().clickedIndexes, [0, 1, 2, 3, 4]);
+
+  const retryNames = ["Projet stable", "Projet temporairement absent"];
+  const retryUrls = [absolute, secondAbsolute];
+  const retryContents = createDomMock(retryNames, retryUrls, {
+    clickFailuresByIndex: { 1: 2 },
+  });
+  const retryScan = await scanChatGptProjects(retryContents, {
+    maxShowMoreClicks: 1,
+    maxProjects: 3,
+    navigationTimeoutMs: 2_000,
+  });
+  assert.equal(retryScan.projects.length, 2);
+  assert.equal(retryScan.failures.length, 0);
+  assert.deepEqual(retryContents.clickAttempts(), [0, 1, 1, 1]);
 
   const thirtyTwoNames = Array.from({ length: 32 }, (_value, index) => `Projet ${index + 1}`);
   const thirtyTwoUrls = thirtyTwoNames.map((_name, index) =>

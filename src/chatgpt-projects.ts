@@ -805,6 +805,32 @@ async function clickProjectHome(
   })()`, true)) as boolean;
 }
 
+async function clickProjectHomeWithRetries(
+  webContents: WebContents,
+  descriptor: ProjectRowDescriptor,
+  maxShowMoreClicks: number,
+  maxProjects: number,
+  signal?: AbortSignal,
+): Promise<{ clicked: boolean; previousUrl: string }> {
+  let previousUrl = webContents.getURL();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    throwIfProjectScanAborted(signal);
+    await prepareProjectsSidebar(webContents);
+    await expandVisibleProjects(webContents, maxShowMoreClicks, maxProjects);
+    previousUrl = webContents.getURL();
+    if (await clickProjectHome(
+      webContents,
+      descriptor.name,
+      descriptor.occurrence,
+      descriptor.initialIndex,
+    )) {
+      return { clicked: true, previousUrl };
+    }
+    if (attempt < 3) await delay(500);
+  }
+  return { clicked: false, previousUrl };
+}
+
 export async function captureCurrentProject(webContents: WebContents): Promise<ChatGptProject> {
   const url = normalizeProjectUrl(webContents.getURL());
   if (!url) throw new Error("La page actuelle n’est pas l’accueil d’un projet ChatGPT.");
@@ -890,21 +916,20 @@ export async function scanChatGptProjects(
     let sawDuplicateUrl = false;
     let lastError = "bouton d’accueil introuvable";
     try {
-      await prepareProjectsSidebar(webContents);
-      await expandVisibleProjects(webContents, maxShowMoreClicks, maxProjects);
-      const previousUrl = webContents.getURL();
-      if (!(await clickProjectHome(
+      const opened = await clickProjectHomeWithRetries(
         webContents,
-        descriptor.name,
-        descriptor.occurrence,
-        descriptor.initialIndex,
-      ))) {
-        lastError = `bouton d’accueil introuvable (index ${descriptor.initialIndex + 1})`;
+        descriptor,
+        maxShowMoreClicks,
+        maxProjects,
+        options.signal,
+      );
+      if (!opened.clicked) {
+        lastError = `bouton d’accueil introuvable après 3 tentatives (index ${descriptor.initialIndex + 1})`;
       } else {
         let url = await waitForProjectUrl(
           webContents,
           navigationTimeoutMs,
-          previousUrl,
+          opened.previousUrl,
           options.signal,
         );
         if (!url) url = normalizeProjectUrl(webContents.getURL());
