@@ -1282,7 +1282,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     log.info(
       `[projects:${scanId}] Sidebar observée=${result.sidebarNames.length}, ` +
         `couverture=${result.sidebarComplete ? "complète" : "partielle"}, ` +
-        `projets contrôlés=${result.discovered}.`,
+        `dépliages=${result.showMoreClicks}, projets contrôlés=${result.discovered}.`,
     );
     for (const project of result.projects) {
       const index = project.sidebarOrder ?? -1;

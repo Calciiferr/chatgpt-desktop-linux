@@ -186,11 +186,22 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     if (!section) return null;
     const sidebar = findActiveSidebar();
     const root = sidebar || section;
-    const labels = ['Afficher plus', 'Show more'];
-    const candidates = [...root.querySelectorAll('button')].filter((button) =>
-      isRendered(button) && labels.includes((button.textContent || '').replace(/\s+/g, ' ').trim())
-    );
-    return candidates.find((button) => section.contains(button)) || candidates[0] || null;
+    const matchesLabel = (control) => {
+      const labels = [control.textContent, control.getAttribute('aria-label'), control.getAttribute('title')]
+        .filter(Boolean).map((value) => value.replace(/\s+/g, ' ').trim().toLowerCase());
+      return labels.some((label) =>
+        /^(afficher|voir) (plus|tout)(?: de projets)?$/.test(label) ||
+        /^(show|view) (more|all)(?: projects)?$/.test(label));
+    };
+    const candidates = [...root.querySelectorAll('button, [role="button"], a')]
+      .filter((control) => isRendered(control) && matchesLabel(control));
+    const inside = candidates.find((control) => section.contains(control));
+    if (inside) return inside;
+    const sectionRect = section.getBoundingClientRect();
+    return candidates
+      .map((control) => ({ control, rect: control.getBoundingClientRect() }))
+      .filter(({ rect }) => rect.top >= sectionRect.top && rect.top <= sectionRect.bottom + 120)
+      .sort((left, right) => left.rect.top - right.rect.top)[0]?.control || null;
   };
 `;
 
@@ -646,7 +657,8 @@ async function expandVisibleProjects(
     if (!result.clicked) break;
     clicks += 1;
     const previousCount = typeof result.count === "number" ? result.count : 0;
-    const loadDeadline = Date.now() + 2_000;
+    const loadDeadline = Date.now() + 5_000;
+    let loaded = false;
     while (Date.now() < loadDeadline) {
       await delay(200);
       const progress = (await webContents.executeJavaScript(`(() => {
@@ -657,8 +669,13 @@ async function expandVisibleProjects(
         const hasMore = Boolean(findShowMoreButton(scope));
         return { count, hasMore };
       })()`, true)) as { count?: number; hasMore?: boolean };
-      if ((progress.count ?? 0) > previousCount || progress.hasMore === true) break;
+      if ((progress.count ?? 0) > previousCount) {
+        loaded = true;
+        break;
+      }
     }
+    if (!loaded) break;
+    await delay(300);
   }
   return clicks;
 }
@@ -708,7 +725,7 @@ export async function snapshotChatGptProjectOrder(
   let previousSignature = "";
   let stablePasses = 0;
   let passes = 0;
-  while (stablePasses < 3 && passes < 12) {
+  while (stablePasses < 5 && passes < 16) {
     throwIfProjectScanAborted(options.signal);
     passes += 1;
     if (showMoreClicks < maxShowMoreClicks) {
@@ -727,7 +744,7 @@ export async function snapshotChatGptProjectOrder(
       }
       if (scroller) scroller.scrollTop = scroller.scrollHeight;
     })()`, true);
-    await delay(400);
+    await delay(500);
     throwIfProjectScanAborted(options.signal);
     descriptors = await visibleProjectDescriptors(webContents, maxProjects);
     const signature = descriptors.map((item) => `${item.name}:${item.occurrence}`).join("\u0000");
@@ -735,7 +752,7 @@ export async function snapshotChatGptProjectOrder(
     else stablePasses = 0;
     previousSignature = signature;
   }
-  if (stablePasses < 3) {
+  if (stablePasses < 5) {
     throw new Error("La liste des projets ne s’est pas stabilisée.");
   }
   const coverage = (await webContents.executeJavaScript(`(() => {
@@ -753,6 +770,7 @@ export async function snapshotChatGptProjectOrder(
   const complete = maxShowMoreClicks === 20 &&
     maxProjects === 200 &&
     coverage.hasMore === false &&
+    showMoreClicks < maxShowMoreClicks &&
     completeNames.length > 0 &&
     completeNames.length < maxProjects;
   return {

@@ -135,10 +135,18 @@ async function testInjectedScriptSyntax() {
     let projectsExpanded = false;
     let currentNames = [...names];
     let expandCalls = 0;
+    let pendingNames = null;
+    const delayedBatches = Array.isArray(options.delayedBatches)
+      ? options.delayedBatches.map((batch) => [...batch])
+      : options.delayedNames
+        ? [[...options.delayedNames]]
+        : [];
+    let delayedBatchIndex = 0;
     const clickedIndexes = [];
     return {
       getURL: () => url,
       state: () => ({ sidebarOpen, projectsExpanded, clickedIndexes }),
+      expansionCalls: () => expandCalls,
       executeJavaScript: async (code) => {
         compile(code);
         if (code.includes("const scored =")) {
@@ -159,15 +167,29 @@ async function testInjectedScriptSyntax() {
         }
         if (code.includes("const showMore =")) {
           expandCalls += 1;
-          if (options.delayedNames && expandCalls === 2) {
+          if (delayedBatchIndex < delayedBatches.length) {
             const count = currentNames.length;
-            currentNames = [...options.delayedNames];
+            pendingNames = delayedBatches[delayedBatchIndex];
+            delayedBatchIndex += 1;
             return { clicked: true, count };
           }
           return { clicked: false, count: currentNames.length };
         }
+        if (code.includes("return { count, hasMore }")) {
+          if (pendingNames) {
+            currentNames = pendingNames;
+            pendingNames = null;
+          }
+          return {
+            count: currentNames.length,
+            hasMore: delayedBatchIndex < delayedBatches.length || options.hasMore === true,
+          };
+        }
         if (code.includes("names: entries.map((entry) => entry.name)")) {
-          return { names: currentNames, hasMore: options.hasMore === true };
+          return {
+            names: currentNames,
+            hasMore: delayedBatchIndex < delayedBatches.length || options.hasMore === true,
+          };
         }
         if (code.includes("return entries.map((entry) => entry.name)")) {
           const limit = Number(code.match(/slice\(0, (\d+)\)/)?.[1] || currentNames.length);
@@ -296,6 +318,17 @@ async function testInjectedScriptSyntax() {
   });
   assert.deepEqual(delayedSnapshot.names, ["Projet 1", "Projet 2", "Projet 3"]);
   assert.equal(delayedSnapshot.showMoreClicks, 1);
+
+  const thirtyNamesInBatches = Array.from({ length: 30 }, (_value, index) => `Lot ${index + 1}`);
+  const batchedSnapshot = await snapshotChatGptProjectOrder(
+    createDomMock(thirtyNamesInBatches.slice(0, 10), [], {
+      delayedBatches: [14, 18, 22, 26, 30].map((count) => thirtyNamesInBatches.slice(0, count)),
+    }),
+    { maxShowMoreClicks: 20, maxProjects: 200 },
+  );
+  assert.equal(batchedSnapshot.names.length, 30);
+  assert.equal(batchedSnapshot.showMoreClicks, 5);
+  assert.equal(batchedSnapshot.complete, true);
 
   const inaccessibleSidebar = {
     getURL: () => "https://chatgpt.com/",
