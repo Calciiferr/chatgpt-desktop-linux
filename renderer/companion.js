@@ -164,7 +164,7 @@ function reportLayout() {
   const height = visibleUnionHeight();
   if (!height) return;
   const bottom = barBottomOffset();
-  const signature = `${height}:${bottom}:${toolsOpen ? "1" : "0"}`;
+  const signature = `${window.innerWidth}:${window.innerHeight}:${height}:${bottom}:${toolsOpen ? "1" : "0"}`;
   if (signature === lastReportedLayout) return;
   lastReportedLayout = signature;
   window.companionApi.reportLayout({ height, expanded: toolsOpen, barBottom: bottom, rects: visibleRects() });
@@ -175,6 +175,15 @@ function scheduleLayoutReport() {
   layoutReportFrame = requestAnimationFrame(() => {
     requestAnimationFrame(reportLayout);
   });
+}
+
+function resizePrompt() {
+  promptInput.style.height = "auto";
+  const maxHeight = Number.parseFloat(window.getComputedStyle(promptInput).maxHeight) || 80;
+  const nextHeight = Math.min(promptInput.scrollHeight, maxHeight);
+  promptInput.style.height = `${nextHeight}px`;
+  promptInput.style.overflowY = promptInput.scrollHeight > maxHeight ? "auto" : "hidden";
+  scheduleLayoutReport();
 }
 
 function itemIcon(type) { return type === "text" ? "¶" : type === "image" ? "▧" : "↥"; }
@@ -346,6 +355,7 @@ function applyState(state) {
     hydratingDraft = true;
     lastDraftVersion = draftVersion;
     promptInput.value = typeof draft.prompt === "string" ? draft.prompt : "";
+    resizePrompt();
     auditSecurityInput.checked = draft.securityAudit === true;
     auditQualityInput.checked = draft.qualityAudit === true;
     selectChatMode(draft.chatMode === "resume" ? "resume" : "new");
@@ -448,7 +458,10 @@ projectSelect.addEventListener("change", async () => {
   if (!newProjectNameInput.hidden) requestAnimationFrame(() => newProjectNameInput.focus());
 });
 
-promptInput.addEventListener("input", () => { void persistDraft(); });
+promptInput.addEventListener("input", () => {
+  resizePrompt();
+  void persistDraft();
+});
 auditSecurityInput.addEventListener("change", () => { void persistDraft(); });
 auditQualityInput.addEventListener("change", () => { void persistDraft(); });
 newProjectNameInput.addEventListener("input", () => { void persistDraft(); });
@@ -577,4 +590,4 @@ window.companionApi.getState().then((state) => {
   applyState(state);
   scheduleLayoutReport();
 });
-window.addEventListener("resize", scheduleLayoutReport);
+window.addEventListener("resize", resizePrompt);

@@ -1629,7 +1629,8 @@ function createCompanionWindow(): void {
     width: MAGIC_BAR_WIDTH,
     height: MAGIC_BAR_FALLBACK_HEIGHT,
     minWidth: 520,
-    minHeight: MAGIC_BAR_MIN_HEIGHT,
+    minHeight: MAGIC_BAR_FALLBACK_HEIGHT,
+    maxHeight: MAGIC_BAR_FALLBACK_HEIGHT,
     show: false,
     frame: false,
     hasShadow: false,
@@ -3849,6 +3850,17 @@ function registerIpcHandlers(): void {
     if (typeof layout !== "object" || layout === null) {
       return;
     }
+    if (!companionWindow || companionWindow.isDestroyed()) {
+      return;
+    }
+    const [windowWidth, windowHeight] = companionWindow.getSize();
+    const [windowX, windowY] = companionWindow.getPosition();
+    const workArea = screen.getDisplayMatching({
+      x: windowX,
+      y: windowY,
+      width: windowWidth,
+      height: windowHeight,
+    }).workArea;
     const record = layout as Record<string, unknown>;
     const height = typeof record.height === "number" ? Math.round(record.height) : 0;
     const rects = Array.isArray(record.rects)
@@ -3862,7 +3874,7 @@ function registerIpcHandlers(): void {
             const y = typeof candidate.y === "number" ? Math.round(candidate.y) : 0;
             const width = typeof candidate.width === "number" ? Math.round(candidate.width) : 0;
             const height = typeof candidate.height === "number" ? Math.round(candidate.height) : 0;
-            if (width <= 0 || height <= 0 || width > MAGIC_BAR_WIDTH || height > 480) {
+            if (width <= 0 || height <= 0 || width > windowWidth + 2 || height > windowHeight + 2) {
               return null;
             }
             return { x, y, width, height };
@@ -3872,13 +3884,14 @@ function registerIpcHandlers(): void {
     if (rects.length > 0) {
       setCompanionShape(rects);
     }
-    if (height >= MAGIC_BAR_MIN_HEIGHT && height <= 480) {
+    if (height >= MAGIC_BAR_MIN_HEIGHT && height <= workArea.height) {
       companionMeasuredHeight = height;
-      if (companionWindow && !companionWindow.isDestroyed()) {
-        const [width, currentHeight] = companionWindow.getSize();
-        if (currentHeight !== height) {
-          companionWindow.setSize(width, height, false);
-        }
+      const [width, currentHeight] = companionWindow.getSize();
+      companionWindow.setMinimumSize(520, MAGIC_BAR_MIN_HEIGHT);
+      companionWindow.setMaximumSize(Math.max(520, workArea.width), height);
+      companionWindow.setMinimumSize(520, height);
+      if (currentHeight !== height) {
+        companionWindow.setSize(width, height, false);
       }
     }
   });

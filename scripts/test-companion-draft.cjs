@@ -127,6 +127,8 @@ assert.match(mainSource, /if \(needsInitialPosition\) \{\s*createCompanionWindow
 assert.equal((mainSource.match(/positionCompanionInitially\(\);/g) || []).length, 1);
 assert.match(mainSource, /const MAGIC_BAR_MIN_HEIGHT = 80/);
 assert.match(createCompanionFunction, /resizable: true/);
+assert.match(createCompanionFunction, /minHeight: MAGIC_BAR_FALLBACK_HEIGHT/);
+assert.match(createCompanionFunction, /maxHeight: MAGIC_BAR_FALLBACK_HEIGHT/);
 assert.match(createCompanionFunction, /maximizable: false/);
 assert.match(mainSource, /startKWinCompanionController\(\)/);
 assert.match(mainSource, /stopKWinCompanionController\(\)/);
@@ -134,12 +136,18 @@ assert.doesNotMatch(mainSource, /positionCompanionMenuWithKWin|setTimeout\(posit
 assert.doesNotMatch(layoutHandler, /getBounds\(\)|setBounds\(/);
 assert.match(layoutHandler, /getSize\(\)/);
 assert.match(layoutHandler, /setSize\(width, height, false\)/);
+assert.match(layoutHandler, /setMaximumSize\(Math\.max\(520, workArea\.width\), height\)/);
+assert.match(layoutHandler, /setMinimumSize\(520, height\)/);
 assert.doesNotMatch(mainSource, /document\.documentElement\.classList\.toggle\('dark'/);
 assert.doesNotMatch(mainSource, /document\.documentElement\.style\.colorScheme/);
 assert.match(mainSource, /before-quit[\s\S]*rmSync\(COMPANION_TEMP_DIR, \{ recursive: true, force: true \}\)/);
 assert.match(rendererSource, /draftVersion:/);
 assert.match(rendererSource, /onHidden\(\(\) =>/);
 assert.match(rendererSource, /window\.companionApi\.setExpanded\(toolsOpen\)/);
+assert.match(rendererSource, /function resizePrompt\(\)/);
+assert.match(rendererSource, /Math\.min\(promptInput\.scrollHeight, maxHeight\)/);
+assert.match(rendererSource, /window\.innerWidth.*window\.innerHeight/);
+assert.match(rendererSource, /window\.addEventListener\("resize", resizePrompt\)/);
 assert.doesNotMatch(rendererSource, /lastOpenId|state\.openId/);
 assert.match(preloadSource, /companion:update-draft/);
 assert.doesNotMatch(settingsSource, /CompanionDraftState|companionDraft/);
