@@ -63,6 +63,7 @@ export interface ProjectScanResult {
   duplicatesSkipped: number;
   durationsMs: number[];
   sidebarNames: string[];
+  sidebarComplete: boolean;
   message: string;
 }
 
@@ -690,7 +691,12 @@ async function visibleProjectDescriptors(
 export async function snapshotChatGptProjectOrder(
   webContents: WebContents,
   options: Pick<ProjectScanOptions, "maxShowMoreClicks" | "maxProjects" | "signal"> = {},
-): Promise<{ names: string[]; descriptors: ProjectRowDescriptor[]; showMoreClicks: number }> {
+): Promise<{
+  names: string[];
+  descriptors: ProjectRowDescriptor[];
+  showMoreClicks: number;
+  complete: boolean;
+}> {
   const maxShowMoreClicks = Math.min(20, Math.max(0, options.maxShowMoreClicks ?? 20));
   const maxProjects = Math.min(200, Math.max(1, options.maxProjects ?? 200));
   throwIfProjectScanAborted(options.signal);
@@ -731,7 +737,25 @@ export async function snapshotChatGptProjectOrder(
   if (stablePasses < 3) {
     throw new Error("La liste des projets ne s’est pas stabilisée.");
   }
-  return { names: descriptors.map((item) => item.name), descriptors, showMoreClicks };
+  const coverage = (await webContents.executeJavaScript(`(() => {
+    ${ACTIVE_PROJECT_SCOPE_HELPERS}
+    const scope = findProjectsSection();
+    const entries = projectEntriesFor(scope);
+    return {
+      names: entries.map((entry) => entry.name).filter(Boolean),
+      hasMore: Boolean(findShowMoreButton(scope)),
+    };
+  })()`, true)) as { names?: unknown; hasMore?: boolean };
+  const completeNames = Array.isArray(coverage.names)
+    ? coverage.names.filter((name): name is string => typeof name === "string").map(cleanName)
+    : [];
+  const complete = coverage.hasMore === false && completeNames.length > 0;
+  return {
+    names: complete ? completeNames : descriptors.map((item) => item.name),
+    descriptors,
+    showMoreClicks,
+    complete,
+  };
 }
 
 async function clickProjectHome(
@@ -812,6 +836,7 @@ export async function scanChatGptProjects(
       duplicatesSkipped: 0,
       durationsMs: [],
       sidebarNames: [],
+      sidebarComplete: snapshot.complete,
       message: "Aucun projet visible dans la sidebar ChatGPT.",
     };
   }
@@ -920,6 +945,7 @@ export async function scanChatGptProjects(
     duplicatesSkipped,
     durationsMs,
     sidebarNames: snapshot.names,
+    sidebarComplete: snapshot.complete,
     message,
   };
 }

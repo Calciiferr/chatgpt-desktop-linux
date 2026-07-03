@@ -76,6 +76,25 @@ assert.equal(
   reconcileProjectsFromSidebar([between], [], ["Autre"], undefined, true).length,
   0,
 );
+const removedAfterCompleteScan = reconcileProjectsFromSidebar(
+  [scanned, between],
+  [scanned],
+  ["Alpha"],
+  undefined,
+  true,
+);
+assert.deepEqual(removedAfterCompleteScan.map((project) => project.id), [scanned.id]);
+const retainedAfterPartialScan = reconcileProjectsFromSidebar(
+  [scanned, between],
+  [scanned],
+  ["Alpha"],
+  undefined,
+  false,
+);
+assert.deepEqual(
+  retainedAfterPartialScan.map((project) => project.id).sort(),
+  [scanned.id, between.id].sort(),
+);
 assert.equal(normalizeStoredProjects([{ name: "Conversation", url: "https://chatgpt.com/c/123" }]).length, 0);
 
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "chatgpt-project-settings-"));
@@ -147,7 +166,13 @@ async function testInjectedScriptSyntax() {
           }
           return { clicked: false, count: currentNames.length };
         }
-        if (code.includes("return entries.map((entry) => entry.name)")) return currentNames;
+        if (code.includes("names: entries.map((entry) => entry.name)")) {
+          return { names: currentNames, hasMore: options.hasMore === true };
+        }
+        if (code.includes("return entries.map((entry) => entry.name)")) {
+          const limit = Number(code.match(/slice\(0, (\d+)\)/)?.[1] || currentNames.length);
+          return currentNames.slice(0, limit);
+        }
         if (code.includes("const expected =")) {
           const initialIndex = Number(code.match(/const initialIndex = (\d+)/)?.[1] || 0);
           clickedIndexes.push(initialIndex);
@@ -169,6 +194,7 @@ async function testInjectedScriptSyntax() {
   });
   assert.equal(scan.status, "ok");
   assert.equal(scan.projects[0].url, absolute);
+  assert.equal(scan.sidebarComplete, true);
   assert.deepEqual(scanContents.state(), { sidebarOpen: true, projectsExpanded: true, clickedIndexes: [0] });
   const scanningProgress = progress.filter((event) => event.phase === "scanning");
   assert.equal(scanningProgress.at(-1).percent, 100);
@@ -220,6 +246,7 @@ async function testInjectedScriptSyntax() {
   });
   assert.equal(thirtyTwoScan.discovered, 32);
   assert.equal(thirtyTwoScan.projects.length, 32);
+  assert.equal(thirtyTwoScan.sidebarComplete, true);
   const completedProgress = thirtyTwoProgress.filter((event) => event.phase === "scanning" && event.completed > 0);
   assert.ok(completedProgress.every((event, index, list) => index === 0 || event.percent >= list[index - 1].percent));
   assert.equal(completedProgress.at(-1).percent, 100);
@@ -229,6 +256,21 @@ async function testInjectedScriptSyntax() {
   const orderSnapshot = await snapshotChatGptProjectOrder(orderOnlyContents, { maxShowMoreClicks: 1, maxProjects: 3 });
   assert.deepEqual(orderSnapshot.names, ["Alpha", "Alpha"]);
   assert.equal(orderOnlyContents.getURL(), "https://chatgpt.com/");
+  assert.equal(orderSnapshot.complete, true);
+
+  const cappedSnapshot = await snapshotChatGptProjectOrder(
+    createDomMock(Array.from({ length: 12 }, (_value, index) => `Projet ${index + 1}`)),
+    { maxShowMoreClicks: 1, maxProjects: 10 },
+  );
+  assert.equal(cappedSnapshot.descriptors.length, 10);
+  assert.equal(cappedSnapshot.names.length, 12);
+  assert.equal(cappedSnapshot.complete, true);
+
+  const expandableSnapshot = await snapshotChatGptProjectOrder(
+    createDomMock(["Projet 1"], [], { hasMore: true }),
+    { maxShowMoreClicks: 1, maxProjects: 10 },
+  );
+  assert.equal(expandableSnapshot.complete, false);
 
   const delayedShowMoreContents = createDomMock(
     ["Projet 1"],
@@ -289,6 +331,10 @@ assert.match(mainSource, /maxShowMoreClicks:\s*1,\s*maxProjects:\s*10/);
 assert.match(synchronizeFunction, /runProjectSyncWithTimeout\(/);
 assert.match(synchronizeFunction, /destroyProjectScanWindow\(\);[\s\S]*projectSyncInProgress = false/);
 assert.match(synchronizeFunction, /previousProjects[\s\S]*cache conservé/);
+assert.match(
+  synchronizeFunction,
+  /result\.status === "ok"[\s\S]*result\.failures\.length === 0[\s\S]*!isBackground \|\| result\.sidebarComplete/,
+);
 assert.match(backgroundFunction, /powerMonitor\.getSystemIdleTime\(\)/);
 assert.match(backgroundFunction, /projectSyncSkipReason\("background"/);
 assert.match(mainSource, /nativeTheme\.themeSource\s*=\s*mode/);

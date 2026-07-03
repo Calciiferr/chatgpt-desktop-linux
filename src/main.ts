@@ -1322,12 +1322,20 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     }
     // A full scan already associates each URL/projectId with its exact initial
     // sidebar position. Reordering again by name would group same-name projects.
+    const removeMissing = result.status === "ok" &&
+      result.failures.length === 0 &&
+      (!isBackground || result.sidebarComplete);
+    if (isBackground && !result.sidebarComplete) {
+      log.info(
+        `[projects:${scanId}] Liste background partielle : suppressions distantes reportées, cache conservé.`,
+      );
+    }
     const mergedProjects = reconcileProjectsFromSidebar(
       currentSettings.chatGptProjects,
       result.projects,
       result.sidebarNames,
       at,
-      !isBackground && result.status === "ok" && result.failures.length === 0,
+      removeMissing,
     );
     log.info(
       `[projects:${scanId}] Fusion cache avant=${currentSettings.chatGptProjects.length}, ` +
