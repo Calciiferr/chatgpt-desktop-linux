@@ -47,6 +47,28 @@ export function initializeLogger(filePath: string): void {
   }
 }
 
+export function readLogTail(maxLines = 100): string {
+  if (!logFilePath) return "";
+  const boundedLines = Math.max(1, Math.min(10_000, Math.floor(maxLines)));
+  try {
+    const lines = fs.readFileSync(logFilePath, "utf8").split(/\r?\n/);
+    if (lines.at(-1) === "") lines.pop();
+    return lines.slice(-boundedLines).join("\n");
+  } catch {
+    return "";
+  }
+}
+
+export function clearLogFile(): boolean {
+  if (!logFilePath) return false;
+  try {
+    fs.writeFileSync(logFilePath, "", { encoding: "utf8", mode: 0o600 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const log = {
   info: (...values: unknown[]): void => write("INFO", values),
   warn: (...values: unknown[]): void => write("WARN", values),

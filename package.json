@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-desktop-linux",
-  "version": "0.7.0-beta.9",
+  "version": "0.7.0-beta.10",
   "private": true,
   "description": "Personal ChatGPT desktop wrapper for Linux, KDE Plasma and Wayland",
   "homepage": "https://chatgpt.com/",
@@ -15,7 +15,8 @@
     "test:tabs": "npm run build && node scripts/test-tabs.cjs",
     "test:clipboard": "npm run build && node scripts/test-clipboard-files.cjs",
     "test:project-sync": "npm run build && node scripts/test-project-sync-policy.cjs",
-    "test": "npm run build && node scripts/test-projects.cjs && node scripts/test-companion-draft.cjs && node scripts/test-tabs.cjs && node scripts/test-clipboard-files.cjs && node scripts/test-project-sync-policy.cjs",
+    "test:diagnostics": "npm run build && node scripts/test-settings-diagnostics.cjs",
+    "test": "npm run build && node scripts/test-projects.cjs && node scripts/test-companion-draft.cjs && node scripts/test-tabs.cjs && node scripts/test-clipboard-files.cjs && node scripts/test-project-sync-policy.cjs && node scripts/test-settings-diagnostics.cjs",
     "predist": "node scripts/archive-release.cjs deb appimage",
     "dist": "npm run build && electron-builder --linux AppImage deb",
     "predist:appimage": "node scripts/archive-release.cjs appimage",

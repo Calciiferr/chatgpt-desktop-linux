@@ -11,7 +11,6 @@ const {
   mergeProjects,
   normalizeProjectUrl,
   normalizeStoredProjects,
-  pruneProjectsMissingFromBackgroundWindow,
   reconcileProjectsFromSidebar,
   reorderProjectsFromSidebar,
   scanChatGptProjects,
@@ -95,33 +94,6 @@ const retainedAfterPartialScan = reconcileProjectsFromSidebar(
 assert.deepEqual(
   retainedAfterPartialScan.map((project) => project.id).sort(),
   [scanned.id, between.id].sort(),
-);
-const backgroundCache = Array.from({ length: 12 }, (_value, index) => createProjectRecord(
-  index === 6 ? "test 7" : `Cache ${index + 1}`,
-  `https://chatgpt.com/g/g-p-${String(index + 300).padStart(32, "0")}-cache-${index + 1}/project`,
-  "scan",
-)).map((project, index) => ({ ...project, sidebarOrder: index }));
-const backgroundNames = backgroundCache
-  .slice(0, 10)
-  .filter((project) => project.name !== "test 7")
-  .map((project) => project.name)
-  .concat("Nouveau distant");
-const prunedBackground = pruneProjectsMissingFromBackgroundWindow(
-  backgroundCache,
-  backgroundNames,
-  10,
-);
-assert.deepEqual(prunedBackground.removed.map((project) => project.name), ["test 7"]);
-assert.equal(prunedBackground.projects.some((project) => project.name === "test 7"), false);
-assert.equal(prunedBackground.projects.some((project) => project.id === backgroundCache[10].id), true);
-assert.equal(prunedBackground.projects.some((project) => project.id === backgroundCache[11].id), true);
-const homonymCache = [
-  { ...backgroundCache[0], name: "Même nom", remoteName: "Même nom", sidebarOrder: 0 },
-  { ...backgroundCache[10], name: "Même nom", remoteName: "Même nom", sidebarOrder: 10 },
-];
-assert.equal(
-  pruneProjectsMissingFromBackgroundWindow(homonymCache, ["Autre"], 10).removed.length,
-  0,
 );
 assert.equal(normalizeStoredProjects([{ name: "Conversation", url: "https://chatgpt.com/c/123" }]).length, 0);
 
@@ -222,7 +194,7 @@ async function testInjectedScriptSyntax() {
   });
   assert.equal(scan.status, "ok");
   assert.equal(scan.projects[0].url, absolute);
-  assert.equal(scan.sidebarComplete, true);
+  assert.equal(scan.sidebarComplete, false);
   assert.deepEqual(scanContents.state(), { sidebarOpen: true, projectsExpanded: true, clickedIndexes: [0] });
   const scanningProgress = progress.filter((event) => event.phase === "scanning");
   assert.equal(scanningProgress.at(-1).percent, 100);
@@ -274,7 +246,7 @@ async function testInjectedScriptSyntax() {
   });
   assert.equal(thirtyTwoScan.discovered, 32);
   assert.equal(thirtyTwoScan.projects.length, 32);
-  assert.equal(thirtyTwoScan.sidebarComplete, true);
+  assert.equal(thirtyTwoScan.sidebarComplete, false);
   const completedProgress = thirtyTwoProgress.filter((event) => event.phase === "scanning" && event.completed > 0);
   assert.ok(completedProgress.every((event, index, list) => index === 0 || event.percent >= list[index - 1].percent));
   assert.equal(completedProgress.at(-1).percent, 100);
@@ -284,15 +256,28 @@ async function testInjectedScriptSyntax() {
   const orderSnapshot = await snapshotChatGptProjectOrder(orderOnlyContents, { maxShowMoreClicks: 1, maxProjects: 3 });
   assert.deepEqual(orderSnapshot.names, ["Alpha", "Alpha"]);
   assert.equal(orderOnlyContents.getURL(), "https://chatgpt.com/");
-  assert.equal(orderSnapshot.complete, true);
+  assert.equal(orderSnapshot.complete, false);
 
   const cappedSnapshot = await snapshotChatGptProjectOrder(
     createDomMock(Array.from({ length: 12 }, (_value, index) => `Projet ${index + 1}`)),
     { maxShowMoreClicks: 1, maxProjects: 10 },
   );
   assert.equal(cappedSnapshot.descriptors.length, 10);
-  assert.equal(cappedSnapshot.names.length, 12);
-  assert.equal(cappedSnapshot.complete, true);
+  assert.equal(cappedSnapshot.names.length, 10);
+  assert.equal(cappedSnapshot.complete, false);
+
+  const backgroundContents = createDomMock(thirtyTwoNames, thirtyTwoUrls);
+  const backgroundScan = await scanChatGptProjects(backgroundContents, {
+    maxShowMoreClicks: 20,
+    maxProjects: 200,
+    maxResolvedProjects: 10,
+    navigationTimeoutMs: 2_000,
+  });
+  assert.equal(backgroundScan.projects.length, 10);
+  assert.equal(backgroundScan.discovered, 10);
+  assert.equal(backgroundScan.sidebarNames.length, 32);
+  assert.equal(backgroundScan.sidebarComplete, true);
+  assert.deepEqual(backgroundContents.state().clickedIndexes, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
 
   const expandableSnapshot = await snapshotChatGptProjectOrder(
     createDomMock(["Projet 1"], [], { hasMore: true }),
@@ -355,15 +340,13 @@ assert.match(scanWindowFunction, /height: isBackground \? 600 : 900/);
 assert.match(scanWindowFunction, /if \(isBackground\) return window;[\s\S]*reloadIgnoringCache\(\)/);
 assert.match(mainSource, /projects:reset-all/);
 assert.doesNotMatch(mainSource, /reorderProjectsFromSidebar\(/);
-assert.match(mainSource, /maxShowMoreClicks:\s*1,\s*maxProjects:\s*10/);
+assert.match(mainSource, /maxShowMoreClicks:\s*20,\s*maxProjects:\s*200,\s*maxResolvedProjects:\s*10/);
 assert.match(synchronizeFunction, /runProjectSyncWithTimeout\(/);
 assert.match(synchronizeFunction, /destroyProjectScanWindow\(\);[\s\S]*projectSyncInProgress = false/);
 assert.match(synchronizeFunction, /previousProjects[\s\S]*cache conservé/);
-assert.match(
-  synchronizeFunction,
-  /result\.status === "ok"[\s\S]*result\.failures\.length === 0[\s\S]*!isBackground \|\| result\.sidebarComplete/,
-);
-assert.match(synchronizeFunction, /pruneProjectsMissingFromBackgroundWindow\([\s\S]*result\.sidebarNames[\s\S]*10/);
+assert.match(synchronizeFunction, /const removeMissing = result\.sidebarComplete/);
+assert.match(synchronizeFunction, /lastSelectedChatGptProjectId:[\s\S]*mergedIds\.has/);
+assert.match(synchronizeFunction, /message: `\$\{mergedProjects\.length\} projet\(s\) dans le cache local\.`/);
 assert.match(backgroundFunction, /powerMonitor\.getSystemIdleTime\(\)/);
 assert.match(backgroundFunction, /projectSyncSkipReason\("background"/);
 assert.match(mainSource, /nativeTheme\.themeSource\s*=\s*mode/);

@@ -331,6 +331,25 @@ code {
   gap: 10px;
 }
 
+.project-list-toggle {
+  justify-self: start;
+}
+
+#project-list-panel {
+  display: grid;
+  gap: 10px;
+}
+
+#project-list-panel[hidden] {
+  display: none;
+}
+
+.diagnostic-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .project-row {
   display: grid;
   gap: 8px;

@@ -41,6 +41,15 @@ const desktopApi = {
   resetWindowBounds(): Promise<unknown> {
     return ipcRenderer.invoke("window:reset-bounds");
   },
+  copyLogFile(): Promise<unknown> {
+    return ipcRenderer.invoke("diagnostics:copy-log-file");
+  },
+  copyLogTail(): Promise<unknown> {
+    return ipcRenderer.invoke("diagnostics:copy-log-tail");
+  },
+  clearLog(): Promise<unknown> {
+    return ipcRenderer.invoke("diagnostics:clear-log");
+  },
   closeSettings(): void {
     ipcRenderer.send("settings:close");
   },

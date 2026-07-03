@@ -180,8 +180,13 @@
             <select id="default-project"></select>
           </label>
 
-          <div id="project-list" class="project-list"></div>
-          <p id="project-list-empty" class="empty-copy" data-i18n="noProjects">Aucun projet dans le cache local.</p>
+          <button id="toggle-project-list" class="secondary project-list-toggle" type="button" aria-expanded="false">
+            Afficher les projets (0)
+          </button>
+          <div id="project-list-panel" hidden>
+            <div id="project-list" class="project-list"></div>
+            <p id="project-list-empty" class="empty-copy" data-i18n="noProjects">Aucun projet dans le cache local.</p>
+          </div>
           <small data-i18n="projectsDomWarning">La synchronisation ouvre automatiquement la sidebar et la section Projets. Elle repose sur l’interface de chatgpt.com, pas sur une API officielle.</small>
           <small data-i18n="resetProjectsHint">La réinitialisation vide uniquement le cache local ; elle ne supprime aucun projet sur ChatGPT.</small>
         </section>
@@ -231,6 +236,11 @@
           <h2 data-i18n="diagnosticsTitle">Diagnostic</h2>
           <p id="fallback-command"></p>
           <small><span data-i18n="logLabel">Journal</span> : <code id="log-path"></code></small>
+          <div class="diagnostic-actions">
+            <button id="copy-log-file" class="secondary" type="button" data-i18n="copyLogFile">Copier le fichier journal</button>
+            <button id="copy-log-tail" class="secondary" type="button" data-i18n="copyLogTail">Copier les 100 dernières lignes</button>
+            <button id="clear-log" class="danger" type="button" data-i18n="clearLog">Vider le journal…</button>
+          </div>
         </section>
 
         <section class="card danger-card">

@@ -39,10 +39,15 @@ const positionMemoryStatus = document.querySelector("#position-memory-status");
 const fallbackCommand = document.querySelector("#fallback-command");
 const companionFallbackCommand = document.querySelector("#companion-fallback-command");
 const logPath = document.querySelector("#log-path");
+const copyLogFileButton = document.querySelector("#copy-log-file");
+const copyLogTailButton = document.querySelector("#copy-log-tail");
+const clearLogButton = document.querySelector("#clear-log");
 const scanProjectsButton = document.querySelector("#scan-projects");
 const resetProjectsButton = document.querySelector("#reset-projects");
 const projectSyncStatus = document.querySelector("#project-sync-status");
 const defaultProjectInput = document.querySelector("#default-project");
+const toggleProjectListButton = document.querySelector("#toggle-project-list");
+const projectListPanel = document.querySelector("#project-list-panel");
 const projectList = document.querySelector("#project-list");
 const projectListEmpty = document.querySelector("#project-list-empty");
 
@@ -61,6 +66,7 @@ let activeUiLanguage = "fr";
 let storedLanguage = "fr";
 let shortcutCaptureTarget = null;
 let currentProjects = [];
+let projectsExpanded = false;
 
 function applySettingsTheme(state) {
   const darkMode = typeof state === "boolean" ? state : state?.darkMode;
@@ -109,7 +115,11 @@ const translations = {
     rememberPositionLabel: "Mémoriser l’emplacement de la fenêtre",
     rememberPositionHint: "Demande à KWin de restaurer la dernière position connue après le masquage dans le tray.",
     widthLabel: "Largeur", heightLabel: "Hauteur", resetWindow: "Recentrer et rétablir cette taille",
-    diagnosticsTitle: "Diagnostic", logLabel: "Journal", sessionTitle: "Session locale",
+    diagnosticsTitle: "Diagnostic", logLabel: "Journal",
+    copyLogFile: "Copier le fichier journal", copyLogTail: "Copier les 100 dernières lignes", clearLog: "Vider le journal…",
+    logFileCopied: "Fichier journal copié.", logTailCopied: "100 dernières lignes copiées.", logCleared: "Journal vidé.",
+    confirmClearLog: "Vider entièrement le fichier journal ?", logActionError: "Opération sur le journal impossible.",
+    sessionTitle: "Session locale",
     sessionHint: "Efface les cookies et le cache de ChatGPT, puis vous déconnecte.",
     resetSession: "Réinitialiser la session…", closeButton: "Fermer", saveButton: "Enregistrer",
     shortcutActive: "Actif", shortcutUnavailable: "Indisponible dans la session actuelle. Utilisez la commande de secours ci-dessous.",
@@ -160,7 +170,11 @@ const translations = {
     x11Mode: "X11/XWayland", waylandNative: "Native Wayland", rememberPositionLabel: "Remember window position",
     rememberPositionHint: "Asks KWin to restore the last known position after hiding to the tray.",
     widthLabel: "Width", heightLabel: "Height", resetWindow: "Recenter and restore this size",
-    diagnosticsTitle: "Diagnostics", logLabel: "Log", sessionTitle: "Local session",
+    diagnosticsTitle: "Diagnostics", logLabel: "Log",
+    copyLogFile: "Copy log file", copyLogTail: "Copy last 100 lines", clearLog: "Clear log…",
+    logFileCopied: "Log file copied.", logTailCopied: "Last 100 lines copied.", logCleared: "Log cleared.",
+    confirmClearLog: "Clear the entire log file?", logActionError: "Log operation failed.",
+    sessionTitle: "Local session",
     sessionHint: "Clears ChatGPT cookies and cache, then signs you out.", resetSession: "Reset session…",
     closeButton: "Close", saveButton: "Save", shortcutActive: "Active",
     shortcutUnavailable: "Unavailable in the current session. Use the fallback command below.",
@@ -211,7 +225,11 @@ const translations = {
     x11Mode: "X11/XWayland", waylandNative: "Wayland nativo", rememberPositionLabel: "Recordar la posición de la ventana",
     rememberPositionHint: "Pide a KWin restaurar la última posición conocida después de ocultarla en la bandeja.",
     widthLabel: "Anchura", heightLabel: "Altura", resetWindow: "Centrar y restaurar este tamaño",
-    diagnosticsTitle: "Diagnóstico", logLabel: "Registro", sessionTitle: "Sesión local",
+    diagnosticsTitle: "Diagnóstico", logLabel: "Registro",
+    copyLogFile: "Copiar archivo de registro", copyLogTail: "Copiar las últimas 100 líneas", clearLog: "Vaciar registro…",
+    logFileCopied: "Archivo de registro copiado.", logTailCopied: "Últimas 100 líneas copiadas.", logCleared: "Registro vaciado.",
+    confirmClearLog: "¿Vaciar completamente el archivo de registro?", logActionError: "No se pudo operar sobre el registro.",
+    sessionTitle: "Sesión local",
     sessionHint: "Borra las cookies y la caché de ChatGPT y cierra la sesión.", resetSession: "Restablecer sesión…",
     closeButton: "Cerrar", saveButton: "Guardar", shortcutActive: "Activo",
     shortcutUnavailable: "No disponible en la sesión actual. Usa el comando alternativo de abajo.",
@@ -232,6 +250,7 @@ const projectTranslations = {
     projectsTitle: "Projets ChatGPT", experimental: "Expérimental",
     projectsHint: "Cache local utilisé par la Magic Bar, actualisé sur demande et automatiquement toutes les cinq minutes.",
     syncProjects: "Synchroniser automatiquement depuis ChatGPT", projectsSynced: "Projets synchronisés.", projectsSyncedCount: "{count} projets synchronisés.",
+    projectsInCache: "{count} projet(s) dans le cache local.", showProjects: "Afficher les projets ({count})", hideProjects: "Masquer les projets ({count})",
     defaultProject: "Projet par défaut dans la Magic Bar", noDefaultProject: "Aucun / ChatGPT normal",
     noProjects: "Aucun projet dans le cache local.",
     projectsDomWarning: "La synchronisation ouvre automatiquement la sidebar et la section Projets. Elle repose sur l’interface de chatgpt.com, pas sur une API officielle.",
@@ -250,6 +269,7 @@ const projectTranslations = {
     projectsTitle: "ChatGPT Projects", experimental: "Experimental",
     projectsHint: "Local cache used by the Magic Bar, refreshed on request and automatically every five minutes.",
     syncProjects: "Sync automatically from ChatGPT", projectsSynced: "Projects synchronized.", projectsSyncedCount: "{count} projects synchronized.",
+    projectsInCache: "{count} project(s) in the local cache.", showProjects: "Show projects ({count})", hideProjects: "Hide projects ({count})",
     defaultProject: "Default project in the Magic Bar", noDefaultProject: "None / regular ChatGPT",
     noProjects: "No project in the local cache.",
     projectsDomWarning: "Synchronization automatically opens the sidebar and Projects section. It uses the chatgpt.com interface, not an official API.",
@@ -268,6 +288,7 @@ const projectTranslations = {
     projectsTitle: "Proyectos ChatGPT", experimental: "Experimental",
     projectsHint: "Caché local usada por Magic Bar, actualizada bajo demanda y automáticamente cada cinco minutos.",
     syncProjects: "Sincronizar automáticamente desde ChatGPT", projectsSynced: "Proyectos sincronizados.", projectsSyncedCount: "{count} proyectos sincronizados.",
+    projectsInCache: "{count} proyecto(s) en la caché local.", showProjects: "Mostrar proyectos ({count})", hideProjects: "Ocultar proyectos ({count})",
     defaultProject: "Proyecto predeterminado en Magic Bar", noDefaultProject: "Ninguno / ChatGPT normal",
     noProjects: "No hay proyectos en la caché local.",
     projectsDomWarning: "La sincronización abre automáticamente la barra lateral y la sección Proyectos. Usa la interfaz de chatgpt.com, no una API oficial.",
@@ -294,6 +315,7 @@ function applyTranslations(language) {
   document.querySelectorAll("[data-i18n]").forEach((element) => {
     element.textContent = tr(element.dataset.i18n);
   });
+  updateProjectListVisibility();
 }
 
 function setStatus(message, kind = "") {
@@ -306,14 +328,26 @@ function formatProjectDate(value) {
   return new Intl.DateTimeFormat(activeUiLanguage, { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
-function renderProjectSync(sync = { status: "never" }) {
+function renderProjectSync(sync = { status: "never" }, projectCount = currentProjects.length) {
   if (!sync || sync.status === "never") {
-    projectSyncStatus.textContent = tr("neverSynced");
+    projectSyncStatus.textContent = `${tr("neverSynced")} · ${tr("projectsInCache").replace("{count}", String(projectCount))}`;
     projectSyncStatus.className = "runtime-status";
     return;
   }
-  projectSyncStatus.textContent = `${String(sync.status).toUpperCase()} · ${formatProjectDate(sync.at)}${sync.message ? ` · ${sync.message}` : ""}`;
+  const detail = sync.status === "error" && sync.message
+    ? sync.message
+    : tr("projectsInCache").replace("{count}", String(projectCount));
+  projectSyncStatus.textContent = `${String(sync.status).toUpperCase()} · ${formatProjectDate(sync.at)} · ${detail}`;
   projectSyncStatus.className = `runtime-status ${sync.status === "ok" ? "success" : "error"}`;
+}
+
+function updateProjectListVisibility() {
+  if (currentProjects.length === 0) projectsExpanded = false;
+  projectListPanel.hidden = !projectsExpanded;
+  toggleProjectListButton.disabled = currentProjects.length === 0;
+  toggleProjectListButton.setAttribute("aria-expanded", String(projectsExpanded));
+  toggleProjectListButton.textContent = tr(projectsExpanded ? "hideProjects" : "showProjects")
+    .replace("{count}", String(currentProjects.length));
 }
 
 function formatEta(milliseconds) {
@@ -400,7 +434,8 @@ function renderProjects(settings) {
     projectList.append(row);
   }
   defaultProjectInput.value = settings.defaultChatGptProjectId || "";
-  renderProjectSync(settings.projectSyncStatus);
+  updateProjectListVisibility();
+  renderProjectSync(settings.projectSyncStatus, currentProjects.length);
 }
 
 function fillForm(payload) {
@@ -700,6 +735,27 @@ defaultProjectInput.addEventListener("change", async () => {
   } else {
     setStatus(result?.error || tr("projectActionError"), "error");
   }
+});
+
+toggleProjectListButton.addEventListener("click", () => {
+  projectsExpanded = !projectsExpanded;
+  updateProjectListVisibility();
+});
+
+copyLogFileButton.addEventListener("click", async () => {
+  const result = await window.desktopApi.copyLogFile();
+  setStatus(result?.ok ? tr("logFileCopied") : result?.error || tr("logActionError"), result?.ok ? "success" : "error");
+});
+
+copyLogTailButton.addEventListener("click", async () => {
+  const result = await window.desktopApi.copyLogTail();
+  setStatus(result?.ok ? tr("logTailCopied") : result?.error || tr("logActionError"), result?.ok ? "success" : "error");
+});
+
+clearLogButton.addEventListener("click", async () => {
+  if (!window.confirm(tr("confirmClearLog"))) return;
+  const result = await window.desktopApi.clearLog();
+  setStatus(result?.ok ? tr("logCleared") : result?.error || tr("logActionError"), result?.ok ? "success" : "error");
 });
 
 cancelButton.addEventListener("click", () => window.desktopApi.closeSettings());

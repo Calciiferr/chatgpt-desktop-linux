@@ -70,6 +70,7 @@ export interface ProjectScanResult {
 export interface ProjectScanOptions {
   maxShowMoreClicks?: number;
   maxProjects?: number;
+  maxResolvedProjects?: number;
   navigationTimeoutMs?: number;
   scanId?: string;
   onProgress?: (progress: ProjectScanProgress) => void;
@@ -347,41 +348,6 @@ export function mergeProjects(
     return (existingOrder.get(left.id) ?? Number.MAX_SAFE_INTEGER) -
       (existingOrder.get(right.id) ?? Number.MAX_SAFE_INTEGER);
   });
-}
-
-export function pruneProjectsMissingFromBackgroundWindow(
-  existing: readonly ChatGptProject[],
-  sidebarNames: readonly string[],
-  limit = 10,
-): { projects: ChatGptProject[]; removed: ChatGptProject[] } {
-  const boundedLimit = Math.max(1, Math.floor(limit));
-  const indexed = existing.map((project, index) => ({ project, index }));
-  const backgroundWindow = indexed
-    .slice()
-    .sort((left, right) =>
-      (left.project.sidebarOrder ?? left.index) - (right.project.sidebarOrder ?? right.index) ||
-      left.index - right.index)
-    .slice(0, boundedLimit);
-  const windowIds = new Set(backgroundWindow.map(({ project }) => project.id));
-  const keyFor = (project: ChatGptProject): string =>
-    cleanName(project.remoteName ?? project.name).toLocaleLowerCase();
-  const remoteKeys = new Set(
-    sidebarNames.slice(0, boundedLimit).map((name) => cleanName(name).toLocaleLowerCase()),
-  );
-  const localCounts = new Map<string, number>();
-  existing.forEach((project) => {
-    const key = keyFor(project);
-    localCounts.set(key, (localCounts.get(key) ?? 0) + 1);
-  });
-  const removed = existing.filter((project) =>
-    windowIds.has(project.id) &&
-    !remoteKeys.has(keyFor(project)) &&
-    (localCounts.get(keyFor(project)) ?? 0) === 1);
-  const removedIds = new Set(removed.map((project) => project.id));
-  return {
-    projects: existing.filter((project) => !removedIds.has(project.id)).map((project) => ({ ...project })),
-    removed: removed.map((project) => ({ ...project })),
-  };
 }
 
 export function reconcileProjectsFromSidebar(
@@ -784,7 +750,11 @@ export async function snapshotChatGptProjectOrder(
   const completeNames = Array.isArray(coverage.names)
     ? coverage.names.filter((name): name is string => typeof name === "string").map(cleanName)
     : [];
-  const complete = coverage.hasMore === false && completeNames.length > 0;
+  const complete = maxShowMoreClicks === 20 &&
+    maxProjects === 200 &&
+    coverage.hasMore === false &&
+    completeNames.length > 0 &&
+    completeNames.length < maxProjects;
   return {
     names: complete ? completeNames : descriptors.map((item) => item.name),
     descriptors,
@@ -849,6 +819,10 @@ export async function scanChatGptProjects(
   throwIfProjectScanAborted(options.signal);
   const maxShowMoreClicks = Math.min(20, Math.max(0, options.maxShowMoreClicks ?? 20));
   const maxProjects = Math.min(200, Math.max(1, options.maxProjects ?? 200));
+  const maxResolvedProjects = Math.min(
+    maxProjects,
+    Math.max(1, options.maxResolvedProjects ?? maxProjects),
+  );
   const navigationTimeoutMs = Math.min(30_000, Math.max(2_000, options.navigationTimeoutMs ?? 12_000));
   const scanId = options.scanId ?? `scan-${Date.now()}`;
   const emit = (progress: Omit<ProjectScanProgress, "scanId">): void => {
@@ -860,7 +834,7 @@ export async function scanChatGptProjects(
     maxProjects,
     signal: options.signal,
   });
-  const descriptors = snapshot.descriptors;
+  const descriptors = snapshot.descriptors.slice(0, maxResolvedProjects);
   if (descriptors.length === 0) {
     return {
       status: "error",

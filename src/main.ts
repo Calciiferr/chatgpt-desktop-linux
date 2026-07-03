@@ -35,7 +35,7 @@ import {
   touchCompanionDraftState,
   updateCompanionDraftState,
 } from "./companion-draft";
-import { initializeLogger, log } from "./logger";
+import { clearLogFile, initializeLogger, log, readLogTail } from "./logger";
 import { syncKdeShortcut } from "./kde-shortcuts";
 import {
   startKWinCompanionController,
@@ -49,7 +49,6 @@ import {
   type ProjectScanProgress,
   createChatGptProject,
   mergeProjects,
-  pruneProjectsMissingFromBackgroundWindow,
   reconcileProjectsFromSidebar,
   scanChatGptProjects,
 } from "./chatgpt-projects";
@@ -1258,7 +1257,9 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
         return scanChatGptProjects(window.webContents, {
           scanId,
           signal,
-          ...(isBackground ? { maxShowMoreClicks: 1, maxProjects: 10 } : {}),
+          ...(isBackground
+            ? { maxShowMoreClicks: 20, maxProjects: 200, maxResolvedProjects: 10 }
+            : {}),
           ...(!isBackground
             ? {
                 onProgress: (progress: ProjectScanProgress) => {
@@ -1278,6 +1279,11 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       },
     );
     const at = new Date().toISOString();
+    log.info(
+      `[projects:${scanId}] Sidebar observée=${result.sidebarNames.length}, ` +
+        `couverture=${result.sidebarComplete ? "complète" : "partielle"}, ` +
+        `projets contrôlés=${result.discovered}.`,
+    );
     for (const project of result.projects) {
       const index = project.sidebarOrder ?? -1;
       log.info(
@@ -1323,29 +1329,14 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     }
     // A full scan already associates each URL/projectId with its exact initial
     // sidebar position. Reordering again by name would group same-name projects.
-    const removeMissing = result.status === "ok" &&
-      result.failures.length === 0 &&
-      (!isBackground || result.sidebarComplete);
+    const removeMissing = result.sidebarComplete;
     if (isBackground && !result.sidebarComplete) {
       log.info(
         `[projects:${scanId}] Liste background partielle : suppressions distantes reportées, cache conservé.`,
       );
     }
-    const backgroundPrune = isBackground
-      ? pruneProjectsMissingFromBackgroundWindow(
-          currentSettings.chatGptProjects,
-          result.sidebarNames,
-          10,
-        )
-      : { projects: currentSettings.chatGptProjects, removed: [] };
-    if (backgroundPrune.removed.length > 0) {
-      log.info(
-        `[projects:${scanId}] Projet(s) absent(s) de la fenêtre background supprimé(s) : ` +
-          backgroundPrune.removed.map((project) => `« ${project.remoteName ?? project.name} »`).join(", "),
-      );
-    }
     const mergedProjects = reconcileProjectsFromSidebar(
-      backgroundPrune.projects,
+      currentSettings.chatGptProjects,
       result.projects,
       result.sidebarNames,
       at,
@@ -1366,16 +1357,23 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
         percent: 100,
       });
     }
+    const mergedIds = new Set(mergedProjects.map((project) => project.id));
     const nextSettings: AppSettings = {
       ...currentSettings,
       chatGptProjects: mergedProjects,
-      projectSyncStatus: isBackground
-        ? currentSettings.projectSyncStatus
-        : {
-            status: result.status,
-            at,
-            message: `${mergedProjects.length} projet(s) synchronisé(s).`,
-          },
+      defaultChatGptProjectId: currentSettings.defaultChatGptProjectId &&
+        mergedIds.has(currentSettings.defaultChatGptProjectId)
+        ? currentSettings.defaultChatGptProjectId
+        : undefined,
+      lastSelectedChatGptProjectId: currentSettings.lastSelectedChatGptProjectId &&
+        mergedIds.has(currentSettings.lastSelectedChatGptProjectId)
+        ? currentSettings.lastSelectedChatGptProjectId
+        : undefined,
+      projectSyncStatus: {
+        status: result.status,
+        at,
+        message: `${mergedProjects.length} projet(s) dans le cache local.`,
+      },
     };
     saveProjectSettings(nextSettings);
     const verified = settingsStore?.load();
@@ -3792,6 +3790,42 @@ function registerIpcHandlers(): void {
       return false;
     }
     return resetSessionWithConfirmation();
+  });
+
+  ipcMain.handle("diagnostics:copy-log-file", (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
+      return { ok: false, error: "Source IPC non autorisée." };
+    }
+    try {
+      if (!logFilePath || !fs.existsSync(logFilePath)) {
+        return { ok: false, error: "Fichier journal introuvable." };
+      }
+      const fileUri = `${pathToFileURL(logFilePath).href}\r\n`;
+      clipboard.writeBuffer("text/uri-list", Buffer.from(fileUri, "utf8"), "clipboard");
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Copie du journal impossible.",
+      };
+    }
+  });
+
+  ipcMain.handle("diagnostics:copy-log-tail", (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
+      return { ok: false, error: "Source IPC non autorisée." };
+    }
+    clipboard.writeText(readLogTail(100), "clipboard");
+    return { ok: true };
+  });
+
+  ipcMain.handle("diagnostics:clear-log", (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
+      return { ok: false, error: "Source IPC non autorisée." };
+    }
+    return clearLogFile()
+      ? { ok: true }
+      : { ok: false, error: "Réinitialisation du journal impossible." };
   });
 
   ipcMain.handle("window:reset-bounds", (event) => {
