@@ -42,7 +42,7 @@ import {
   stopKWinCompanionController,
 } from "./kwin-companion-controller";
 import { syncKWinPositionMemory } from "./kwin-position-memory";
-import { ChatResponseMonitor } from "./response-monitor";
+import { ChatResponseMonitor, shouldThrottleChatTab } from "./response-monitor";
 import { inspectChatPageState } from "./chat-page-state";
 import {
   type ChatGptProject,
@@ -132,6 +132,7 @@ interface ChatTab {
   title: string;
   loading: boolean;
   monitor: ChatResponseMonitor;
+  backgroundThrottling: boolean;
 }
 
 let mainWindow: BrowserWindow | null = null;
@@ -416,11 +417,13 @@ function visibleWindowUsesTaskbar(
 function markMainWindowVisible(): void {
   mainWindowHiddenSince = null;
   updateTrayMenu();
+  syncChatTabThrottling();
 }
 
 function markMainWindowHidden(): void {
   mainWindowHiddenSince ??= Date.now();
   updateTrayMenu();
+  syncChatTabThrottling();
 }
 
 function showWindow(): void {
@@ -439,6 +442,7 @@ function showWindow(): void {
   mainWindowHiddenSince = null;
   mainWindow.show();
   mainWindow.focus();
+  syncChatTabThrottling();
   updateTrayMenu();
   if (!wasVisible) {
     log.info(`[window] Fenêtre affichée (shell prêt : ${shellReady ? "oui" : "non"}).`);
@@ -523,6 +527,7 @@ function hideWindow(notify = false): void {
       log.info("[window] Fenêtre cachée dans la zone de notification.");
     }
   }
+  syncChatTabThrottling();
   updateTrayMenu();
   if (notify) {
     showHiddenNotification();
@@ -672,6 +677,23 @@ function sendTabState(): void {
   });
 }
 
+function syncChatTabThrottling(): void {
+  const windowVisible = Boolean(mainWindow?.isVisible());
+  const windowMinimized = Boolean(mainWindow?.isMinimized());
+  for (const tab of chatTabs) {
+    if (tab.view.webContents.isDestroyed()) continue;
+    const next = shouldThrottleChatTab({
+      windowVisible,
+      windowMinimized,
+      active: tab.id === activeChatTabId,
+      generating: tab.monitor.isGenerationInProgress(),
+    });
+    if (tab.backgroundThrottling === next) continue;
+    tab.view.webContents.setBackgroundThrottling(next);
+    tab.backgroundThrottling = next;
+  }
+}
+
 function layoutChatViews(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const bounds = mainWindow.getContentBounds();
@@ -680,6 +702,7 @@ function layoutChatViews(): void {
     tab.view.setBounds({ x: 0, y: top, width: bounds.width, height: Math.max(1, bounds.height - top) });
     tab.view.setVisible(tab.id === activeChatTabId);
   }
+  syncChatTabThrottling();
   positionSearchView();
   if (refreshView) {
     refreshView.setBounds({
@@ -797,8 +820,19 @@ function createChatTab(url = CHATGPT_URL, activate = true): ChatTab | null {
     },
   });
   view.setBackgroundColor(resolvedThemeBackground());
-  const monitor = new ChatResponseMonitor(view.webContents, () => notifyResponseFinished(id));
-  const tab: ChatTab = { id, view, title: APP_TITLE, loading: true, monitor };
+  const monitor = new ChatResponseMonitor(
+    view.webContents,
+    () => notifyResponseFinished(id),
+    () => syncChatTabThrottling(),
+  );
+  const tab: ChatTab = {
+    id,
+    view,
+    title: APP_TITLE,
+    loading: true,
+    monitor,
+    backgroundThrottling: false,
+  };
   chatTabs.push(tab);
   mainWindow.contentView.addChildView(view);
   view.webContents.setWindowOpenHandler(({ url: target }) => {

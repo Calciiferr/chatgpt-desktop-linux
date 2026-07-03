@@ -4,6 +4,19 @@ import { log } from "./logger";
 const POLL_INTERVAL_MS = 1_000;
 const REQUIRED_IDLE_POLLS = 2;
 
+export interface ChatTabThrottlingState {
+  windowVisible: boolean;
+  windowMinimized: boolean;
+  active: boolean;
+  generating: boolean;
+}
+
+export function shouldThrottleChatTab(state: ChatTabThrottlingState): boolean {
+  if (state.generating) return false;
+  if (!state.windowVisible || state.windowMinimized) return true;
+  return !state.active;
+}
+
 // Keep every chatgpt.com-specific selector in this module. If the website changes,
 // response monitoring can be disabled without affecting the rest of the application.
 const GENERATION_STATE_SCRIPT = String.raw`(() => {
@@ -33,7 +46,12 @@ export class ChatResponseMonitor {
   public constructor(
     private readonly webContents: WebContents,
     private readonly onResponseFinished: () => void,
+    private readonly onGenerationStateChanged?: (generating: boolean) => void,
   ) {}
+
+  public isGenerationInProgress(): boolean {
+    return this.generationObserved;
+  }
 
   public start(): void {
     if (this.timer || this.webContents.isDestroyed()) {
@@ -52,7 +70,10 @@ export class ChatResponseMonitor {
   }
 
   public reset(): void {
-    this.generationObserved = false;
+    if (this.generationObserved) {
+      this.generationObserved = false;
+      this.onGenerationStateChanged?.(false);
+    }
     this.idlePolls = 0;
   }
 
@@ -76,8 +97,9 @@ export class ChatResponseMonitor {
       if (generating) {
         if (!this.generationObserved) {
           log.info("[response-monitor] Génération détectée.");
+          this.generationObserved = true;
+          this.onGenerationStateChanged?.(true);
         }
-        this.generationObserved = true;
         this.idlePolls = 0;
         return;
       }
