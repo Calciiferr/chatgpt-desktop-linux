@@ -49,6 +49,7 @@ import {
   type ProjectScanProgress,
   createChatGptProject,
   mergeProjects,
+  pruneProjectsMissingFromBackgroundWindow,
   reconcileProjectsFromSidebar,
   scanChatGptProjects,
 } from "./chatgpt-projects";
@@ -1330,8 +1331,21 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
         `[projects:${scanId}] Liste background partielle : suppressions distantes reportées, cache conservé.`,
       );
     }
+    const backgroundPrune = isBackground
+      ? pruneProjectsMissingFromBackgroundWindow(
+          currentSettings.chatGptProjects,
+          result.sidebarNames,
+          10,
+        )
+      : { projects: currentSettings.chatGptProjects, removed: [] };
+    if (backgroundPrune.removed.length > 0) {
+      log.info(
+        `[projects:${scanId}] Projet(s) absent(s) de la fenêtre background supprimé(s) : ` +
+          backgroundPrune.removed.map((project) => `« ${project.remoteName ?? project.name} »`).join(", "),
+      );
+    }
     const mergedProjects = reconcileProjectsFromSidebar(
-      currentSettings.chatGptProjects,
+      backgroundPrune.projects,
       result.projects,
       result.sidebarNames,
       at,

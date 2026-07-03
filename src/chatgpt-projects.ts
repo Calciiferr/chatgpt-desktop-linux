@@ -349,6 +349,41 @@ export function mergeProjects(
   });
 }
 
+export function pruneProjectsMissingFromBackgroundWindow(
+  existing: readonly ChatGptProject[],
+  sidebarNames: readonly string[],
+  limit = 10,
+): { projects: ChatGptProject[]; removed: ChatGptProject[] } {
+  const boundedLimit = Math.max(1, Math.floor(limit));
+  const indexed = existing.map((project, index) => ({ project, index }));
+  const backgroundWindow = indexed
+    .slice()
+    .sort((left, right) =>
+      (left.project.sidebarOrder ?? left.index) - (right.project.sidebarOrder ?? right.index) ||
+      left.index - right.index)
+    .slice(0, boundedLimit);
+  const windowIds = new Set(backgroundWindow.map(({ project }) => project.id));
+  const keyFor = (project: ChatGptProject): string =>
+    cleanName(project.remoteName ?? project.name).toLocaleLowerCase();
+  const remoteKeys = new Set(
+    sidebarNames.slice(0, boundedLimit).map((name) => cleanName(name).toLocaleLowerCase()),
+  );
+  const localCounts = new Map<string, number>();
+  existing.forEach((project) => {
+    const key = keyFor(project);
+    localCounts.set(key, (localCounts.get(key) ?? 0) + 1);
+  });
+  const removed = existing.filter((project) =>
+    windowIds.has(project.id) &&
+    !remoteKeys.has(keyFor(project)) &&
+    (localCounts.get(keyFor(project)) ?? 0) === 1);
+  const removedIds = new Set(removed.map((project) => project.id));
+  return {
+    projects: existing.filter((project) => !removedIds.has(project.id)).map((project) => ({ ...project })),
+    removed: removed.map((project) => ({ ...project })),
+  };
+}
+
 export function reconcileProjectsFromSidebar(
   existing: readonly ChatGptProject[],
   resolved: readonly ChatGptProject[],

@@ -11,6 +11,7 @@ const {
   mergeProjects,
   normalizeProjectUrl,
   normalizeStoredProjects,
+  pruneProjectsMissingFromBackgroundWindow,
   reconcileProjectsFromSidebar,
   reorderProjectsFromSidebar,
   scanChatGptProjects,
@@ -94,6 +95,33 @@ const retainedAfterPartialScan = reconcileProjectsFromSidebar(
 assert.deepEqual(
   retainedAfterPartialScan.map((project) => project.id).sort(),
   [scanned.id, between.id].sort(),
+);
+const backgroundCache = Array.from({ length: 12 }, (_value, index) => createProjectRecord(
+  index === 6 ? "test 7" : `Cache ${index + 1}`,
+  `https://chatgpt.com/g/g-p-${String(index + 300).padStart(32, "0")}-cache-${index + 1}/project`,
+  "scan",
+)).map((project, index) => ({ ...project, sidebarOrder: index }));
+const backgroundNames = backgroundCache
+  .slice(0, 10)
+  .filter((project) => project.name !== "test 7")
+  .map((project) => project.name)
+  .concat("Nouveau distant");
+const prunedBackground = pruneProjectsMissingFromBackgroundWindow(
+  backgroundCache,
+  backgroundNames,
+  10,
+);
+assert.deepEqual(prunedBackground.removed.map((project) => project.name), ["test 7"]);
+assert.equal(prunedBackground.projects.some((project) => project.name === "test 7"), false);
+assert.equal(prunedBackground.projects.some((project) => project.id === backgroundCache[10].id), true);
+assert.equal(prunedBackground.projects.some((project) => project.id === backgroundCache[11].id), true);
+const homonymCache = [
+  { ...backgroundCache[0], name: "Même nom", remoteName: "Même nom", sidebarOrder: 0 },
+  { ...backgroundCache[10], name: "Même nom", remoteName: "Même nom", sidebarOrder: 10 },
+];
+assert.equal(
+  pruneProjectsMissingFromBackgroundWindow(homonymCache, ["Autre"], 10).removed.length,
+  0,
 );
 assert.equal(normalizeStoredProjects([{ name: "Conversation", url: "https://chatgpt.com/c/123" }]).length, 0);
 
@@ -335,6 +363,7 @@ assert.match(
   synchronizeFunction,
   /result\.status === "ok"[\s\S]*result\.failures\.length === 0[\s\S]*!isBackground \|\| result\.sidebarComplete/,
 );
+assert.match(synchronizeFunction, /pruneProjectsMissingFromBackgroundWindow\([\s\S]*result\.sidebarNames[\s\S]*10/);
 assert.match(backgroundFunction, /powerMonitor\.getSystemIdleTime\(\)/);
 assert.match(backgroundFunction, /projectSyncSkipReason\("background"/);
 assert.match(mainSource, /nativeTheme\.themeSource\s*=\s*mode/);
