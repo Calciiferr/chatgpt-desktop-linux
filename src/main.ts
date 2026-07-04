@@ -91,7 +91,7 @@ const MAGIC_BAR_WIDTH = 680;
 const MAGIC_BAR_FALLBACK_HEIGHT = 190;
 const MAGIC_BAR_MIN_HEIGHT = 80;
 const MAGIC_MENU_WIDTH = 280;
-const MAGIC_MENU_HEIGHT = 270;
+const MAGIC_MENU_HEIGHT = 228;
 const MAGIC_MENU_GAP = 2;
 const SEARCH_VIEW_WIDTH = 390;
 const SEARCH_VIEW_HEIGHT = 46;
@@ -3114,7 +3114,10 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
     const result = syncKdeShortcut("main", accelerator);
     if (result.applied) {
       registeredShortcut = accelerator;
-      log.info(`[shortcut] ${accelerator} appliqué via KGlobalAccel.`);
+      log.info(
+        `[shortcut] ${accelerator} appliqué via KGlobalAccel ` +
+          `(action=${result.actionId ?? "?"}, migration _launch=${result.legacyMigrated ? "oui" : "non"}).`,
+      );
       return true;
     }
     if (previousShortcut) {
@@ -3122,7 +3125,10 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
       registeredShortcut = previousShortcut;
     }
     if (logFailure) {
-      log.error(`[shortcut] Échec KGlobalAccel (${accelerator}) : ${result.error ?? "inconnu"}`);
+      log.error(
+        `[shortcut] Échec KGlobalAccel (${accelerator}, action=${result.actionId ?? "?"}) : ` +
+          `${result.error ?? "inconnu"}`,
+      );
     }
     return false;
   }
@@ -3190,7 +3196,10 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
     const result = syncKdeShortcut("companion", accelerator);
     if (result.applied) {
       registeredCompanionShortcut = accelerator;
-      log.info(`[shortcut] ${accelerator} (Magic Bar) appliqué via KGlobalAccel.`);
+      log.info(
+        `[shortcut] ${accelerator} (Magic Bar) appliqué via KGlobalAccel ` +
+          `(action=${result.actionId ?? "?"}).`,
+      );
       return true;
     }
     if (previousShortcut) {

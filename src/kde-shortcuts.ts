@@ -36,13 +36,24 @@ export type KdeShortcutAction = "main" | "companion";
 export interface KdeShortcutResult {
   available: boolean;
   applied: boolean;
+  actionId?: string;
+  legacyMigrated?: boolean;
   error?: string;
 }
 
-function actionDetails(action: KdeShortcutAction): { id: string; name: string } {
+export function kdeShortcutActionDetails(action: KdeShortcutAction): { id: string; name: string } {
   return action === "main"
-    ? { id: "_launch", name: "ChatGPT" }
+    ? { id: "Toggle", name: "Afficher/masquer ChatGPT" }
     : { id: "Companion", name: "Ouvrir la Magic Bar" };
+}
+
+function actionIdentifier(details: { id: string; name: string }): string {
+  return `['${COMPONENT_ID}', '${details.id}', '${COMPONENT_NAME}', '${details.name}']`;
+}
+
+function keysFromResult(result: ReturnType<typeof spawnSync>): number[] {
+  if (result.error || result.status !== 0) return [];
+  return [...String(result.stdout).matchAll(/-?\d+/g)].map((match) => Number(match[0]));
 }
 
 export function acceleratorToQtKey(accelerator: string): number | null {
@@ -94,19 +105,46 @@ export function syncKdeShortcut(
   accelerator: string,
   enabled = true,
 ): KdeShortcutResult {
-  const details = actionDetails(action);
+  const details = kdeShortcutActionDetails(action);
   const qtKey = enabled ? acceleratorToQtKey(accelerator) : 0;
   if (enabled && qtKey === null) {
     return { available: true, applied: false, error: "Raccourci non convertible pour KDE." };
   }
 
-  const actionId = `['${COMPONENT_ID}', '${details.id}', '${COMPONENT_NAME}', '${details.name}']`;
+  const actionId = actionIdentifier(details);
   const keys = enabled ? `[${qtKey}]` : "[]";
+  const legacyActionId = action === "main"
+    ? actionIdentifier({ id: "_launch", name: "ChatGPT" })
+    : undefined;
+  const legacyKeys = legacyActionId ? keysFromResult(runGdbus("shortcut", [legacyActionId])) : [];
+  let legacyMigrated = false;
+  const restoreLegacy = (): void => {
+    if (!legacyActionId || legacyKeys.length === 0) return;
+    runGdbus("doRegister", [legacyActionId]);
+    runGdbus("setForeignShortcut", [legacyActionId, `[${legacyKeys.join(",")}]`]);
+  };
+  if (legacyActionId && legacyKeys.length > 0) {
+    const clearLegacyResult = runGdbus("setForeignShortcut", [legacyActionId, "[]"]);
+    if (clearLegacyResult.error || clearLegacyResult.status !== 0) {
+      return {
+        available: false,
+        applied: false,
+        actionId: details.id,
+        error:
+          clearLegacyResult.error?.message ||
+          String(clearLegacyResult.stderr).trim() ||
+          "Migration de l’ancienne action KGlobalAccel impossible.",
+      };
+    }
+    legacyMigrated = true;
+  }
   const registerResult = runGdbus("doRegister", [actionId]);
   if (registerResult.error || registerResult.status !== 0) {
+    restoreLegacy();
     return {
       available: false,
       applied: false,
+      actionId: details.id,
       error:
         registerResult.error?.message ||
         String(registerResult.stderr).trim() ||
@@ -115,9 +153,11 @@ export function syncKdeShortcut(
   }
   const setResult = runGdbus("setForeignShortcut", [actionId, keys]);
   if (setResult.error || setResult.status !== 0) {
+    restoreLegacy();
     return {
       available: false,
       applied: false,
+      actionId: details.id,
       error:
         setResult.error?.message || String(setResult.stderr).trim() || "KGlobalAccel indisponible.",
     };
@@ -125,20 +165,24 @@ export function syncKdeShortcut(
 
   const readResult = runGdbus("shortcut", [actionId]);
   if (readResult.error || readResult.status !== 0) {
+    restoreLegacy();
     return {
       available: false,
       applied: false,
+      actionId: details.id,
       error:
         readResult.error?.message || String(readResult.stderr).trim() || "Vérification KDE impossible.",
     };
   }
-  const registeredKeys = [...String(readResult.stdout).matchAll(/-?\d+/g)].map((match) =>
-    Number(match[0]),
-  );
+  const registeredKeys = keysFromResult(readResult);
   const applied = enabled ? registeredKeys.includes(qtKey as number) : registeredKeys.length === 0;
+  if (!applied) restoreLegacy();
+  if (applied && legacyMigrated && legacyActionId) runGdbus("unRegister", [legacyActionId]);
   return {
     available: true,
     applied,
+    actionId: details.id,
+    legacyMigrated,
     ...(applied
       ? {}
       : {

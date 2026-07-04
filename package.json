@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-desktop-linux",
-  "version": "0.7.0-beta.17",
+  "version": "0.7.0-beta.18",
   "private": true,
   "description": "Personal ChatGPT desktop wrapper for Linux, KDE Plasma and Wayland",
   "homepage": "https://chatgpt.com/",
@@ -89,12 +89,16 @@
           "GenericName": "Assistant IA",
           "Comment": "Utiliser ChatGPT dans une fenêtre dédiée",
           "Keywords": "ChatGPT;OpenAI;IA;AI;Assistant;",
-          "Actions": "Companion;Clipboard;Settings;",
-          "X-KDE-Shortcuts": "Ctrl+Alt+G",
+          "Actions": "Toggle;Companion;Clipboard;Settings;",
           "Terminal": "false",
           "StartupNotify": "true"
         },
         "desktopActions": {
+          "Toggle": {
+            "Name": "Afficher/masquer ChatGPT",
+            "Exec": "chatgpt-desktop-linux --toggle",
+            "X-KDE-Shortcuts": "Ctrl+Alt+G"
+          },
           "Companion": {
             "Name": "Ouvrir la Magic Bar",
             "Exec": "chatgpt-desktop-linux --companion",

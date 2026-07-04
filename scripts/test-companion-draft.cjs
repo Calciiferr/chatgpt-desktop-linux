@@ -116,6 +116,7 @@ const preloadSource = fs.readFileSync(path.join(root, "src/companion-preload.ts"
 const desktopPreloadSource = fs.readFileSync(path.join(root, "src/preload.ts"), "utf8");
 const settingsSource = fs.readFileSync(path.join(root, "src/settings-store.ts"), "utf8");
 const packageSource = fs.readFileSync(path.join(root, "package.json"), "utf8");
+const companionMenuHtml = fs.readFileSync(path.join(root, "renderer/companion-menu.html"), "utf8");
 
 const showFunction = mainSource.match(/async function showCompanionWindow[\s\S]*?\n}\n\nasync function chooseCompanionFiles/)?.[0] || "";
 const createCompanionFunction = mainSource.match(/function createCompanionWindow[\s\S]*?\n}\n\nfunction createCompanionMenuWindow/)?.[0] || "";
@@ -172,6 +173,10 @@ assert.match(mainSource, /nativeTheme\.shouldUseDarkColors \? "tray-icon\.png" :
 assert.match(mainSource, /tray\.setImage\(currentTrayIcon\(\)\)/);
 assert.match(packageSource, /assets\/tray-icon-light\.png/);
 assert.ok(fs.existsSync(path.join(root, "assets/tray-icon-light.png")));
+const configuredMenuHeight = Number(mainSource.match(/MAGIC_MENU_HEIGHT = (\d+)/)?.[1]);
+const menuButtonCount = (companionMenuHtml.match(/<button\b/g) || []).length;
+assert.equal(menuButtonCount, 5);
+assert.equal(configuredMenuHeight, menuButtonCount * 42 + 18);
 
 class MockSignal {
   constructor() { this.callbacks = []; }
@@ -220,7 +225,7 @@ windows.push(remappedBar);
 windowAdded.emit(remappedBar);
 assert.deepEqual(remappedBar.frameGeometry, { x: 120, y: 0, width: 680, height: 140 });
 
-const menu = mockWindow("ChatGPT Magic Bar Menu", { x: 800, y: 500, width: 280, height: 270 });
+const menu = mockWindow("ChatGPT Magic Bar Menu", { x: 800, y: 500, width: 280, height: 228 });
 windows.push(menu);
 windowAdded.emit(menu);
 assert.equal(menu.frameGeometry.x, 120);
@@ -228,6 +233,6 @@ assert.equal(menu.frameGeometry.y, 142);
 
 remappedBar.frameGeometry = { x: 300, y: 500, width: 680, height: 140 };
 assert.equal(menu.frameGeometry.x, 300);
-assert.equal(menu.frameGeometry.y, 228);
+assert.equal(menu.frameGeometry.y, 270);
 
 console.log("Companion session draft lifecycle tests passed.");
