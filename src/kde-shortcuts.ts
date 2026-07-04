@@ -45,7 +45,7 @@ function actionDetails(action: KdeShortcutAction): { id: string; name: string } 
     : { id: "Companion", name: "Ouvrir la Magic Bar" };
 }
 
-function acceleratorToQtKey(accelerator: string): number | null {
+export function acceleratorToQtKey(accelerator: string): number | null {
   const parts = accelerator
     .split("+")
     .map((part) => part.trim())
@@ -102,6 +102,17 @@ export function syncKdeShortcut(
 
   const actionId = `['${COMPONENT_ID}', '${details.id}', '${COMPONENT_NAME}', '${details.name}']`;
   const keys = enabled ? `[${qtKey}]` : "[]";
+  const registerResult = runGdbus("doRegister", [actionId]);
+  if (registerResult.error || registerResult.status !== 0) {
+    return {
+      available: false,
+      applied: false,
+      error:
+        registerResult.error?.message ||
+        String(registerResult.stderr).trim() ||
+        "Enregistrement de l’action KGlobalAccel impossible.",
+    };
+  }
   const setResult = runGdbus("setForeignShortcut", [actionId, keys]);
   if (setResult.error || setResult.status !== 0) {
     return {
@@ -128,6 +139,12 @@ export function syncKdeShortcut(
   return {
     available: true,
     applied,
-    ...(applied ? {} : { error: "KDE n’a pas appliqué le raccourci demandé." }),
+    ...(applied
+      ? {}
+      : {
+          error:
+            `KDE n’a pas appliqué le raccourci demandé ` +
+            `(attendu=${enabled ? qtKey : "aucun"}, retourné=${registeredKeys.join(",") || "aucun"}).`,
+        }),
   };
 }
