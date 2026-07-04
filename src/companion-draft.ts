@@ -76,6 +76,20 @@ export function touchCompanionDraftState(current: CompanionDraftState): Companio
   return { ...current, version: current.version + 1 };
 }
 
+export function appendCompanionPromptText(
+  current: CompanionDraftState,
+  textValue: string,
+): CompanionDraftState {
+  const text = textValue.trim();
+  if (!text) return current;
+  const separator = current.prompt ? "\n\n" : "";
+  return {
+    ...current,
+    version: current.version + 1,
+    prompt: `${current.prompt}${separator}${text}`.slice(0, 12_000),
+  };
+}
+
 export function retargetCompanionDraftState(
   current: CompanionDraftState,
   projectId: string,

@@ -4,24 +4,21 @@ const translations = {
     region: "Capturer une zone",
     window: "Capturer une fenêtre",
     screen: "Capturer l’écran",
-    clipboardText: "Ajouter le presse-papiers",
-    clipboardImage: "Ajouter les fichiers/images copiés",
+    clipboardImport: "Ajouter depuis le presse-papiers",
   },
   en: {
     files: "Add files",
     region: "Capture region",
     window: "Capture window",
     screen: "Capture screen",
-    clipboardText: "Add clipboard text",
-    clipboardImage: "Add copied files/images",
+    clipboardImport: "Add from clipboard",
   },
   es: {
     files: "Añadir archivos",
     region: "Capturar una zona",
     window: "Capturar una ventana",
     screen: "Capturar la pantalla",
-    clipboardText: "Añadir texto del portapapeles",
-    clipboardImage: "Añadir archivos/imágenes copiados",
+    clipboardImport: "Añadir desde el portapapeles",
   },
 };
 
@@ -65,14 +62,9 @@ for (const [selector, mode] of [["#capture-region", "region"], ["#capture-window
   });
 }
 
-document.querySelector("#clipboard-image").addEventListener("click", async () => {
+document.querySelector("#clipboard-import").addEventListener("click", async () => {
   closeMenu();
-  await window.companionApi.addClipboardImage();
-});
-
-document.querySelector("#clipboard-text").addEventListener("click", async () => {
-  closeMenu();
-  await window.companionApi.addClipboardText();
+  await window.companionApi.addClipboard();
 });
 
 document.addEventListener("keydown", (event) => {

@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const {
+  appendCompanionPromptText,
   emptyCompanionDraft,
   initialCompanionDraft,
   reconcileCompanionDraftProjectState,
@@ -97,6 +98,12 @@ assert.equal(invalid.invalidProject, true);
 assert.equal(invalid.draft.projectEnabled, false);
 
 assert.equal(touchCompanionDraftState(invalid.draft).version, invalid.draft.version + 1);
+const appendedPrompt = appendCompanionPromptText({ ...initial, prompt: "Déjà présent" }, "Nouveau texte");
+assert.equal(appendedPrompt.prompt, "Déjà présent\n\nNouveau texte");
+assert.equal(appendedPrompt.version, initial.version + 1);
+assert.equal(appendedPrompt.selectedProjectId, initial.selectedProjectId);
+assert.equal(appendCompanionPromptText(appendedPrompt, "   "), appendedPrompt);
+assert.equal(appendCompanionPromptText({ ...initial, prompt: "x".repeat(11_999) }, "suite").prompt.length, 12_000);
 assert.equal(updateCompanionDraftState(empty, { prompt: "x".repeat(13_000) }, isKnown).draft.prompt.length, 12_000);
 assert.equal(updateCompanionDraftState(empty, { newProjectName: "x".repeat(150) }, isKnown).draft.newProjectName.length, 120);
 

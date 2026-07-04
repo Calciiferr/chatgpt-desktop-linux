@@ -2,7 +2,7 @@ const translations = {
   fr: {
     close: "Fermer", addContext: "Ajouter du contexte", chatDestination: "Conversation cible",
     requestPlaceholder: "Message ChatGPT", files: "Ajouter des fichiers", region: "Capturer une zone",
-    window: "Capturer une fenêtre", screen: "Capturer l’écran", clipboardImage: "Ajouter les fichiers/images copiés",
+    window: "Capturer une fenêtre", screen: "Capturer l’écran", clipboardEmpty: "Aucun contenu compatible dans le presse-papiers.",
     securityAudit: "Audit sécurité", qualityAudit: "Audit qualité",
     projectLabel: "Projet", noProjectsSynced: "Aucun projet synchronisé", pinnedProjects: "Projets épinglés", otherProjects: "Autres projets", createProject: "Créer un nouveau projet…",
     refreshProjects: "↻ Actualiser les projets", manageProjects: "Gérer les projets…",
@@ -11,13 +11,13 @@ const translations = {
     newProjectPlaceholder: "Nom du nouveau projet", projectNameRequired: "Saisissez le nom du nouveau projet.",
     newChat: "Nouveau", resumeChat: "Dernier", prepare: "Préparer dans ChatGPT",
     emptyError: "Écrivez une demande ou ajoutez un contexte.", preparing: "Préparation dans ChatGPT…",
-    fallback: "Le texte a été copié. Joignez les fichiers manuellement.", imageMissing: "Aucun fichier ni aucune image compatible dans le presse-papiers.",
+    fallback: "Le texte a été copié. Joignez les fichiers manuellement.",
     captureError: "Capture annulée ou indisponible.", transferError: "Transfert impossible.",
   },
   en: {
     close: "Close", addContext: "Add context", chatDestination: "Target conversation",
     requestPlaceholder: "Message ChatGPT", files: "Add files", region: "Capture region", window: "Capture window",
-    screen: "Capture screen", clipboardImage: "Add copied files/images", newChat: "New", resumeChat: "Last",
+    screen: "Capture screen", clipboardEmpty: "No compatible clipboard content.", newChat: "New", resumeChat: "Last",
     securityAudit: "Security audit", qualityAudit: "Quality audit",
     projectLabel: "Project", noProjectsSynced: "No synchronized project", pinnedProjects: "Pinned projects", otherProjects: "Other projects", createProject: "Create a new project…",
     refreshProjects: "↻ Refresh projects", manageProjects: "Manage projects…",
@@ -25,13 +25,13 @@ const translations = {
     projectsLoading: "Loading scanner…", projectsDiscovering: "Detecting projects…", projectsSaving: "Saving…", approximately: "about",
     newProjectPlaceholder: "New project name", projectNameRequired: "Enter the new project name.",
     prepare: "Prepare in ChatGPT", emptyError: "Write a request or add context.", preparing: "Preparing in ChatGPT…",
-    fallback: "The text was copied. Attach files manually.", imageMissing: "No compatible files or images in the clipboard.",
+    fallback: "The text was copied. Attach files manually.",
     captureError: "Capture cancelled or unavailable.", transferError: "Transfer failed.",
   },
   es: {
     close: "Cerrar", addContext: "Añadir contexto", chatDestination: "Conversación de destino",
     requestPlaceholder: "Mensaje para ChatGPT", files: "Añadir archivos", region: "Capturar una zona",
-    window: "Capturar una ventana", screen: "Capturar la pantalla", clipboardImage: "Añadir archivos/imágenes copiados",
+    window: "Capturar una ventana", screen: "Capturar la pantalla", clipboardEmpty: "No hay contenido compatible en el portapapeles.",
     securityAudit: "Auditoría de seguridad", qualityAudit: "Auditoría de calidad",
     projectLabel: "Proyecto", noProjectsSynced: "Ningún proyecto sincronizado", pinnedProjects: "Proyectos fijados", otherProjects: "Otros proyectos", createProject: "Crear un nuevo proyecto…",
     refreshProjects: "↻ Actualizar proyectos", manageProjects: "Gestionar proyectos…",
@@ -40,7 +40,7 @@ const translations = {
     newProjectPlaceholder: "Nombre del nuevo proyecto", projectNameRequired: "Introduce el nombre del nuevo proyecto.",
     newChat: "Nuevo", resumeChat: "Último", prepare: "Preparar en ChatGPT",
     emptyError: "Escribe una solicitud o añade contexto.", preparing: "Preparando en ChatGPT…",
-    fallback: "El texto se copió. Adjunta los archivos manualmente.", imageMissing: "No hay archivos ni imágenes compatibles en el portapapeles.",
+    fallback: "El texto se copió. Adjunta los archivos manualmente.",
     captureError: "Captura cancelada o no disponible.", transferError: "No se pudo transferir.",
   },
 };
@@ -368,7 +368,7 @@ function applyState(state) {
     Number.isInteger(state.promptMaxLines) && state.promptMaxLines >= 1 && state.promptMaxLines <= 10
       ? state.promptMaxLines
       : 3;
-  const noticeKey = ["captureError", "imageMissing"].includes(state.notice) ? state.notice : "";
+  const noticeKey = ["captureError", "clipboardEmpty"].includes(state.notice) ? state.notice : "";
   const notice = noticeKey ? tr(noticeKey) : typeof state.notice === "string" ? state.notice : "";
   const noticeId = Number.isInteger(state.noticeId) ? state.noticeId : 0;
   const draft = state.draft && typeof state.draft === "object" ? state.draft : null;
@@ -407,7 +407,7 @@ function applyState(state) {
   const transientStatusId = Number.isInteger(transientStatus?.id) ? transientStatus.id : 0;
   if (transientStatusId > lastTransientStatusId) {
     lastTransientStatusId = transientStatusId;
-    const key = ["captureError", "imageMissing"].includes(transientStatus?.key) ? transientStatus.key : "";
+    const key = ["captureError", "clipboardEmpty"].includes(transientStatus?.key) ? transientStatus.key : "";
     const remainingMs = Number.isFinite(transientStatus?.expiresAt)
       ? transientStatus.expiresAt - Date.now()
       : 0;
@@ -585,8 +585,9 @@ document.addEventListener("paste", (event) => {
   const clipboardData = event.clipboardData;
   if (!clipboardData) return;
   const types = [...clipboardData.types].map((type) => type.toLowerCase());
-  const hasFilesOrImages =
+  const hasSupportedContent =
     clipboardData.files.length > 0 ||
+    Boolean(clipboardData.getData("text/plain")) ||
     types.some(
       (type) =>
         type === "files" ||
@@ -594,9 +595,12 @@ document.addEventListener("paste", (event) => {
         type === "x-special/gnome-copied-files" ||
         type.startsWith("image/"),
     );
-  if (!hasFilesOrImages) return;
+  if (!hasSupportedContent) return;
   event.preventDefault();
-  void window.companionApi.addClipboardImage();
+  void (async () => {
+    await persistDraft();
+    await window.companionApi.addClipboard();
+  })();
 });
 
 window.companionApi.onState(applyState);

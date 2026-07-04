@@ -34,11 +34,8 @@ const companionApi = {
   capture(mode: "region" | "screen" | "window"): Promise<{ ok: boolean; cancelled?: boolean }> {
     return ipcRenderer.invoke("companion:capture", mode);
   },
-  addClipboardImage(): Promise<{ ok: boolean; added?: number }> {
-    return ipcRenderer.invoke("companion:clipboard-image");
-  },
-  addClipboardText(): Promise<{ ok: boolean; empty?: boolean }> {
-    return ipcRenderer.invoke("companion:clipboard-text");
+  addClipboard(): Promise<{ ok: boolean; kind?: "files" | "image" | "text"; added?: number }> {
+    return ipcRenderer.invoke("companion:clipboard-import");
   },
   removeItem(id: string): void {
     ipcRenderer.send("companion:remove-item", id);

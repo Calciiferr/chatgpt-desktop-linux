@@ -28,6 +28,7 @@ import { pathToFileURL } from "node:url";
 import { syncAutostart } from "./autostart";
 import {
   type CompanionDraftState,
+  appendCompanionPromptText,
   emptyCompanionDraft,
   initialCompanionDraft,
   reconcileCompanionDraftProjectState,
@@ -111,7 +112,7 @@ interface CliRequest {
 }
 
 type CompanionItemType = "text" | "file" | "image";
-type CompanionFeedbackKey = "captureError" | "imageMissing";
+type CompanionFeedbackKey = "captureError" | "clipboardEmpty";
 interface CompanionItem {
   id: string;
   type: CompanionItemType;
@@ -1676,48 +1677,26 @@ function clipboardSourceLabel(): string {
       : "Presse-papiers";
 }
 
-function clipboardFilePaths(): string[] {
+function clipboardFilePayload(): { formatPresent: boolean; paths: string[] } {
   const formats = clipboard.availableFormats("clipboard");
   const uriListFormat = formats.find((format) => {
     const normalized = format.toLowerCase().split(";", 1)[0];
     return normalized === "text/uri-list" || normalized === "x-special/gnome-copied-files";
   });
-  if (!uriListFormat) return [];
+  if (!uriListFormat) return { formatPresent: false, paths: [] };
 
   const uriList = clipboard.readBuffer(uriListFormat).toString("utf8").replace(/\0/g, "\n");
-  return parseClipboardFileUris(uriList, 50);
+  return { formatPresent: true, paths: parseClipboardFileUris(uriList, 50) };
 }
 
-function addClipboardTextContext(): { ok: boolean; empty?: boolean } {
-  const text = clipboard.readText("clipboard").trim().slice(0, MAX_CONTEXT_LENGTH);
-  if (!text) {
-    companionNotice =
-      activeLanguage === "en"
-        ? "The clipboard contains no text."
-        : activeLanguage === "es"
-          ? "El portapapeles no contiene texto."
-          : "Le presse-papiers ne contient aucun texte.";
-    sendCompanionState();
-    return { ok: false, empty: true };
-  }
-
-  companionItems.push({
-    id: randomUUID(),
-    type: "text",
-    name:
-      activeLanguage === "en"
-        ? "Clipboard text"
-        : activeLanguage === "es"
-          ? "Texto del portapapeles"
-          : "Texte du presse-papiers",
-    source: clipboardSourceLabel(),
-    preview: text.length < 240 ? text : `${text.slice(0, 237)}…`,
-    text,
-  });
-  touchCompanionDraft();
+function appendClipboardTextToPrompt(text: string): boolean {
+  initializeCompanionDraft();
+  const nextDraft = appendCompanionPromptText(companionDraft, text);
+  if (nextDraft === companionDraft) return false;
+  companionDraft = nextDraft;
   companionNotice = "";
   sendCompanionState();
-  return { ok: true };
+  return true;
 }
 
 function addIncomingTextContext(text: string, source?: string): void {
@@ -1958,7 +1937,7 @@ async function showCompanionWindow(
     addIncomingTextContext(incomingText, options.source);
   }
   if (options.clipboard) {
-    addClipboardTextContext();
+    await importClipboardToCompanion();
   }
   await addCompanionPaths(filePaths, false, { source: options.source });
 
@@ -2075,37 +2054,51 @@ async function captureWithSpectacle(mode: unknown): Promise<{ ok: boolean; cance
   });
 }
 
-async function captureClipboardImage(): Promise<{ ok: boolean; added?: number }> {
-  const filePaths = clipboardFilePaths();
-  if (filePaths.length > 0) {
+async function importClipboardToCompanion(): Promise<{
+  ok: boolean;
+  kind?: "files" | "image" | "text";
+  added?: number;
+}> {
+  const filePayload = clipboardFilePayload();
+  if (filePayload.formatPresent) {
+    if (filePayload.paths.length === 0) {
+      showCompanionError("clipboardEmpty");
+      return { ok: false };
+    }
     clearCompanionFeedback();
-    const added = await addCompanionPaths(filePaths, false, { source: clipboardSourceLabel() });
-    if (added === 0) showCompanionError("imageMissing");
-    return { ok: added > 0, added };
+    const added = await addCompanionPaths(filePayload.paths, false, { source: clipboardSourceLabel() });
+    if (added === 0) showCompanionError("clipboardEmpty");
+    return { ok: added > 0, kind: "files", added };
   }
 
   const image = clipboard.readImage("clipboard");
-  if (image.isEmpty()) {
-    showCompanionError("imageMissing");
-    return { ok: false };
+  if (!image.isEmpty()) {
+    fs.mkdirSync(COMPANION_TEMP_DIR, { recursive: true });
+    const outputPath = path.join(COMPANION_TEMP_DIR, `clipboard-${Date.now()}-${randomUUID()}.png`);
+    try {
+      fs.writeFileSync(outputPath, image.toPNG(), { mode: 0o600 });
+      clearCompanionFeedback();
+      const added = await addCompanionPaths([outputPath], true, {
+        preferFileUpload: true,
+        source: clipboardSourceLabel(),
+      });
+      if (added !== 1) showCompanionError("clipboardEmpty");
+      return { ok: added === 1, kind: "image", added };
+    } catch (error) {
+      fs.rmSync(outputPath, { force: true });
+      log.error("[companion] Image du presse-papiers indisponible :", error);
+      showCompanionError("clipboardEmpty");
+      return { ok: false };
+    }
   }
-  fs.mkdirSync(COMPANION_TEMP_DIR, { recursive: true });
-  const outputPath = path.join(COMPANION_TEMP_DIR, `clipboard-${Date.now()}-${randomUUID()}.png`);
-  try {
-    fs.writeFileSync(outputPath, image.toPNG(), { mode: 0o600 });
+
+  const text = clipboard.readText("clipboard");
+  if (appendClipboardTextToPrompt(text)) {
     clearCompanionFeedback();
-    const added = await addCompanionPaths([outputPath], true, {
-      preferFileUpload: true,
-      source: clipboardSourceLabel(),
-    });
-    if (added !== 1) showCompanionError("imageMissing");
-    return { ok: added === 1, added };
-  } catch (error) {
-    fs.rmSync(outputPath, { force: true });
-    log.error("[companion] Image du presse-papiers indisponible :", error);
-    showCompanionError("imageMissing");
-    return { ok: false };
+    return { ok: true, kind: "text" };
   }
+  showCompanionError("clipboardEmpty");
+  return { ok: false };
 }
 
 async function waitForComposer(timeoutMs = 12_000): Promise<boolean> {
@@ -3889,18 +3882,11 @@ function registerIpcHandlers(): void {
     return captureWithSpectacle(mode);
   });
 
-  ipcMain.handle("companion:clipboard-image", (event) => {
+  ipcMain.handle("companion:clipboard-import", (event) => {
     if (!event.senderFrame || !isTrustedCompanionSender(event.senderFrame.url)) {
       return { ok: false };
     }
-    return captureClipboardImage();
-  });
-
-  ipcMain.handle("companion:clipboard-text", (event) => {
-    if (!event.senderFrame || !isTrustedCompanionSender(event.senderFrame.url)) {
-      return { ok: false };
-    }
-    return addClipboardTextContext();
+    return importClipboardToCompanion();
   });
 
   ipcMain.handle("search:find", (event, input: unknown) => {
