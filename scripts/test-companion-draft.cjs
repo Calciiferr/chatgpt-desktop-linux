@@ -115,7 +115,7 @@ const createCompanionFunction = mainSource.match(/function createCompanionWindow
 const layoutHandler = mainSource.match(/ipcMain\.on\("companion:layout"[\s\S]*?\n  \}\);/)?.[0] || "";
 assert.doesNotMatch(showFunction, /companionItems\s*=\s*\[\]/);
 assert.match(mainSource, /ipcMain\.handle\("companion:update-draft"/);
-assert.match(mainSource, /if \(ok\) completeCompanionDraftTransfer/);
+assert.match(mainSource, /if \(ok\) \{[\s\S]*?completeCompanionDraftTransfer/);
 assert.match(mainSource, /retargetCompanionDraftToCreatedProject\(selectedProject\)/);
 assert.match(mainSource, /if \(submittedVersion === companionDraft\.version\)/);
 assert.match(mainSource, /function toggleCompanionWindow\(\)/);

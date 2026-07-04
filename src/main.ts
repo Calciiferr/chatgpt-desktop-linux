@@ -55,6 +55,12 @@ import {
 import { syncKateTextIntegration } from "./text-integrations";
 import { parseClipboardFileUris } from "./clipboard-files";
 import {
+  type ComposerAttachmentSnapshot,
+  attachmentSnapshotProvesBatch,
+  composerAttachmentProbeScript,
+  transferAttachmentBatches,
+} from "./attachment-transfer";
+import {
   ProjectSyncTimeoutError,
   type ProjectSyncTrigger,
   projectSyncSkipReason,
@@ -2129,92 +2135,36 @@ function companionFileNames(filePaths: readonly string[]): string[] {
   return filePaths.map((filePath) => path.basename(filePath)).filter(Boolean);
 }
 
-async function visibleAttachmentNameCount(filePaths: readonly string[]): Promise<number> {
-  if (!mainWindow || mainWindow.isDestroyed() || filePaths.length === 0) {
-    return 0;
-  }
-  const names = companionFileNames(filePaths);
-  const serializedNames = JSON.stringify(names);
-  const contents = activeChatContents();
-  if (!contents) return 0;
-  try {
-    return (await contents.executeJavaScript(
-      `(() => {
-        const names = ${serializedNames};
-        const normalize = (value) => (value || '').normalize('NFC').toLowerCase();
-        const pageText = normalize(document.body?.innerText || '');
-        return names.filter((name) => {
-          const normalizedName = normalize(name);
-          if (pageText.includes(normalizedName)) return true;
-          return [...document.querySelectorAll('[aria-label], [title], [data-testid], img[alt]')]
-            .some((element) => normalize(
-              (element.getAttribute('aria-label') || '') + ' ' +
-              (element.getAttribute('title') || '') + ' ' +
-              (element.getAttribute('data-testid') || '') + ' ' +
-              (element.getAttribute('alt') || '')
-            ).includes(normalizedName));
-        }).length;
-      })()`,
-      true,
-    )) as number;
-  } catch {
-    return 0;
-  }
-}
-
-async function visibleAttachmentMarkerCount(): Promise<number> {
+async function visibleComposerAttachmentSnapshot(
+  filePaths: readonly string[] = [],
+): Promise<ComposerAttachmentSnapshot> {
   if (!mainWindow || mainWindow.isDestroyed()) {
-    return 0;
+    return { markerCount: 0, matchedNames: [] };
   }
   const contents = activeChatContents();
-  if (!contents) return 0;
+  if (!contents) return { markerCount: 0, matchedNames: [] };
   try {
     return (await contents.executeJavaScript(
-      `(() => {
-        const composer = document.querySelector('#prompt-textarea') ||
-          document.querySelector('[data-testid="prompt-textarea"]') ||
-          document.querySelector('form textarea') ||
-          document.querySelector('form [contenteditable="true"]');
-        const root = composer?.closest('form')?.parentElement || composer?.closest('main') || document.body;
-        const selectors = [
-          'img[src^="blob:"]',
-          'img[src^="data:"]',
-          '[data-testid*="attachment" i]',
-          '[data-testid*="file" i]',
-          '[aria-label*="attachment" i]',
-          '[aria-label*="pièce jointe" i]',
-          '[aria-label*="archivo adjunto" i]',
-          '[aria-label*="remove" i]',
-          '[aria-label*="supprimer" i]',
-          '[aria-label*="quitar" i]'
-        ];
-        return selectors.reduce((count, selector) => count + root.querySelectorAll(selector).length, 0);
-      })()`,
+      composerAttachmentProbeScript(companionFileNames(filePaths)),
       true,
-    )) as number;
+    )) as ComposerAttachmentSnapshot;
   } catch {
-    return 0;
+    return { markerCount: 0, matchedNames: [] };
   }
 }
 
 async function waitForVisibleAttachments(
   filePaths: readonly string[],
   timeoutMs = 3_000,
-  baselineMarkerCount = 0,
+  baseline: ComposerAttachmentSnapshot = { markerCount: 0, matchedNames: [] },
 ): Promise<boolean> {
   if (filePaths.length === 0) {
     return true;
   }
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const count = await visibleAttachmentNameCount(filePaths);
-    if (count >= filePaths.length) {
-      return true;
-    }
-    const markers = await visibleAttachmentMarkerCount();
-    if (markers > baselineMarkerCount) {
-      return true;
-    }
+    const current = await visibleComposerAttachmentSnapshot(filePaths);
+    if (attachmentSnapshotProvesBatch(companionFileNames(filePaths), baseline, current)) return true;
     await new Promise((resolve) => setTimeout(resolve, 350));
   }
   return false;
@@ -2312,7 +2262,8 @@ async function pasteImageFilesIntoChatComposer(filePaths: readonly string[]): Pr
   const serializedFiles = JSON.stringify(files);
   const contents = activeChatContents();
   if (!contents) return false;
-  const pasted = (await contents.executeJavaScript(
+  const baseline = await visibleComposerAttachmentSnapshot(filePaths);
+  const pasteDispatched = (await contents.executeJavaScript(
     `(() => {
       const target = document.querySelector('#prompt-textarea') ||
         document.querySelector('[data-testid="prompt-textarea"]') ||
@@ -2335,17 +2286,13 @@ async function pasteImageFilesIntoChatComposer(filePaths: readonly string[]): Pr
         cancelable: true,
         clipboardData: dataTransfer,
       });
-      return target.dispatchEvent(event);
+      target.dispatchEvent(event);
+      return true;
     })()`,
     true,
   )) as boolean;
-  if (!pasted) {
-    return false;
-  }
-  // ChatGPT accepte généralement l'image avec un léger délai et n'expose pas toujours
-  // une vignette détectable immédiatement. Ne pas lancer un second chemin ici évite
-  // l'envoi en double.
-  return true;
+  if (!pasteDispatched) return false;
+  return waitForVisibleAttachments(filePaths, 4_000, baseline);
 }
 
 async function dropFilesOnChatComposer(filePaths: readonly string[], timeoutMs = 3_000): Promise<boolean> {
@@ -2380,7 +2327,7 @@ async function dropFilesOnChatComposer(filePaths: readonly string[], timeoutMs =
     files: [...filePaths],
     dragOperationsMask: 1,
   };
-  const baselineMarkerCount = await visibleAttachmentMarkerCount();
+  const baseline = await visibleComposerAttachmentSnapshot(filePaths);
   await chatDebugger.sendCommand("Input.dispatchDragEvent", {
     type: "dragEnter",
     x: point.x,
@@ -2399,60 +2346,23 @@ async function dropFilesOnChatComposer(filePaths: readonly string[], timeoutMs =
     y: point.y,
     data,
   });
-  return waitForVisibleAttachments(filePaths, timeoutMs, baselineMarkerCount);
+  return waitForVisibleAttachments(filePaths, timeoutMs, baseline);
 }
 
-async function attachFilesToChat(
+async function uploadFilesIntoChat(
   filePaths: readonly string[],
-  options: { preferFileUploadPaths?: readonly string[] } = {},
+  chatDebugger: WebContents["debugger"],
 ): Promise<boolean> {
   if (!mainWindow || mainWindow.isDestroyed() || filePaths.length === 0) {
     return filePaths.length === 0;
   }
-  const contents = activeChatContents();
-  if (!contents) return false;
-  const chatDebugger = contents.debugger;
-  const alreadyAttached = chatDebugger.isAttached();
-  const preferFileUploadSet = new Set((options.preferFileUploadPaths ?? []).map((filePath) => path.resolve(filePath)));
-  const imagePaths = filePaths.filter(
-    (filePath) => isImageFile(filePath) && !preferFileUploadSet.has(path.resolve(filePath)),
-  );
-  const fileUploadPaths = filePaths.filter(
-    (filePath) => !isImageFile(filePath) || preferFileUploadSet.has(path.resolve(filePath)),
-  );
+  const attachPaths = [...filePaths];
   type FileChooserParams = { backendNodeId?: number };
   let chooserListener:
     | ((event: Electron.Event, method: string, params: Record<string, unknown>) => void)
     | null = null;
   try {
-    if (!alreadyAttached) {
-      chatDebugger.attach("1.3");
-    }
-    const baselineMarkerCount = await visibleAttachmentMarkerCount();
-
-    if (imagePaths.length > 0) {
-      const pasted = await pasteImageFilesIntoChatComposer(imagePaths).catch((error: unknown) => {
-        log.warn("[magic-bar] Collage rapide des images impossible :", error);
-        return false;
-      });
-      if (pasted) {
-        log.info(`[magic-bar] ${imagePaths.length} image(s) collée(s) dans ChatGPT.`);
-        if (fileUploadPaths.length === 0) {
-          return true;
-        }
-      } else if (fileUploadPaths.length === 0) {
-        const imageFallback = await dropFilesOnChatComposer(imagePaths, 4_000);
-        if (imageFallback) {
-          log.info(`[magic-bar] ${imagePaths.length} image(s) déposée(s) dans ChatGPT.`);
-        }
-        return imageFallback;
-      }
-    }
-
-    const attachPaths = fileUploadPaths.length > 0 ? fileUploadPaths : filePaths;
-    if (attachPaths.length === 0) {
-      return true;
-    }
+    const baseline = await visibleComposerAttachmentSnapshot(attachPaths);
 
     await chatDebugger.sendCommand("DOM.enable");
     const documentResult = (await chatDebugger.sendCommand("DOM.getDocument", { depth: 0 })) as {
@@ -2467,7 +2377,7 @@ async function attachFilesToChat(
         nodeId: queryResult.nodeId,
         files: [...attachPaths],
       });
-      if (await waitForVisibleAttachments(attachPaths, 4_000, baselineMarkerCount)) {
+      if (await waitForVisibleAttachments(attachPaths, 4_000, baseline)) {
         log.info(`[magic-bar] ${attachPaths.length} fichier(s) remis au champ fichier ChatGPT.`);
         return true;
       }
@@ -2518,7 +2428,7 @@ async function attachFilesToChat(
     await new Promise((resolve) => setTimeout(resolve, 250));
     await clickChatUploadMenuItem();
     const attached = await chooserResult;
-    if (attached && (await waitForVisibleAttachments(attachPaths, 4_000, baselineMarkerCount))) {
+    if (attached && (await waitForVisibleAttachments(attachPaths, 4_000, baseline))) {
       log.info(`[magic-bar] ${attachPaths.length} fichier(s) remis via le sélecteur ChatGPT.`);
       return true;
     }
@@ -2540,9 +2450,52 @@ async function attachFilesToChat(
         .sendCommand("Page.setInterceptFileChooserDialog", { enabled: false })
         .catch(() => undefined);
     }
-    if (!alreadyAttached && chatDebugger.isAttached()) {
-      chatDebugger.detach();
+  }
+}
+
+async function attachFilesToChat(
+  filePaths: readonly string[],
+  options: { preferFileUploadPaths?: readonly string[] } = {},
+): Promise<boolean> {
+  if (!mainWindow || mainWindow.isDestroyed() || filePaths.length === 0) {
+    return filePaths.length === 0;
+  }
+  const contents = activeChatContents();
+  if (!contents) return false;
+  const chatDebugger = contents.debugger;
+  const alreadyAttached = chatDebugger.isAttached();
+  try {
+    if (!alreadyAttached) chatDebugger.attach("1.3");
+    const result = await transferAttachmentBatches(
+      filePaths,
+      (options.preferFileUploadPaths ?? []).map((filePath) => path.resolve(filePath)),
+      isImageFile,
+      async (imagePaths) => {
+        const pasted = await pasteImageFilesIntoChatComposer(imagePaths).catch((error: unknown) => {
+          log.warn("[magic-bar] Collage des images impossible, fallback upload :", error);
+          return false;
+        });
+        if (pasted) {
+          log.info(`[magic-bar] ${imagePaths.length} image(s) visiblement attachée(s) après collage.`);
+        } else {
+          log.warn("[magic-bar] Collage image sans pièce jointe visible, fallback upload fichier.");
+        }
+        return pasted;
+      },
+      async (uploadPaths) => uploadFilesIntoChat(uploadPaths, chatDebugger),
+    );
+    if (!result.ok) {
+      log.warn(
+        `[magic-bar] Transfert incomplet : ${result.imagePaths.length} image(s), ` +
+          `${result.filePaths.length} fichier(s); brouillon conservé.`,
+      );
     }
+    return result.ok;
+  } catch (error) {
+    log.warn("[magic-bar] Ajout automatique des pièces jointes impossible :", error);
+    return false;
+  } finally {
+    if (!alreadyAttached && chatDebugger.isAttached()) chatDebugger.detach();
   }
 }
 
@@ -2782,12 +2735,14 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
 
   companionWindow?.hide();
   mainWindow.focus();
-  for (const item of selectedItems.filter((candidate) => candidate.temporary)) {
-    if (item.filePath) {
-      setTimeout(() => fs.rmSync(item.filePath!, { force: true }), 15 * 60 * 1000).unref();
+  if (ok) {
+    for (const item of selectedItems.filter((candidate) => candidate.temporary)) {
+      if (item.filePath) {
+        setTimeout(() => fs.rmSync(item.filePath!, { force: true }), 15 * 60 * 1000).unref();
+      }
     }
+    completeCompanionDraftTransfer(submittedDraftVersion, ids);
   }
-  if (ok) completeCompanionDraftTransfer(submittedDraftVersion, ids);
   log.info(ok ? "[companion] Contenu prérempli, en attente de l’envoi utilisateur." : "[companion] Repli presse-papiers utilisé.");
   return { ok: true, fallback: !ok };
 }
