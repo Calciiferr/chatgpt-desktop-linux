@@ -143,6 +143,26 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
       return { button, row, name: projectNameForEntry(button, row), initialIndex };
     }).filter((entry) => entry.name);
   };
+  const pinnedProjectEntriesFor = (section) => {
+    if (!section) return [];
+    const sidebarItems = [...section.querySelectorAll('[data-sidebar-item="true"]')];
+    const candidates = (sidebarItems.length > 0
+      ? sidebarItems
+      : [...section.querySelectorAll('[role="button"]')]
+        .filter((element) => element.querySelector('[data-testid="project-folder-icon"]')))
+      .filter(isRendered)
+      .filter((element) => {
+        const href = element.getAttribute('href') || element.closest('a[href]')?.getAttribute('href');
+        if (href) return false;
+        return element.getAttribute('data-sidebar-item') === 'true' || element.getAttribute('role') === 'button';
+      });
+    return [...new Set(candidates)].map((element, initialIndex) => ({
+      element,
+      name: (element.innerText || element.textContent || element.getAttribute('aria-label') || '')
+        .split('\n').map((part) => part.trim()).find(Boolean) || '',
+      initialIndex,
+    })).filter((entry) => entry.name);
+  };
   const findActiveSidebar = () => {
     const markers = ['nouveau chat', 'new chat', 'bibliothèque', 'library', 'planification', 'scheduling', 'applications'];
     const candidates = [...document.querySelectorAll('nav, aside, [class*="sidebar"]')]
@@ -563,7 +583,7 @@ async function ensureSidebarOpen(webContents: WebContents): Promise<void> {
 }
 
 interface PinnedProjectSnapshot {
-  projects: ChatGptProject[];
+  descriptors: ProjectRowDescriptor[];
   complete: boolean;
 }
 
@@ -572,35 +592,29 @@ async function snapshotPinnedProjects(webContents: WebContents): Promise<PinnedP
     found: boolean;
     expanded: boolean;
     clicked: boolean;
-    links: Array<{ name: string; url: string }>;
+    names: string[];
   }> => (await webContents.executeJavaScript(`(() => {
     ${ACTIVE_PROJECT_SCOPE_HELPERS}
     const shouldClickPinnedHeader = ${clickHeader};
     const section = findPinnedSection();
-    if (!section) return { found: false, expanded: true, clicked: false, links: [] };
+    if (!section) return { found: false, expanded: true, clicked: false, names: [] };
     const header = section.querySelector('[class*="sidebar-expando-section-header"]');
     const headerButton = header
       ? [...header.querySelectorAll('button')].find(exactPinnedText)
       : undefined;
-    const pinnedProjectLinks = [...section.querySelectorAll('a[href]')]
-      .filter(isRendered)
-      .map((anchor) => ({
-        name: (anchor.innerText || anchor.textContent || anchor.getAttribute('aria-label') ||
-          anchor.getAttribute('title') || '').split('\\n').map((part) => part.trim()).find(Boolean) || '',
-        url: anchor.href,
-      }))
-      .filter((entry) => entry.name && entry.url);
-    const expanded = pinnedProjectLinks.length > 0 || headerButton?.getAttribute('aria-expanded') === 'true';
+    const names = pinnedProjectEntriesFor(section).map((entry) => entry.name);
+    const hasVisibleItems = [...section.querySelectorAll('[data-sidebar-item="true"], a[href]')].some(isRendered);
+    const expanded = hasVisibleItems || headerButton?.getAttribute('aria-expanded') === 'true';
     if (shouldClickPinnedHeader && !expanded && headerButton instanceof HTMLElement) {
       headerButton.click();
-      return { found: true, expanded: false, clicked: true, links: [] };
+      return { found: true, expanded: false, clicked: true, names: [] };
     }
-    return { found: true, expanded, clicked: false, links: pinnedProjectLinks };
+    return { found: true, expanded, clicked: false, names };
   })()`, true)) as {
     found: boolean;
     expanded: boolean;
     clicked: boolean;
-    links: Array<{ name: string; url: string }>;
+    names: string[];
   };
 
   let result = await read(true);
@@ -609,22 +623,23 @@ async function snapshotPinnedProjects(webContents: WebContents): Promise<PinnedP
     while (Date.now() < deadline) {
       await delay(200);
       result = await read(false);
-      if (result.expanded || result.links.length > 0) break;
+      if (result.expanded || result.names.length > 0) break;
     }
   }
-  const projects: ChatGptProject[] = [];
-  const seenIds = new Set<string>();
-  for (const link of result.links) {
-    const url = normalizeProjectUrl(link.url);
-    if (!url) continue;
-    const project = createProjectRecord(link.name, url, "scan");
-    if (seenIds.has(project.id)) continue;
-    project.pinned = true;
-    seenIds.add(project.id);
-    projects.push(project);
+  const cleanNames = result.names.filter((name): name is string => typeof name === "string").map(cleanName);
+  const totals = new Map<string, number>();
+  for (const name of cleanNames) {
+    const key = name.toLocaleLowerCase();
+    totals.set(key, (totals.get(key) ?? 0) + 1);
   }
+  const occurrences = new Map<string, number>();
   return {
-    projects,
+    descriptors: cleanNames.map((name, initialIndex) => {
+      const key = name.toLocaleLowerCase();
+      const occurrence = occurrences.get(key) ?? 0;
+      occurrences.set(key, occurrence + 1);
+      return { name, occurrence, initialIndex, duplicateCount: totals.get(key) ?? 1 };
+    }),
     complete: !result.found || result.expanded,
   };
 }
@@ -916,6 +931,96 @@ async function clickProjectHomeWithRetries(
   return { clicked: false, previousUrl };
 }
 
+async function clickPinnedProject(
+  webContents: WebContents,
+  descriptor: ProjectRowDescriptor,
+): Promise<boolean> {
+  return (await webContents.executeJavaScript(`(() => {
+    ${ACTIVE_PROJECT_SCOPE_HELPERS}
+    const expected = ${JSON.stringify(descriptor.name)};
+    const occurrence = ${descriptor.occurrence};
+    const initialIndex = ${descriptor.initialIndex};
+    const normalize = (value) => (value || '').replace(/\s+/g, ' ').trim();
+    const entries = pinnedProjectEntriesFor(findPinnedSection());
+    const indexed = entries[initialIndex];
+    const entry = indexed && normalize(indexed.name) === normalize(expected)
+      ? indexed
+      : entries.filter((candidate) => normalize(candidate.name) === normalize(expected))[occurrence];
+    if (!(entry?.element instanceof HTMLElement)) return false;
+    entry.element.click();
+    return true;
+  })()`, true)) as boolean;
+}
+
+async function openExpandedPinnedProjectHome(
+  webContents: WebContents,
+  descriptor: ProjectRowDescriptor,
+  previousUrl: string,
+  signal?: AbortSignal,
+): Promise<void> {
+  const deadline = Date.now() + 2_000;
+  while (Date.now() < deadline) {
+    throwIfProjectScanAborted(signal);
+    const currentProjectUrl = normalizeProjectUrl(webContents.getURL());
+    if (currentProjectUrl && currentProjectUrl !== normalizeProjectUrl(previousUrl)) return;
+    const clicked = (await webContents.executeJavaScript(`(() => {
+      ${ACTIVE_PROJECT_SCOPE_HELPERS}
+      const pinnedExpansionExpected = ${JSON.stringify(descriptor.name)};
+      const occurrence = ${descriptor.occurrence};
+      const initialIndex = ${descriptor.initialIndex};
+      const normalize = (value) => (value || '').replace(/\s+/g, ' ').trim();
+      const entries = pinnedProjectEntriesFor(findPinnedSection());
+      const indexed = entries[initialIndex];
+      const entry = indexed && normalize(indexed.name) === normalize(pinnedExpansionExpected)
+        ? indexed
+        : entries.filter((candidate) => normalize(candidate.name) === normalize(pinnedExpansionExpected))[occurrence];
+      if (!(entry?.element instanceof HTMLElement)) return false;
+      const controlledId = entry.element.getAttribute('aria-controls');
+      const controlled = controlledId ? document.getElementById(controlledId) : null;
+      const scopes = [entry.element, controlled, entry.element.parentElement].filter(Boolean);
+      const buttons = scopes.flatMap((scope) => [
+        ...(scope.matches?.('button[aria-label]') ? [scope] : []),
+        ...scope.querySelectorAll('button[aria-label]'),
+      ]);
+      const home = [...new Set(buttons)].find(isProjectHomeButton);
+      if (!(home instanceof HTMLElement)) return false;
+      home.click();
+      return true;
+    })()`, true)) as boolean;
+    if (clicked) return;
+    await delay(200);
+  }
+}
+
+async function clickPinnedProjectWithRetries(
+  webContents: WebContents,
+  descriptor: ProjectRowDescriptor,
+  signal?: AbortSignal,
+): Promise<{ clicked: boolean; previousUrl: string }> {
+  let previousUrl = webContents.getURL();
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    throwIfProjectScanAborted(signal);
+    await ensureSidebarOpen(webContents);
+    await snapshotPinnedProjects(webContents);
+    previousUrl = webContents.getURL();
+    if (await clickPinnedProject(webContents, descriptor)) {
+      await openExpandedPinnedProjectHome(webContents, descriptor, previousUrl, signal);
+      return { clicked: true, previousUrl };
+    }
+    if (attempt < 3) await delay(500);
+  }
+  return { clicked: false, previousUrl };
+}
+
+function isChatGptConversationUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.origin === CHATGPT_ORIGIN && /^\/c\/[a-z0-9-]+\/?$/i.test(url.pathname);
+  } catch {
+    return false;
+  }
+}
+
 export async function captureCurrentProject(webContents: WebContents): Promise<ChatGptProject> {
   const url = normalizeProjectUrl(webContents.getURL());
   if (!url) throw new Error("La page actuelle n’est pas l’accueil d’un projet ChatGPT.");
@@ -966,7 +1071,11 @@ export async function scanChatGptProjects(
   throwIfProjectScanAborted(options.signal);
   const pinnedSnapshot = await snapshotPinnedProjects(webContents);
   const descriptors = snapshot.descriptors.slice(0, maxResolvedProjects);
-  const discovered = descriptors.length + pinnedSnapshot.projects.length;
+  const workItems = [
+    ...pinnedSnapshot.descriptors.map((descriptor) => ({ descriptor, pinned: true })),
+    ...descriptors.map((descriptor) => ({ descriptor, pinned: false })),
+  ];
+  const discovered = workItems.length;
   if (discovered === 0) {
     return {
       status: "error",
@@ -983,40 +1092,44 @@ export async function scanChatGptProjects(
   }
 
   const orderSyncedAt = new Date().toISOString();
-  const projects: ChatGptProject[] = pinnedSnapshot.projects.map((project, index) => ({
-    ...project,
-    sidebarOrder: index,
-    orderSyncedAt,
-  }));
+  const projects: ChatGptProject[] = [];
   const failures: ProjectScanFailure[] = [];
-  const durationsMs: number[] = pinnedSnapshot.projects.map(() => 0);
-  const resolvedUrls = new Set(projects.map((project) => project.url));
+  const durationsMs: number[] = [];
+  const resolvedUrls = new Set<string>();
   let duplicatesSkipped = 0;
+  let pinnedConversationsIgnored = 0;
   let completed = 0;
   emit({
     phase: "scanning",
     completed: 0,
     total: discovered,
-    successes: projects.length,
+    successes: 0,
     failures: 0,
     percent: 0,
   });
-  for (const descriptor of descriptors) {
+  for (const item of workItems) {
+    const { descriptor } = item;
+    const overallIndex = item.pinned
+      ? descriptor.initialIndex
+      : pinnedSnapshot.descriptors.length + descriptor.initialIndex;
     throwIfProjectScanAborted(options.signal);
     const startedAt = Date.now();
     let resolvedProject: ChatGptProject | null = null;
     let sawDuplicateUrl = false;
+    let ignoredConversation = false;
     let lastError = "bouton d’accueil introuvable";
     try {
-      const opened = await clickProjectHomeWithRetries(
-        webContents,
-        descriptor,
-        maxShowMoreClicks,
-        maxProjects,
-        options.signal,
-      );
+      const opened = item.pinned
+        ? await clickPinnedProjectWithRetries(webContents, descriptor, options.signal)
+        : await clickProjectHomeWithRetries(
+            webContents,
+            descriptor,
+            maxShowMoreClicks,
+            maxProjects,
+            options.signal,
+          );
       if (!opened.clicked) {
-        lastError = `bouton d’accueil introuvable après 3 tentatives (index ${descriptor.initialIndex + 1})`;
+        lastError = `bouton d’accueil introuvable après 3 tentatives (index ${overallIndex + 1})`;
       } else {
         let url = await waitForProjectUrl(
           webContents,
@@ -1025,19 +1138,22 @@ export async function scanChatGptProjects(
           options.signal,
         );
         if (!url) url = normalizeProjectUrl(webContents.getURL());
-        if (!url) {
-          lastError = `navigation expirée (index ${descriptor.initialIndex + 1})`;
+        if (!url && item.pinned && isChatGptConversationUrl(webContents.getURL())) {
+          ignoredConversation = true;
+          pinnedConversationsIgnored += 1;
+        } else if (!url) {
+          lastError = `navigation expirée (index ${overallIndex + 1})`;
         } else if (resolvedUrls.has(url)) {
           // A repeated URL is a duplicate DOM entry, not an invitation to
           // click another row sharing the same display name.
           sawDuplicateUrl = true;
-          lastError = `URL déjà résolue (index ${descriptor.initialIndex + 1})`;
+          lastError = `URL déjà résolue (index ${overallIndex + 1})`;
         } else {
           const project = createProjectRecord(descriptor.name, url, "scan");
           // Only clear an existing pinned flag when the pinned section was
           // observed conclusively; an inaccessible section is ambiguous.
-          project.pinned = pinnedSnapshot.complete ? false : undefined;
-          project.sidebarOrder = pinnedSnapshot.projects.length + descriptor.initialIndex;
+          project.pinned = item.pinned ? true : pinnedSnapshot.complete ? false : undefined;
+          project.sidebarOrder = overallIndex;
           project.orderSyncedAt = orderSyncedAt;
           project.remoteName = descriptor.name;
           resolvedUrls.add(url);
@@ -1054,11 +1170,11 @@ export async function scanChatGptProjects(
     if (!resolvedProject) {
       if (sawDuplicateUrl) {
         duplicatesSkipped += 1;
-      } else {
+      } else if (!ignoredConversation) {
         failures.push({
           name: descriptor.name,
           error: lastError,
-          initialIndex: pinnedSnapshot.projects.length + descriptor.initialIndex,
+          initialIndex: overallIndex,
           occurrence: descriptor.occurrence,
           durationMs,
         });
@@ -1073,8 +1189,8 @@ export async function scanChatGptProjects(
       total: discovered,
       successes: projects.length,
       failures: failures.length,
-      percent: Math.round(((completed + pinnedSnapshot.projects.length) / discovered) * 100),
-      etaMs: Math.max(0, Math.round(averageMs * (descriptors.length - completed))),
+      percent: Math.round((completed / discovered) * 100),
+      etaMs: Math.max(0, Math.round(averageMs * (discovered - completed))),
       currentProjectName: descriptor.name,
     });
     throwIfProjectScanAborted(options.signal);
@@ -1082,7 +1198,8 @@ export async function scanChatGptProjects(
   const status = projects.length === 0 ? "error" : failures.length > 0 ? "partial" : "ok";
   const message =
     `${discovered} projet(s) trouvé(s) · ${projects.length} réussi(s) · ${failures.length} échoué(s)` +
-    (duplicatesSkipped > 0 ? ` · ${duplicatesSkipped} répétition(s) DOM ignorée(s)` : "");
+    (duplicatesSkipped > 0 ? ` · ${duplicatesSkipped} répétition(s) DOM ignorée(s)` : "") +
+    (pinnedConversationsIgnored > 0 ? ` · ${pinnedConversationsIgnored} conversation(s) épinglée(s) ignorée(s)` : "");
   return {
     status,
     projects: mergeProjects([], projects),
@@ -1091,7 +1208,7 @@ export async function scanChatGptProjects(
     showMoreClicks: snapshot.showMoreClicks,
     duplicatesSkipped,
     durationsMs,
-    sidebarNames: [...pinnedSnapshot.projects.map((project) => project.name), ...snapshot.names],
+    sidebarNames: [...pinnedSnapshot.descriptors.map((descriptor) => descriptor.name), ...snapshot.names],
     sidebarComplete: snapshot.complete && pinnedSnapshot.complete,
     message,
   };

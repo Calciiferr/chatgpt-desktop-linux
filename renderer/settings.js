@@ -259,7 +259,7 @@ const projectTranslations = {
     syncLoading: "Chargement du scanner…", syncDiscovering: "Détection des projets…", syncSaving: "Enregistrement…", approximately: "environ",
     projectRenamed: "Nom local enregistré.", defaultSaved: "Projet par défaut enregistré.",
     projectActionError: "Opération projet impossible.",
-    confirmRemoveProject: "Supprimer ce projet du cache local ?", source: "Source", updated: "Mis à jour",
+    confirmRemoveProject: "Supprimer ce projet du cache local ?", pinned: "Épinglé", source: "Source", updated: "Mis à jour",
     resetProjects: "Réinitialiser tous les projets…",
     resetProjectsHint: "La réinitialisation vide uniquement le cache local ; elle ne supprime aucun projet sur ChatGPT.",
     confirmResetProjects: "Vider entièrement le cache local des projets ? Les projets ChatGPT eux-mêmes ne seront pas supprimés.",
@@ -278,7 +278,7 @@ const projectTranslations = {
     syncLoading: "Loading scanner…", syncDiscovering: "Detecting projects…", syncSaving: "Saving…", approximately: "about",
     projectRenamed: "Local name saved.", defaultSaved: "Default project saved.",
     projectActionError: "Project operation failed.",
-    confirmRemoveProject: "Remove this project from the local cache?", source: "Source", updated: "Updated",
+    confirmRemoveProject: "Remove this project from the local cache?", pinned: "Pinned", source: "Source", updated: "Updated",
     resetProjects: "Reset all projects…",
     resetProjectsHint: "Resetting only clears the local cache; it does not delete any project from ChatGPT.",
     confirmResetProjects: "Clear the entire local project cache? The ChatGPT projects themselves will not be deleted.",
@@ -297,7 +297,7 @@ const projectTranslations = {
     syncLoading: "Cargando escáner…", syncDiscovering: "Detectando proyectos…", syncSaving: "Guardando…", approximately: "aproximadamente",
     projectRenamed: "Nombre local guardado.", defaultSaved: "Proyecto predeterminado guardado.",
     projectActionError: "No se pudo completar la operación.",
-    confirmRemoveProject: "¿Eliminar este proyecto de la caché local?", source: "Origen", updated: "Actualizado",
+    confirmRemoveProject: "¿Eliminar este proyecto de la caché local?", pinned: "Fijado", source: "Origen", updated: "Actualizado",
     resetProjects: "Restablecer todos los proyectos…",
     resetProjectsHint: "El restablecimiento solo vacía la caché local; no elimina ningún proyecto de ChatGPT.",
     confirmResetProjects: "¿Vaciar toda la caché local de proyectos? Los proyectos de ChatGPT no se eliminarán.",
@@ -429,7 +429,7 @@ function renderProjects(settings) {
     url.textContent = project.url;
     const meta = document.createElement("div");
     meta.className = "project-meta";
-    meta.textContent = `${tr("source")} : ${project.source} · ${tr("updated")} : ${formatProjectDate(project.lastSyncedAt)}`;
+    meta.textContent = `${project.pinned === true ? `${tr("pinned")} · ` : ""}${tr("source")} : ${project.source} · ${tr("updated")} : ${formatProjectDate(project.lastSyncedAt)}`;
     row.append(header, url, meta);
     projectList.append(row);
   }

@@ -154,6 +154,12 @@ async function testInjectedScriptSyntax() {
     const remainingClickFailures = new Map(
       Object.entries(options.clickFailuresByIndex || {}).map(([index, count]) => [Number(index), Number(count)]),
     );
+    const remainingPinnedClickFailures = new Map(
+      Object.entries(options.pinnedClickFailuresByIndex || {}).map(([index, count]) => [Number(index), Number(count)]),
+    );
+    const pinnedCandidates = (Array.isArray(options.pinnedEntries) ? options.pinnedEntries : [])
+      .filter((entry) => entry.kind !== "conversation" && !entry.href);
+    const expandedPinnedIndexes = new Set();
     return {
       getURL: () => url,
       state: () => ({ sidebarOpen, projectsExpanded, clickedIndexes }),
@@ -162,13 +168,35 @@ async function testInjectedScriptSyntax() {
       executeJavaScript: async (code) => {
         compile(code);
         if (code.includes("const shouldClickPinnedHeader")) {
-          const links = Array.isArray(options.pinnedEntries) ? options.pinnedEntries : [];
           return {
-            found: options.pinnedFound === true || links.length > 0,
+            found: options.pinnedFound === true || pinnedCandidates.length > 0 || (options.pinnedEntries?.length || 0) > 0,
             expanded: true,
             clicked: false,
-            links,
+            names: pinnedCandidates.map((entry) => entry.name),
           };
+        }
+        if (code.includes("const pinnedExpansionExpected")) {
+          const initialIndex = Number(code.match(/const initialIndex = (\d+)/)?.[1] || 0);
+          const entry = pinnedCandidates[initialIndex];
+          if (!entry || !expandedPinnedIndexes.has(initialIndex)) return false;
+          url = entry.navigationUrl || entry.url || url;
+          return true;
+        }
+        if (code.includes("pinnedProjectEntriesFor(findPinnedSection())")) {
+          const initialIndex = Number(code.match(/const initialIndex = (\d+)/)?.[1] || 0);
+          const remainingFailures = remainingPinnedClickFailures.get(initialIndex) || 0;
+          if (remainingFailures > 0) {
+            remainingPinnedClickFailures.set(initialIndex, remainingFailures - 1);
+            return false;
+          }
+          const entry = pinnedCandidates[initialIndex];
+          if (!entry) return false;
+          if (entry.expands === true) {
+            expandedPinnedIndexes.add(initialIndex);
+            return true;
+          }
+          url = entry.navigationUrl || entry.url || url;
+          return true;
         }
         if (code.includes("const scored =")) {
           if (sidebarOpen) return { open: true };
@@ -253,8 +281,8 @@ async function testInjectedScriptSyntax() {
   const pinnedProjectUrl = "https://chatgpt.com/g/g-p-0000000000000000000000000000a004-chatgpt-app-linux/project";
   const pinnedOnlyScan = await scanChatGptProjects(createDomMock([], [], {
     pinnedEntries: [
-      { name: "ChatGPT App Linux", url: pinnedProjectUrl },
-      { name: "Conversation épinglée", url: "https://chatgpt.com/c/123456" },
+      { name: "ChatGPT App Linux", kind: "button", expands: true, navigationUrl: pinnedProjectUrl },
+      { name: "Conversation épinglée", kind: "conversation", href: "/c/123456" },
     ],
   }), { maxShowMoreClicks: 1, maxProjects: 3 });
   assert.equal(pinnedOnlyScan.projects.length, 1);
@@ -263,18 +291,43 @@ async function testInjectedScriptSyntax() {
   assert.equal(pinnedOnlyScan.discovered, 1);
 
   const duplicatedPinnedScan = await scanChatGptProjects(createDomMock(["Alpha"], [absolute], {
-    pinnedEntries: [{ name: "Alpha", url: absolute }],
+    pinnedEntries: [{ name: "Alpha", kind: "button", navigationUrl: absolute }],
   }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
   assert.equal(duplicatedPinnedScan.projects.length, 1);
   assert.equal(duplicatedPinnedScan.projects[0].id, scanned.id);
   assert.equal(duplicatedPinnedScan.projects[0].pinned, true);
 
   const pinnedHomonymScan = await scanChatGptProjects(createDomMock(["Alpha"], [secondAbsolute], {
-    pinnedEntries: [{ name: "Alpha", url: absolute }],
+    pinnedEntries: [{ name: "Alpha", kind: "button", navigationUrl: absolute }],
   }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
   assert.equal(pinnedHomonymScan.projects.length, 2);
   assert.equal(new Set(pinnedHomonymScan.projects.map((project) => project.id)).size, 2);
   assert.deepEqual(pinnedHomonymScan.projects.map((project) => project.pinned), [true, false]);
+
+  const conversationButtonScan = await scanChatGptProjects(createDomMock(["Alpha"], [absolute], {
+    pinnedEntries: [{ name: "Conversation inattendue", kind: "button", navigationUrl: "https://chatgpt.com/c/abcdef" }],
+  }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
+  assert.equal(conversationButtonScan.projects.length, 1);
+  assert.equal(conversationButtonScan.failures.length, 0);
+  assert.match(conversationButtonScan.message, /1 conversation\(s\) épinglée\(s\) ignorée\(s\)/);
+
+  const failedPinnedCache = {
+    ...createProjectRecord("Projet épinglé indisponible", pinnedProjectUrl, "scan"),
+    pinned: true,
+  };
+  const failedPinnedScan = await scanChatGptProjects(createDomMock(["Alpha"], [absolute], {
+    pinnedEntries: [{ name: failedPinnedCache.name, kind: "button", navigationUrl: pinnedProjectUrl }],
+    pinnedClickFailuresByIndex: { 0: 3 },
+  }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
+  assert.equal(failedPinnedScan.failures.length, 1);
+  const cacheAfterPinnedFailure = reconcileProjectsFromSidebar(
+    [failedPinnedCache, scanned],
+    failedPinnedScan.projects,
+    failedPinnedScan.sidebarNames,
+    undefined,
+    true,
+  );
+  assert.ok(cacheAfterPinnedFailure.some((project) => project.id === failedPinnedCache.id));
 
   const duplicateContents = createDomMock(["Alpha", "Alpha"], [absolute, secondAbsolute]);
   const duplicateScan = await scanChatGptProjects(duplicateContents, {
@@ -455,6 +508,8 @@ assert.match(companionSource, /projectsSyncing:\s*"Synchronisation des projets�
 assert.match(companionSource, /progress\.percent[\s\S]*progress\.completed[\s\S]*progress\.total/);
 assert.match(companionSource, /document\.createElement\("optgroup"\)/);
 assert.match(companionSource, /pinnedProjects\.length > 0/);
+const settingsSource = fs.readFileSync(path.join(__dirname, "../renderer/settings.js"), "utf8");
+assert.match(settingsSource, /project\.pinned === true \? `\$\{tr\("pinned"\)\} · `/);
 const projectSource = fs.readFileSync(path.join(__dirname, "../src/chatgpt-projects.ts"), "utf8");
 assert.match(projectSource, /header\.parentElement\?\.closest\('\[class\*="sidebar-expando-section"\]'\)/);
 assert.match(projectSource, /const projectEntriesFor = \(section\)/);
