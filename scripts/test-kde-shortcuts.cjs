@@ -22,15 +22,18 @@ assert.notEqual(kdeShortcutActionDetails("main").id, kdeShortcutActionDetails("c
 const source = fs.readFileSync(path.join(__dirname, "../src/kde-shortcuts.ts"), "utf8");
 const syncFunction = source.match(/export function syncKdeShortcut[\s\S]*?\n}/)?.[0] || "";
 assert.match(syncFunction, /runGdbus\("doRegister", \[actionId\]\)/);
-assert.match(syncFunction, /runGdbus\("setForeignShortcut", \[actionId, keys\]\)/);
+assert.match(syncFunction, /action === "main"[\s\S]*assignMainShortcut\(actionId, keys\)[\s\S]*setForeignShortcut/);
 assert.ok(
   syncFunction.indexOf('runGdbus("doRegister", [actionId]') <
-    syncFunction.indexOf('runGdbus("setForeignShortcut", [actionId, keys]'),
+    syncFunction.indexOf("assignMainShortcut(actionId, keys)"),
   "the desktop action is registered before its shortcut is assigned",
 );
 assert.match(syncFunction, /runGdbus\("shortcut", \[actionId\]\)/);
+assert.match(syncFunction, /runGdbus\("defaultShortcut", \[actionId\]\)/);
 assert.match(syncFunction, /id: "_launch", name: "ChatGPT"/);
-assert.match(syncFunction, /runGdbus\("setForeignShortcut", \[legacyActionId, "\[\]"\]\)/);
+assert.match(syncFunction, /assignMainShortcut\(legacyActionId, "\[\]"\)/);
+assert.match(source, /runGdbus\("setShortcut", \[actionId, keys, "7"\]\)/);
+assert.match(syncFunction, /runGdbus\("setForeignShortcut", \[actionId, keys\]\)/);
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, "../package.json"), "utf8"));
 const linux = packageJson.build.linux;

@@ -36,6 +36,7 @@ export type KdeShortcutAction = "main" | "companion";
 export interface KdeShortcutResult {
   available: boolean;
   applied: boolean;
+  defaultApplied?: boolean;
   actionId?: string;
   legacyMigrated?: boolean;
   error?: string;
@@ -54,6 +55,11 @@ function actionIdentifier(details: { id: string; name: string }): string {
 function keysFromResult(result: ReturnType<typeof spawnSync>): number[] {
   if (result.error || result.status !== 0) return [];
   return [...String(result.stdout).matchAll(/-?\d+/g)].map((match) => Number(match[0]));
+}
+
+function assignMainShortcut(actionId: string, keys: string): ReturnType<typeof spawnSync> {
+  // ActiveShortcut (1) | DefaultShortcut (2) | NoAutoloading (4).
+  return runGdbus("setShortcut", [actionId, keys, "7"]);
 }
 
 export function acceleratorToQtKey(accelerator: string): number | null {
@@ -121,10 +127,10 @@ export function syncKdeShortcut(
   const restoreLegacy = (): void => {
     if (!legacyActionId || legacyKeys.length === 0) return;
     runGdbus("doRegister", [legacyActionId]);
-    runGdbus("setForeignShortcut", [legacyActionId, `[${legacyKeys.join(",")}]`]);
+    assignMainShortcut(legacyActionId, `[${legacyKeys.join(",")}]`);
   };
   if (legacyActionId && legacyKeys.length > 0) {
-    const clearLegacyResult = runGdbus("setForeignShortcut", [legacyActionId, "[]"]);
+    const clearLegacyResult = assignMainShortcut(legacyActionId, "[]");
     if (clearLegacyResult.error || clearLegacyResult.status !== 0) {
       return {
         available: false,
@@ -151,7 +157,9 @@ export function syncKdeShortcut(
         "Enregistrement de l’action KGlobalAccel impossible.",
     };
   }
-  const setResult = runGdbus("setForeignShortcut", [actionId, keys]);
+  const setResult = action === "main"
+    ? assignMainShortcut(actionId, keys)
+    : runGdbus("setForeignShortcut", [actionId, keys]);
   if (setResult.error || setResult.status !== 0) {
     restoreLegacy();
     return {
@@ -175,12 +183,33 @@ export function syncKdeShortcut(
     };
   }
   const registeredKeys = keysFromResult(readResult);
-  const applied = enabled ? registeredKeys.includes(qtKey as number) : registeredKeys.length === 0;
+  const activeApplied = enabled ? registeredKeys.includes(qtKey as number) : registeredKeys.length === 0;
+  let defaultApplied: boolean | undefined;
+  let defaultKeys: number[] = [];
+  if (action === "main") {
+    const defaultReadResult = runGdbus("defaultShortcut", [actionId]);
+    if (defaultReadResult.error || defaultReadResult.status !== 0) {
+      restoreLegacy();
+      return {
+        available: false,
+        applied: false,
+        actionId: details.id,
+        error:
+          defaultReadResult.error?.message ||
+          String(defaultReadResult.stderr).trim() ||
+          "Vérification du raccourci KDE par défaut impossible.",
+      };
+    }
+    defaultKeys = keysFromResult(defaultReadResult);
+    defaultApplied = enabled ? defaultKeys.includes(qtKey as number) : defaultKeys.length === 0;
+  }
+  const applied = activeApplied && defaultApplied !== false;
   if (!applied) restoreLegacy();
   if (applied && legacyMigrated && legacyActionId) runGdbus("unRegister", [legacyActionId]);
   return {
     available: true,
     applied,
+    defaultApplied,
     actionId: details.id,
     legacyMigrated,
     ...(applied
@@ -188,7 +217,8 @@ export function syncKdeShortcut(
       : {
           error:
             `KDE n’a pas appliqué le raccourci demandé ` +
-            `(attendu=${enabled ? qtKey : "aucun"}, retourné=${registeredKeys.join(",") || "aucun"}).`,
+            `(attendu=${enabled ? qtKey : "aucun"}, actif=${registeredKeys.join(",") || "aucun"}` +
+            `${action === "main" ? `, défaut=${defaultKeys.join(",") || "aucun"}` : ""}).`,
         }),
   };
 }
