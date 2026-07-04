@@ -1098,7 +1098,7 @@ function companionPublicState(): object {
     noticeId: companionNoticeId,
     transientStatus: companionTransientStatus,
     promptMaxLines: currentSettings.companionPromptMaxLines,
-    projects: currentSettings.chatGptProjects.map(({ id, name, url }) => ({ id, name, url })),
+    projects: currentSettings.chatGptProjects.map(({ id, name, url, pinned }) => ({ id, name, url, pinned })),
     defaultProjectId: currentSettings.defaultChatGptProjectId ?? null,
     lastSelectedProjectId: currentSettings.lastSelectedChatGptProjectId ?? null,
     projectScanProgress: currentProjectScanProgress,
@@ -1316,7 +1316,8 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     log.info(
       `[projects:${scanId}] Sidebar observée=${result.sidebarNames.length}, ` +
         `couverture=${result.sidebarComplete ? "complète" : "partielle"}, ` +
-        `dépliages=${result.showMoreClicks}, projets contrôlés=${result.discovered}.`,
+        `dépliages=${result.showMoreClicks}, projets contrôlés=${result.discovered}, ` +
+        `épinglés=${result.projects.filter((project) => project.pinned === true).length}.`,
     );
     for (const project of result.projects) {
       const index = project.sidebarOrder ?? -1;

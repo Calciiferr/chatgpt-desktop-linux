@@ -28,6 +28,7 @@ assert.equal(normalizeProjectUrl("https://chatgpt.com/c/123"), null);
 
 const scanned = createProjectRecord("Alpha", absolute, "scan", "2026-07-01T00:00:00.000Z");
 assert.equal(scanned.id, "chatgpt-project:g-p-0000000000000000000000000000a001");
+assert.equal(scanned.pinned, undefined);
 const locallyRenamed = { ...scanned, name: "Alpha local", locallyRenamed: true };
 const refreshed = createProjectRecord("Alpha serveur", absolute, "scan", "2026-07-01T01:00:00.000Z");
 const merged = mergeProjects([locallyRenamed], [refreshed]);
@@ -42,6 +43,10 @@ const twoSameNames = mergeProjects([], [
 assert.equal(twoSameNames.length, 2);
 assert.deepEqual(twoSameNames.map((project) => project.url), [secondAbsolute, absolute]);
 assert.equal(mergeProjects([], [scanned, scanned]).length, 1);
+const pinnedScanned = { ...scanned, pinned: true };
+assert.equal(mergeProjects([scanned], [pinnedScanned])[0].id, scanned.id);
+assert.equal(mergeProjects([scanned], [pinnedScanned])[0].pinned, true);
+assert.equal(mergeProjects([pinnedScanned], [{ ...scanned, pinned: false }])[0].pinned, false);
 const reordered = reorderProjectsFromSidebar(twoSameNames, ["Alpha", "Alpha"]);
 assert.deepEqual(reordered.map((project) => project.id), twoSameNames.map((project) => project.id));
 const between = createProjectRecord(
@@ -96,6 +101,8 @@ assert.deepEqual(
   [scanned.id, between.id].sort(),
 );
 assert.equal(normalizeStoredProjects([{ name: "Conversation", url: "https://chatgpt.com/c/123" }]).length, 0);
+assert.equal(normalizeStoredProjects([scanned])[0].pinned, false);
+assert.equal(normalizeStoredProjects([pinnedScanned])[0].pinned, true);
 
 const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), "chatgpt-project-settings-"));
 const settingsPath = path.join(temporaryDirectory, "settings.json");
@@ -154,6 +161,15 @@ async function testInjectedScriptSyntax() {
       clickAttempts: () => [...clickAttemptIndexes],
       executeJavaScript: async (code) => {
         compile(code);
+        if (code.includes("const shouldClickPinnedHeader")) {
+          const links = Array.isArray(options.pinnedEntries) ? options.pinnedEntries : [];
+          return {
+            found: options.pinnedFound === true || links.length > 0,
+            expanded: true,
+            clicked: false,
+            links,
+          };
+        }
         if (code.includes("const scored =")) {
           if (sidebarOpen) return { open: true };
           if (code.includes("const shouldClick = true")) {
@@ -233,6 +249,32 @@ async function testInjectedScriptSyntax() {
   assert.equal(scanningProgress.at(-1).percent, 100);
   assert.equal(scanningProgress.at(-1).completed, 1);
   assert.equal(scanningProgress.at(-1).etaMs, 0);
+
+  const pinnedProjectUrl = "https://chatgpt.com/g/g-p-0000000000000000000000000000a004-chatgpt-app-linux/project";
+  const pinnedOnlyScan = await scanChatGptProjects(createDomMock([], [], {
+    pinnedEntries: [
+      { name: "ChatGPT App Linux", url: pinnedProjectUrl },
+      { name: "Conversation épinglée", url: "https://chatgpt.com/c/123456" },
+    ],
+  }), { maxShowMoreClicks: 1, maxProjects: 3 });
+  assert.equal(pinnedOnlyScan.projects.length, 1);
+  assert.equal(pinnedOnlyScan.projects[0].url, pinnedProjectUrl);
+  assert.equal(pinnedOnlyScan.projects[0].pinned, true);
+  assert.equal(pinnedOnlyScan.discovered, 1);
+
+  const duplicatedPinnedScan = await scanChatGptProjects(createDomMock(["Alpha"], [absolute], {
+    pinnedEntries: [{ name: "Alpha", url: absolute }],
+  }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
+  assert.equal(duplicatedPinnedScan.projects.length, 1);
+  assert.equal(duplicatedPinnedScan.projects[0].id, scanned.id);
+  assert.equal(duplicatedPinnedScan.projects[0].pinned, true);
+
+  const pinnedHomonymScan = await scanChatGptProjects(createDomMock(["Alpha"], [secondAbsolute], {
+    pinnedEntries: [{ name: "Alpha", url: absolute }],
+  }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
+  assert.equal(pinnedHomonymScan.projects.length, 2);
+  assert.equal(new Set(pinnedHomonymScan.projects.map((project) => project.id)).size, 2);
+  assert.deepEqual(pinnedHomonymScan.projects.map((project) => project.pinned), [true, false]);
 
   const duplicateContents = createDomMock(["Alpha", "Alpha"], [absolute, secondAbsolute]);
   const duplicateScan = await scanChatGptProjects(duplicateContents, {
@@ -411,6 +453,8 @@ assert.match(mainSource, /nativeTheme\.themeSource\s*=\s*mode/);
 const companionSource = fs.readFileSync(path.join(__dirname, "../renderer/companion.js"), "utf8");
 assert.match(companionSource, /projectsSyncing:\s*"Synchronisation des projets…"/);
 assert.match(companionSource, /progress\.percent[\s\S]*progress\.completed[\s\S]*progress\.total/);
+assert.match(companionSource, /document\.createElement\("optgroup"\)/);
+assert.match(companionSource, /pinnedProjects\.length > 0/);
 const projectSource = fs.readFileSync(path.join(__dirname, "../src/chatgpt-projects.ts"), "utf8");
 assert.match(projectSource, /header\.parentElement\?\.closest\('\[class\*="sidebar-expando-section"\]'\)/);
 assert.match(projectSource, /const projectEntriesFor = \(section\)/);

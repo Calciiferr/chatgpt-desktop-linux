@@ -23,6 +23,7 @@ export interface ChatGptProject {
   remoteName?: string;
   sidebarOrder?: number;
   orderSyncedAt?: string;
+  pinned?: boolean;
 }
 
 export interface ProjectScanFailure {
@@ -102,6 +103,8 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
   };
   const exactProjectText = (element) =>
     ['Projets', 'Projects'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
+  const exactPinnedText = (element) =>
+    ['Épinglés', 'Epinglés', 'Pinned'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
   const projectHomeLabels = ['ouvrir l’accueil du projet', 'open project home', 'open project homepage'];
   const isProjectHomeButton = (button) =>
     button instanceof HTMLButtonElement && projectHomeLabels.includes(
@@ -181,6 +184,16 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
       if (viewportDifference !== 0) return viewportDifference;
       return projectEntriesFor(right).length - projectEntriesFor(left).length;
     })[0];
+  };
+  const findPinnedSection = () => {
+    const sidebar = findActiveSidebar();
+    const root = sidebar || document;
+    const headers = [...root.querySelectorAll('[class*="sidebar-expando-section-header"]')]
+      .filter(isRendered)
+      .filter((header) => [header, ...header.querySelectorAll('button, span, div')].some(exactPinnedText));
+    return [...new Set(headers
+      .map((header) => header.parentElement?.closest('[class*="sidebar-expando-section"]'))
+      .filter((section) => section && isRendered(section)))][0] || null;
   };
   const findShowMoreButton = (section) => {
     if (!section) return null;
@@ -288,6 +301,7 @@ export function normalizeStoredProjects(value: unknown): ChatGptProject[] {
           : new Date().toISOString(),
       );
       if (record.locallyRenamed === true) project.locallyRenamed = true;
+      project.pinned = record.pinned === true;
       if (typeof record.remoteName === "string" && cleanName(record.remoteName)) {
         project.remoteName = cleanName(record.remoteName);
       }
@@ -333,6 +347,7 @@ export function mergeProjects(
       remoteName: next.remoteName ?? next.name ?? previous?.remoteName,
       sidebarOrder: nextOrder,
       locallyRenamed: previous?.locallyRenamed || next.locallyRenamed || undefined,
+      pinned: next.pinned === undefined ? previous?.pinned : next.pinned,
     });
     incomingSeen.add(next.id);
   }
@@ -547,6 +562,73 @@ async function ensureSidebarOpen(webContents: WebContents): Promise<void> {
   throw new Error("Impossible d’ouvrir la sidebar ChatGPT.");
 }
 
+interface PinnedProjectSnapshot {
+  projects: ChatGptProject[];
+  complete: boolean;
+}
+
+async function snapshotPinnedProjects(webContents: WebContents): Promise<PinnedProjectSnapshot> {
+  const read = async (clickHeader: boolean): Promise<{
+    found: boolean;
+    expanded: boolean;
+    clicked: boolean;
+    links: Array<{ name: string; url: string }>;
+  }> => (await webContents.executeJavaScript(`(() => {
+    ${ACTIVE_PROJECT_SCOPE_HELPERS}
+    const shouldClickPinnedHeader = ${clickHeader};
+    const section = findPinnedSection();
+    if (!section) return { found: false, expanded: true, clicked: false, links: [] };
+    const header = section.querySelector('[class*="sidebar-expando-section-header"]');
+    const headerButton = header
+      ? [...header.querySelectorAll('button')].find(exactPinnedText)
+      : undefined;
+    const pinnedProjectLinks = [...section.querySelectorAll('a[href]')]
+      .filter(isRendered)
+      .map((anchor) => ({
+        name: (anchor.innerText || anchor.textContent || anchor.getAttribute('aria-label') ||
+          anchor.getAttribute('title') || '').split('\\n').map((part) => part.trim()).find(Boolean) || '',
+        url: anchor.href,
+      }))
+      .filter((entry) => entry.name && entry.url);
+    const expanded = pinnedProjectLinks.length > 0 || headerButton?.getAttribute('aria-expanded') === 'true';
+    if (shouldClickPinnedHeader && !expanded && headerButton instanceof HTMLElement) {
+      headerButton.click();
+      return { found: true, expanded: false, clicked: true, links: [] };
+    }
+    return { found: true, expanded, clicked: false, links: pinnedProjectLinks };
+  })()`, true)) as {
+    found: boolean;
+    expanded: boolean;
+    clicked: boolean;
+    links: Array<{ name: string; url: string }>;
+  };
+
+  let result = await read(true);
+  if (result.clicked) {
+    const deadline = Date.now() + 3_000;
+    while (Date.now() < deadline) {
+      await delay(200);
+      result = await read(false);
+      if (result.expanded || result.links.length > 0) break;
+    }
+  }
+  const projects: ChatGptProject[] = [];
+  const seenIds = new Set<string>();
+  for (const link of result.links) {
+    const url = normalizeProjectUrl(link.url);
+    if (!url) continue;
+    const project = createProjectRecord(link.name, url, "scan");
+    if (seenIds.has(project.id)) continue;
+    project.pinned = true;
+    seenIds.add(project.id);
+    projects.push(project);
+  }
+  return {
+    projects,
+    complete: !result.found || result.expanded,
+  };
+}
+
 interface ProjectsSectionProbe {
   found: boolean;
   visibleRows: number;
@@ -594,7 +676,10 @@ async function ensureProjectsSectionExpanded(
     if (probe.found) break;
     await delay(250);
   }
-  if (!probe?.found) throw new Error("Section Projets introuvable.");
+  if (!probe?.found) {
+    if (allowEmpty) return;
+    throw new Error("Section Projets introuvable.");
+  }
   if (probe.visibleRows > 0) return;
 
   if (probe.expanded) {
@@ -718,7 +803,7 @@ export async function snapshotChatGptProjectOrder(
   const maxShowMoreClicks = Math.min(20, Math.max(0, options.maxShowMoreClicks ?? 20));
   const maxProjects = Math.min(200, Math.max(1, options.maxProjects ?? 200));
   throwIfProjectScanAborted(options.signal);
-  await prepareProjectsSidebar(webContents);
+  await prepareProjectsSidebar(webContents, true);
   throwIfProjectScanAborted(options.signal);
   let showMoreClicks = await expandVisibleProjects(webContents, maxShowMoreClicks, maxProjects);
   let descriptors: ProjectRowDescriptor[] = [];
@@ -878,8 +963,11 @@ export async function scanChatGptProjects(
     maxProjects,
     signal: options.signal,
   });
+  throwIfProjectScanAborted(options.signal);
+  const pinnedSnapshot = await snapshotPinnedProjects(webContents);
   const descriptors = snapshot.descriptors.slice(0, maxResolvedProjects);
-  if (descriptors.length === 0) {
+  const discovered = descriptors.length + pinnedSnapshot.projects.length;
+  if (discovered === 0) {
     return {
       status: "error",
       projects: [],
@@ -889,23 +977,27 @@ export async function scanChatGptProjects(
       duplicatesSkipped: 0,
       durationsMs: [],
       sidebarNames: [],
-      sidebarComplete: snapshot.complete,
+      sidebarComplete: snapshot.complete && pinnedSnapshot.complete,
       message: "Aucun projet visible dans la sidebar ChatGPT.",
     };
   }
 
-  const projects: ChatGptProject[] = [];
-  const failures: ProjectScanFailure[] = [];
-  const durationsMs: number[] = [];
-  const resolvedUrls = new Set<string>();
   const orderSyncedAt = new Date().toISOString();
+  const projects: ChatGptProject[] = pinnedSnapshot.projects.map((project, index) => ({
+    ...project,
+    sidebarOrder: index,
+    orderSyncedAt,
+  }));
+  const failures: ProjectScanFailure[] = [];
+  const durationsMs: number[] = pinnedSnapshot.projects.map(() => 0);
+  const resolvedUrls = new Set(projects.map((project) => project.url));
   let duplicatesSkipped = 0;
   let completed = 0;
   emit({
     phase: "scanning",
     completed: 0,
-    total: descriptors.length,
-    successes: 0,
+    total: discovered,
+    successes: projects.length,
     failures: 0,
     percent: 0,
   });
@@ -942,7 +1034,10 @@ export async function scanChatGptProjects(
           lastError = `URL déjà résolue (index ${descriptor.initialIndex + 1})`;
         } else {
           const project = createProjectRecord(descriptor.name, url, "scan");
-          project.sidebarOrder = descriptor.initialIndex;
+          // Only clear an existing pinned flag when the pinned section was
+          // observed conclusively; an inaccessible section is ambiguous.
+          project.pinned = pinnedSnapshot.complete ? false : undefined;
+          project.sidebarOrder = pinnedSnapshot.projects.length + descriptor.initialIndex;
           project.orderSyncedAt = orderSyncedAt;
           project.remoteName = descriptor.name;
           resolvedUrls.add(url);
@@ -963,7 +1058,7 @@ export async function scanChatGptProjects(
         failures.push({
           name: descriptor.name,
           error: lastError,
-          initialIndex: descriptor.initialIndex,
+          initialIndex: pinnedSnapshot.projects.length + descriptor.initialIndex,
           occurrence: descriptor.occurrence,
           durationMs,
         });
@@ -975,10 +1070,10 @@ export async function scanChatGptProjects(
     emit({
       phase: "scanning",
       completed,
-      total: descriptors.length,
+      total: discovered,
       successes: projects.length,
       failures: failures.length,
-      percent: Math.round((completed / descriptors.length) * 100),
+      percent: Math.round(((completed + pinnedSnapshot.projects.length) / discovered) * 100),
       etaMs: Math.max(0, Math.round(averageMs * (descriptors.length - completed))),
       currentProjectName: descriptor.name,
     });
@@ -986,18 +1081,18 @@ export async function scanChatGptProjects(
   }
   const status = projects.length === 0 ? "error" : failures.length > 0 ? "partial" : "ok";
   const message =
-    `${descriptors.length} projet(s) trouvé(s) · ${projects.length} réussi(s) · ${failures.length} échoué(s)` +
+    `${discovered} projet(s) trouvé(s) · ${projects.length} réussi(s) · ${failures.length} échoué(s)` +
     (duplicatesSkipped > 0 ? ` · ${duplicatesSkipped} répétition(s) DOM ignorée(s)` : "");
   return {
     status,
     projects: mergeProjects([], projects),
     failures,
-    discovered: descriptors.length,
+    discovered,
     showMoreClicks: snapshot.showMoreClicks,
     duplicatesSkipped,
     durationsMs,
-    sidebarNames: snapshot.names,
-    sidebarComplete: snapshot.complete,
+    sidebarNames: [...pinnedSnapshot.projects.map((project) => project.name), ...snapshot.names],
+    sidebarComplete: snapshot.complete && pinnedSnapshot.complete,
     message,
   };
 }

@@ -4,7 +4,7 @@ const translations = {
     requestPlaceholder: "Message ChatGPT", files: "Ajouter des fichiers", region: "Capturer une zone",
     window: "Capturer une fenêtre", screen: "Capturer l’écran", clipboardImage: "Ajouter les fichiers/images copiés",
     securityAudit: "Audit sécurité", qualityAudit: "Audit qualité",
-    projectLabel: "Projet", noProjectsSynced: "Aucun projet synchronisé", createProject: "Créer un nouveau projet…",
+    projectLabel: "Projet", noProjectsSynced: "Aucun projet synchronisé", pinnedProjects: "Projets épinglés", otherProjects: "Autres projets", createProject: "Créer un nouveau projet…",
     refreshProjects: "↻ Actualiser les projets", manageProjects: "Gérer les projets…",
     projectsSyncing: "Synchronisation des projets…", projectsSynced: "Projets actualisés.", projectsSyncedCount: "{count} projets synchronisés", projectsSyncError: "Synchronisation impossible.",
     projectsLoading: "Chargement du scanner…", projectsDiscovering: "Détection des projets…", projectsSaving: "Enregistrement…", approximately: "environ",
@@ -19,7 +19,7 @@ const translations = {
     requestPlaceholder: "Message ChatGPT", files: "Add files", region: "Capture region", window: "Capture window",
     screen: "Capture screen", clipboardImage: "Add copied files/images", newChat: "New", resumeChat: "Last",
     securityAudit: "Security audit", qualityAudit: "Quality audit",
-    projectLabel: "Project", noProjectsSynced: "No synchronized project", createProject: "Create a new project…",
+    projectLabel: "Project", noProjectsSynced: "No synchronized project", pinnedProjects: "Pinned projects", otherProjects: "Other projects", createProject: "Create a new project…",
     refreshProjects: "↻ Refresh projects", manageProjects: "Manage projects…",
     projectsSyncing: "Synchronizing projects…", projectsSynced: "Projects refreshed.", projectsSyncedCount: "{count} projects synchronized", projectsSyncError: "Synchronization failed.",
     projectsLoading: "Loading scanner…", projectsDiscovering: "Detecting projects…", projectsSaving: "Saving…", approximately: "about",
@@ -33,7 +33,7 @@ const translations = {
     requestPlaceholder: "Mensaje para ChatGPT", files: "Añadir archivos", region: "Capturar una zona",
     window: "Capturar una ventana", screen: "Capturar la pantalla", clipboardImage: "Añadir archivos/imágenes copiados",
     securityAudit: "Auditoría de seguridad", qualityAudit: "Auditoría de calidad",
-    projectLabel: "Proyecto", noProjectsSynced: "Ningún proyecto sincronizado", createProject: "Crear un nuevo proyecto…",
+    projectLabel: "Proyecto", noProjectsSynced: "Ningún proyecto sincronizado", pinnedProjects: "Proyectos fijados", otherProjects: "Otros proyectos", createProject: "Crear un nuevo proyecto…",
     refreshProjects: "↻ Actualizar proyectos", manageProjects: "Gestionar proyectos…",
     projectsSyncing: "Sincronizando proyectos…", projectsSynced: "Proyectos actualizados.", projectsSyncedCount: "{count} proyectos sincronizados", projectsSyncError: "No se pudo sincronizar.",
     projectsLoading: "Cargando escáner…", projectsDiscovering: "Detectando proyectos…", projectsSaving: "Guardando…", approximately: "aproximadamente",
@@ -315,15 +315,30 @@ function renderProjectPicker(state, draft) {
     newProjectNameInput.value = typeof draft.newProjectName === "string" ? draft.newProjectName : "";
   }
   projectSelect.replaceChildren();
-  const addOption = (value, label, disabled = false) => {
+  const addOption = (value, label, disabled = false, parent = projectSelect) => {
     const option = document.createElement("option");
     option.value = value;
     option.textContent = label;
     option.disabled = disabled;
-    projectSelect.append(option);
+    parent.append(option);
   };
   if (knownProjects.length === 0) addOption("__empty__", tr("noProjectsSynced"), true);
-  for (const project of knownProjects) addOption(project.id, project.name);
+  const pinnedProjects = knownProjects.filter((project) => project.pinned === true);
+  const otherProjects = knownProjects.filter((project) => project.pinned !== true);
+  if (pinnedProjects.length > 0) {
+    const pinnedGroup = document.createElement("optgroup");
+    pinnedGroup.label = tr("pinnedProjects");
+    for (const project of pinnedProjects) addOption(project.id, project.name, false, pinnedGroup);
+    projectSelect.append(pinnedGroup);
+    if (otherProjects.length > 0) {
+      const otherGroup = document.createElement("optgroup");
+      otherGroup.label = tr("otherProjects");
+      for (const project of otherProjects) addOption(project.id, project.name, false, otherGroup);
+      projectSelect.append(otherGroup);
+    }
+  } else {
+    for (const project of otherProjects) addOption(project.id, project.name);
+  }
   addOption("__create__", tr("createProject"));
   addOption("__refresh__", tr("refreshProjects"));
   addOption("__manage__", tr("manageProjects"));
