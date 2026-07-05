@@ -50,7 +50,7 @@ if ! command -v zip >/dev/null 2>&1; then
   exit 1
 fi
 
-OUTPUT_DIR="$HOME/Projects/chatgpt-ai-handoff"
+OUTPUT_DIR="${AI_HANDOFF_OUTPUT_DIR:-$HOME/handoffs}"
 mkdir -p -- "$OUTPUT_DIR"
 
 while :; do
