@@ -36,12 +36,15 @@ function controllerScript(): string {
   return `
 const barTitle = "ChatGPT Magic Bar";
 const menuTitle = "ChatGPT Magic Bar Menu";
+const previewTitle = "ChatGPT Magic Bar Aperçu";
 const gap = 2;
 let lastBarPosition = null;
 let barWindow = null;
 let menuWindow = null;
+let previewWindow = null;
 let restoringBar = false;
 let positioningMenu = false;
+let positioningPreview = false;
 const watchedBars = [];
 
 function captionOf(window) {
@@ -54,6 +57,10 @@ function isBar(window) {
 
 function isMenu(window) {
   return captionOf(window) === menuTitle;
+}
+
+function isPreview(window) {
+  return captionOf(window) === previewTitle;
 }
 
 function findExact(title) {
@@ -120,10 +127,37 @@ function placeMenu() {
   positioningMenu = false;
 }
 
+function placePreview() {
+  if (positioningPreview) return;
+  const bar = isBar(barWindow) ? barWindow : findExact(barTitle);
+  const preview = isPreview(previewWindow) ? previewWindow : findExact(previewTitle);
+  if (!bar || !preview) return;
+
+  const previewGeometry = preview.frameGeometry;
+  const output = outputGeometryFor(bar);
+  const outputLeft = Math.round(output.x);
+  const outputTop = Math.round(output.y);
+  const outputWidth = Math.round(output.width);
+  const outputHeight = Math.round(output.height);
+  const width = Math.min(Math.round(previewGeometry.width), outputWidth);
+  const height = Math.min(Math.round(previewGeometry.height), outputHeight);
+  const x = Math.max(outputLeft, outputLeft + Math.round((outputWidth - width) / 2));
+  const y = Math.max(outputTop, outputTop + Math.round((outputHeight - height) / 2));
+
+  positioningPreview = true;
+  preview.frameGeometry = { x, y, width, height };
+  preview.keepAbove = true;
+  preview.onAllDesktops = true;
+  if (typeof preview.skipTaskbar !== "undefined") preview.skipTaskbar = true;
+  if (typeof preview.skipSwitcher !== "undefined") preview.skipSwitcher = true;
+  positioningPreview = false;
+}
+
 function rememberBar(window) {
   if (!isBar(window) || restoringBar) return;
   lastBarPosition = clonePosition(window.frameGeometry);
   placeMenu();
+  placePreview();
 }
 
 function watchBar(window) {
@@ -154,6 +188,7 @@ function watchBar(window) {
     }
   }
   placeMenu();
+  placePreview();
 }
 
 function watch(window) {
@@ -161,6 +196,9 @@ function watch(window) {
   else if (isMenu(window)) {
     menuWindow = window;
     placeMenu();
+  } else if (isPreview(window)) {
+    previewWindow = window;
+    placePreview();
   }
 }
 
@@ -169,6 +207,7 @@ workspace.windowAdded.connect(watch);
 workspace.windowRemoved.connect((window) => {
   if (window === barWindow) barWindow = null;
   if (window === menuWindow) menuWindow = null;
+  if (window === previewWindow) previewWindow = null;
 });
 `;
 }

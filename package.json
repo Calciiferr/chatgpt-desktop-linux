@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-desktop-linux",
-  "version": "0.7.0-beta.19",
+  "version": "0.7.0-beta.20",
   "private": true,
   "description": "Personal ChatGPT desktop wrapper for Linux, KDE Plasma and Wayland",
   "homepage": "https://chatgpt.com/",
@@ -19,7 +19,8 @@
     "test:diagnostics": "npm run build && node scripts/test-settings-diagnostics.cjs",
     "test:throttling": "npm run build && node scripts/test-chat-tab-throttling.cjs",
     "test:kde-shortcuts": "node scripts/test-kde-shortcuts.cjs",
-    "test": "npm run build && node scripts/test-projects.cjs && node scripts/test-companion-draft.cjs && node scripts/test-tabs.cjs && node scripts/test-clipboard-files.cjs && node scripts/test-attachment-transfer.cjs && node scripts/test-project-sync-policy.cjs && node scripts/test-settings-diagnostics.cjs && node scripts/test-chat-tab-throttling.cjs && node scripts/test-kde-shortcuts.cjs",
+    "test:preview": "npm run build && node scripts/test-companion-preview.cjs",
+    "test": "npm run build && node scripts/test-projects.cjs && node scripts/test-companion-draft.cjs && node scripts/test-tabs.cjs && node scripts/test-clipboard-files.cjs && node scripts/test-attachment-transfer.cjs && node scripts/test-project-sync-policy.cjs && node scripts/test-settings-diagnostics.cjs && node scripts/test-chat-tab-throttling.cjs && node scripts/test-kde-shortcuts.cjs && node scripts/test-companion-preview.cjs",
     "handoff:zip": "./scripts/make-ai-handoff-zip.sh",
     "handoff:zip:debug": "./scripts/make-ai-handoff-zip.sh --include-debug",
     "predist": "node scripts/archive-release.cjs deb appimage",

@@ -13,6 +13,7 @@ const translations = {
     emptyError: "Écrivez une demande ou ajoutez un contexte.", preparing: "Préparation dans ChatGPT…",
     fallback: "Le texte a été copié. Joignez les fichiers manuellement.",
     captureError: "Capture annulée ou indisponible.", transferError: "Transfert impossible.",
+    previewError: "Aperçu image indisponible.",
   },
   en: {
     close: "Close", addContext: "Add context", chatDestination: "Target conversation",
@@ -27,6 +28,7 @@ const translations = {
     prepare: "Prepare in ChatGPT", emptyError: "Write a request or add context.", preparing: "Preparing in ChatGPT…",
     fallback: "The text was copied. Attach files manually.",
     captureError: "Capture cancelled or unavailable.", transferError: "Transfer failed.",
+    previewError: "Image preview unavailable.",
   },
   es: {
     close: "Cerrar", addContext: "Añadir contexto", chatDestination: "Conversación de destino",
@@ -42,6 +44,7 @@ const translations = {
     emptyError: "Escribe una solicitud o añade contexto.", preparing: "Preparando en ChatGPT…",
     fallback: "El texto se copió. Adjunta los archivos manualmente.",
     captureError: "Captura cancelada o no disponible.", transferError: "No se pudo transferir.",
+    previewError: "Vista previa de imagen no disponible.",
   },
 };
 
@@ -52,10 +55,6 @@ const prepareButton = document.querySelector("#prepare");
 const status = document.querySelector("#status");
 const toggleToolsButton = document.querySelector("#toggle-tools");
 const sourceIndicator = document.querySelector("#source-indicator");
-const previewDialog = document.querySelector("#preview-dialog");
-const previewImage = document.querySelector("#preview-image");
-const previewTitle = document.querySelector("#preview-title");
-const previewClose = document.querySelector("#preview-close");
 const auditSecurityInput = document.querySelector("#audit-security");
 const auditQualityInput = document.querySelector("#audit-quality");
 const projectEnabledInput = document.querySelector("#project-enabled");
@@ -193,12 +192,14 @@ function resizePrompt() {
 
 function itemIcon(type) { return type === "text" ? "¶" : type === "image" ? "▧" : "↥"; }
 
-function openImagePreview(item) {
-  if (!item.previewDataUrl && !item.thumbnailDataUrl) return;
-  previewImage.src = item.previewDataUrl || item.thumbnailDataUrl;
-  previewImage.alt = item.name || "";
-  previewTitle.textContent = item.name || "";
-  previewDialog.showModal();
+async function openImagePreview(item) {
+  if (!item?.id) return;
+  try {
+    const result = await window.companionApi.openPreview(item.id);
+    if (!result?.ok) setTransientStatus(tr("previewError"), "error");
+  } catch {
+    setTransientStatus(tr("previewError"), "error");
+  }
 }
 
 function mediaForItem(item) {
@@ -518,14 +519,6 @@ document.addEventListener("pointerdown", (event) => {
 
 document.querySelector("#close").addEventListener("click", () => window.companionApi.close());
 
-previewClose.addEventListener("click", () => previewDialog.close());
-previewDialog.addEventListener("click", (event) => {
-  if (event.target === previewDialog) previewDialog.close();
-});
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && previewDialog.open) previewDialog.close();
-});
-
 prepareButton.addEventListener("click", async () => {
   setStatus();
   if (
@@ -610,7 +603,6 @@ window.companionApi.onMenuVisibility((visible) => {
   scheduleLayoutReport();
 });
 window.companionApi.onHidden(() => {
-  if (previewDialog.open) previewDialog.close();
   closeTools(false);
 });
 window.companionApi.onProjectScanProgress(renderProjectProgress);

@@ -37,6 +37,17 @@ const companionApi = {
   addClipboard(): Promise<{ ok: boolean; kind?: "files" | "image" | "text"; added?: number }> {
     return ipcRenderer.invoke("companion:clipboard-import");
   },
+  openPreview(itemId: string): Promise<{ ok: boolean }> {
+    return ipcRenderer.invoke("companion:open-preview", itemId);
+  },
+  onPreviewData(callback: (data: unknown) => void): () => void {
+    const listener = (_event: Electron.IpcRendererEvent, data: unknown): void => callback(data);
+    ipcRenderer.on("companion:preview-data", listener);
+    return () => ipcRenderer.removeListener("companion:preview-data", listener);
+  },
+  closePreview(): void {
+    ipcRenderer.send("companion:preview-close");
+  },
   removeItem(id: string): void {
     ipcRenderer.send("companion:remove-item", id);
   },

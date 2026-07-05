@@ -320,50 +320,6 @@ textarea::placeholder { color: var(--muted); }
 #status.error { color: #f28f8f; }
 #status.success { color: #77c69b; }
 
-.preview-dialog {
-  width: min(82vw, 920px);
-  max-height: 82vh;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  background: var(--surface);
-  color: var(--text);
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.62);
-}
-.preview-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.52);
-  backdrop-filter: blur(4px);
-}
-.preview-dialog img {
-  display: block;
-  max-width: 100%;
-  max-height: calc(82vh - 72px);
-  margin: 18px auto 8px;
-  border-radius: 14px;
-  object-fit: contain;
-}
-.preview-close {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  width: 30px;
-  height: 30px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--surface-hover);
-  color: var(--text);
-  font-size: 19px;
-}
-#preview-title {
-  margin: 4px 40px 0;
-  overflow: hidden;
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 @media (max-width: 570px) {
   .chat-mode { display: none; }
   .source-indicator { max-width: 105px; }

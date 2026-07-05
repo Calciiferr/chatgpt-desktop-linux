@@ -93,6 +93,12 @@ const MAGIC_BAR_MIN_HEIGHT = 80;
 const MAGIC_MENU_WIDTH = 280;
 const MAGIC_MENU_HEIGHT = 228;
 const MAGIC_MENU_GAP = 2;
+const MAGIC_PREVIEW_MIN_WIDTH = 360;
+const MAGIC_PREVIEW_MIN_HEIGHT = 280;
+const MAGIC_PREVIEW_MAX_RATIO = 0.85;
+const MAGIC_PREVIEW_MAX_SOURCE_EDGE = 1600;
+const MAGIC_PREVIEW_CHROME_WIDTH = 32;
+const MAGIC_PREVIEW_CHROME_HEIGHT = 72;
 const SEARCH_VIEW_WIDTH = 390;
 const SEARCH_VIEW_HEIGHT = 46;
 const SEARCH_VIEW_MARGIN = 12;
@@ -120,7 +126,6 @@ interface CompanionItem {
   source?: string;
   preview?: string;
   thumbnailDataUrl?: string;
-  previewDataUrl?: string;
   iconDataUrl?: string;
   text?: string;
   filePath?: string;
@@ -146,6 +151,8 @@ let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let companionWindow: BrowserWindow | null = null;
 let companionMenuWindow: BrowserWindow | null = null;
+let companionPreviewWindow: BrowserWindow | null = null;
+let companionPreviewLoadPromise: Promise<void> | null = null;
 let searchView: WebContentsView | null = null;
 let refreshView: WebContentsView | null = null;
 let tray: Tray | null = null;
@@ -1592,7 +1599,6 @@ function mimeTypeForPath(filePath: string): string {
 
 async function fileVisuals(filePath: string, image: boolean): Promise<{
   thumbnailDataUrl?: string;
-  previewDataUrl?: string;
   iconDataUrl?: string;
 }> {
   try {
@@ -1600,11 +1606,7 @@ async function fileVisuals(filePath: string, image: boolean): Promise<{
       const source = nativeImage.createFromPath(filePath);
       if (!source.isEmpty()) {
         const thumbnail = source.resize({ width: 112, height: 112 });
-        const preview = source.resize({ width: 1000, height: 760 });
-        return {
-          thumbnailDataUrl: thumbnail.toDataURL(),
-          previewDataUrl: preview.toDataURL(),
-        };
+        return { thumbnailDataUrl: thumbnail.toDataURL() };
       }
     }
   } catch (error) {
@@ -1765,23 +1767,189 @@ function createCompanionWindow(): void {
     if (!isQuitting) {
       event.preventDefault();
       hideCompanionMenu();
+      hideCompanionPreview();
       companionWindow?.hide();
     }
   });
   companionWindow.on("hide", () => {
     hideCompanionMenu();
+    hideCompanionPreview();
     if (companionWindow && !companionWindow.isDestroyed()) {
       companionWindow.webContents.send("companion:hidden");
     }
   });
   companionWindow.on("closed", () => {
     hideCompanionMenu();
+    destroyCompanionPreviewWindow();
     companionWindow = null;
   });
   companionWindow.webContents.on("did-finish-load", sendCompanionState);
   void companionWindow.loadFile(rendererPath("companion.html")).catch((error: unknown) => {
     log.error("[companion] Impossible de charger la fenêtre :", error);
   });
+}
+
+function hideCompanionPreview(): void {
+  if (companionPreviewWindow && !companionPreviewWindow.isDestroyed()) {
+    companionPreviewWindow.hide();
+  }
+}
+
+function destroyCompanionPreviewWindow(): void {
+  const previewWindow = companionPreviewWindow;
+  companionPreviewWindow = null;
+  companionPreviewLoadPromise = null;
+  if (previewWindow && !previewWindow.isDestroyed()) {
+    previewWindow.destroy();
+  }
+}
+
+function createCompanionPreviewWindow(): BrowserWindow {
+  if (companionPreviewWindow && !companionPreviewWindow.isDestroyed()) {
+    return companionPreviewWindow;
+  }
+
+  const previewWindow = new BrowserWindow({
+    width: 960,
+    height: 720,
+    minWidth: MAGIC_PREVIEW_MIN_WIDTH,
+    minHeight: MAGIC_PREVIEW_MIN_HEIGHT,
+    show: false,
+    frame: false,
+    hasShadow: true,
+    transparent: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: true,
+    maximizable: false,
+    fullscreenable: false,
+    title: "ChatGPT Magic Bar Aperçu",
+    icon: assetPath("icon.png"),
+    backgroundColor: resolvedThemeBackground(),
+    webPreferences: {
+      preload: path.join(__dirname, "companion-preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+  companionPreviewWindow = previewWindow;
+
+  previewWindow.setMenuBarVisibility(false);
+  previewWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  previewWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.key === "Escape") {
+      event.preventDefault();
+      hideCompanionPreview();
+    }
+  });
+  previewWindow.on("blur", () => {
+    setTimeout(() => {
+      if (
+        companionPreviewWindow === previewWindow &&
+        !previewWindow.isDestroyed() &&
+        previewWindow.isVisible() &&
+        !previewWindow.isFocused()
+      ) {
+        hideCompanionPreview();
+      }
+    }, 120);
+  });
+  previewWindow.on("close", (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      hideCompanionPreview();
+    }
+  });
+  previewWindow.on("closed", () => {
+    if (companionPreviewWindow === previewWindow) {
+      companionPreviewWindow = null;
+      companionPreviewLoadPromise = null;
+    }
+  });
+  companionPreviewLoadPromise = previewWindow
+    .loadFile(rendererPath("companion-preview.html"))
+    .catch((error: unknown) => {
+      log.error("[magic-bar] Impossible de charger l’aperçu image :", error);
+      if (companionPreviewWindow === previewWindow) {
+        destroyCompanionPreviewWindow();
+      }
+      throw error;
+    });
+  return previewWindow;
+}
+
+async function openCompanionPreview(itemId: unknown): Promise<{ ok: boolean }> {
+  if (typeof itemId !== "string") return { ok: false };
+  const item = companionItems.find((candidate) => candidate.id === itemId);
+  if (!item || item.type !== "image" || !item.filePath) {
+    log.warn(`[magic-bar] Aperçu refusé : image introuvable (${itemId}).`);
+    return { ok: false };
+  }
+  if (!companionWindow || companionWindow.isDestroyed()) {
+    log.warn("[magic-bar] Aperçu refusé : Magic Bar indisponible.");
+    return { ok: false };
+  }
+
+  try {
+    const source = nativeImage.createFromPath(item.filePath);
+    if (source.isEmpty()) throw new Error("Image illisible.");
+    const sourceSize = source.getSize();
+    const largestEdge = Math.max(sourceSize.width, sourceSize.height);
+    const previewImage = largestEdge > MAGIC_PREVIEW_MAX_SOURCE_EDGE
+      ? sourceSize.width >= sourceSize.height
+        ? source.resize({ width: MAGIC_PREVIEW_MAX_SOURCE_EDGE })
+        : source.resize({ height: MAGIC_PREVIEW_MAX_SOURCE_EDGE })
+      : source;
+    const previewSize = previewImage.getSize();
+    const display = screen.getDisplayMatching(companionWindow.getBounds());
+    const workArea = display.workArea;
+    const maxWidth = Math.max(
+      MAGIC_PREVIEW_MIN_WIDTH,
+      Math.floor(workArea.width * MAGIC_PREVIEW_MAX_RATIO),
+    );
+    const maxHeight = Math.max(
+      MAGIC_PREVIEW_MIN_HEIGHT,
+      Math.floor(workArea.height * MAGIC_PREVIEW_MAX_RATIO),
+    );
+    const width = Math.min(
+      maxWidth,
+      Math.max(MAGIC_PREVIEW_MIN_WIDTH, previewSize.width + MAGIC_PREVIEW_CHROME_WIDTH),
+    );
+    const height = Math.min(
+      maxHeight,
+      Math.max(MAGIC_PREVIEW_MIN_HEIGHT, previewSize.height + MAGIC_PREVIEW_CHROME_HEIGHT),
+    );
+    const bounds: Rectangle = {
+      x: workArea.x + Math.round((workArea.width - width) / 2),
+      y: workArea.y + Math.round((workArea.height - height) / 2),
+      width,
+      height,
+    };
+
+    const previewWindow = createCompanionPreviewWindow();
+    if (companionPreviewLoadPromise) await companionPreviewLoadPromise;
+    if (previewWindow.isDestroyed() || companionPreviewWindow !== previewWindow) {
+      return { ok: false };
+    }
+    previewWindow.setBackgroundColor(resolvedThemeBackground());
+    previewWindow.setMaximumSize(maxWidth, maxHeight);
+    previewWindow.setMinimumSize(MAGIC_PREVIEW_MIN_WIDTH, MAGIC_PREVIEW_MIN_HEIGHT);
+    previewWindow.setBounds(bounds, false);
+    previewWindow.webContents.send("companion:preview-data", {
+      name: item.name,
+      dataUrl: previewImage.toDataURL(),
+      language: activeLanguage,
+      darkMode: nativeTheme.shouldUseDarkColors,
+    });
+    previewWindow.show();
+    previewWindow.focus();
+    return { ok: true };
+  } catch (error) {
+    log.warn(`[magic-bar] Aperçu image impossible (${item.filePath}) :`, error);
+    hideCompanionPreview();
+    return { ok: false };
+  }
 }
 
 function createCompanionMenuWindow(): void {
@@ -3512,6 +3680,7 @@ function isTrustedLocalSender(url: string): boolean {
     pathToFileURL(rendererPath("settings.html")).href,
     pathToFileURL(rendererPath("companion.html")).href,
     pathToFileURL(rendererPath("companion-menu.html")).href,
+    pathToFileURL(rendererPath("companion-preview.html")).href,
     pathToFileURL(rendererPath("search.html")).href,
     pathToFileURL(rendererPath("browser-shell.html")).href,
   ]).has(url);
@@ -3533,6 +3702,7 @@ function isTrustedCompanionSender(url: string): boolean {
   return new Set([
     pathToFileURL(rendererPath("companion.html")).href,
     pathToFileURL(rendererPath("companion-menu.html")).href,
+    pathToFileURL(rendererPath("companion-preview.html")).href,
   ]).has(url);
 }
 
@@ -3898,6 +4068,19 @@ function registerIpcHandlers(): void {
     return importClipboardToCompanion();
   });
 
+  ipcMain.handle("companion:open-preview", (event, itemId: unknown) => {
+    if (!event.senderFrame || !isTrustedCompanionSender(event.senderFrame.url)) {
+      return { ok: false };
+    }
+    return openCompanionPreview(itemId);
+  });
+
+  ipcMain.on("companion:preview-close", (event) => {
+    if (event.senderFrame && isTrustedCompanionSender(event.senderFrame.url)) {
+      hideCompanionPreview();
+    }
+  });
+
   ipcMain.handle("search:find", (event, input: unknown) => {
     if (!event.senderFrame || !isTrustedSearchSender(event.senderFrame.url)) {
       return { ok: false };
@@ -4145,6 +4328,7 @@ if (!hasSingleInstanceLock) {
       projectSyncTimer = null;
     }
     destroyProjectScanWindow();
+    destroyCompanionPreviewWindow();
     stopKWinCompanionController();
     persistWindowBounds();
     fs.rmSync(COMPANION_TEMP_DIR, { recursive: true, force: true });
