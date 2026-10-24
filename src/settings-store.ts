@@ -29,6 +29,7 @@ export interface AppSettings {
   searchPreviousShortcut: string;
   reloadShortcut: string;
   newTabShortcut: string;
+  checkUpdatesOnStartup: boolean;
   closeTabShortcut: string;
   nextTabShortcut: string;
   previousTabShortcut: string;
@@ -52,6 +53,7 @@ export interface AppSettings {
   defaultHeight: number;
   chatGptProjects: ChatGptProject[];
   defaultChatGptProjectId?: string;
+  newTabChatGptProjectId?: string;
   lastSelectedChatGptProjectId?: string;
   projectSyncStatus: {
     status: ProjectSyncState;
@@ -71,6 +73,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   searchPreviousShortcut: "Shift+Enter",
   reloadShortcut: "F5",
   newTabShortcut: "Ctrl+T",
+  checkUpdatesOnStartup: true,
   closeTabShortcut: "Ctrl+W",
   nextTabShortcut: "Ctrl+Tab",
   previousTabShortcut: "Ctrl+Shift+Tab",
@@ -209,6 +212,7 @@ function normalizeStoredSettings(value: unknown): AppSettings {
       typeof value.reloadShortcut === "string" && value.reloadShortcut.trim()
         ? value.reloadShortcut.trim()
         : DEFAULT_SETTINGS.reloadShortcut,
+    checkUpdatesOnStartup: typeof value.checkUpdatesOnStartup === "boolean" ? value.checkUpdatesOnStartup : true,
     newTabShortcut:
       typeof value.newTabShortcut === "string" && value.newTabShortcut.trim()
         ? value.newTabShortcut.trim()
@@ -290,6 +294,8 @@ function normalizeStoredSettings(value: unknown): AppSettings {
     projectIds.has(value.defaultChatGptProjectId)
       ? { defaultChatGptProjectId: value.defaultChatGptProjectId }
       : {}),
+    ...(typeof value.newTabChatGptProjectId === "string" && projectIds.has(value.newTabChatGptProjectId)
+      ? { newTabChatGptProjectId: value.newTabChatGptProjectId } : {}),
     ...(typeof value.lastSelectedChatGptProjectId === "string" &&
     projectIds.has(value.lastSelectedChatGptProjectId)
       ? { lastSelectedChatGptProjectId: value.lastSelectedChatGptProjectId }
@@ -436,6 +442,11 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
 
   return {
     ...current,
+    checkUpdatesOnStartup: typeof input.checkUpdatesOnStartup === "boolean" ? input.checkUpdatesOnStartup : current.checkUpdatesOnStartup,
+    newTabChatGptProjectId: input.newTabChatGptProjectId === undefined
+      ? current.newTabChatGptProjectId
+      : typeof input.newTabChatGptProjectId === "string" && current.chatGptProjects.some(project => project.id === input.newTabChatGptProjectId)
+        ? input.newTabChatGptProjectId : undefined,
     globalShortcut: shortcut,
     searchShortcut,
     searchNextShortcut,
@@ -491,4 +502,10 @@ export class SettingsStore {
     });
     fs.renameSync(temporaryPath, this.filePath);
   }
+}
+
+/** A removed project falls back to the normal ChatGPT home. */
+export function newChatTabUrl(settings: Pick<AppSettings, "chatGptProjects" | "newTabChatGptProjectId">): string {
+  return settings.chatGptProjects.find(project => project.id === settings.newTabChatGptProjectId)?.url
+    ?? "https://chatgpt.com/";
 }

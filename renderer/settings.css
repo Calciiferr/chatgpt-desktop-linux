@@ -385,3 +385,25 @@ code {
   color: var(--project-meta);
   font-size: 10px;
 }
+
+/* Text and symbols keep status meaningful without relying on color alone. */
+#update-access-status, #update-status {
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+}
+#update-access-status[data-state="success"], #update-status[data-state="success"] {
+  color: light-dark(#146c35, #8ee6ab);
+  background: light-dark(#edf9f0, #183729);
+  border-color: light-dark(#9bd2ab, #36734d);
+}
+#update-status[data-state="info"] {
+  color: light-dark(#174c87, #acd1ff);
+  background: light-dark(#edf5ff, #1b3049);
+  border-color: light-dark(#a9c9ec, #3d6088);
+}
+#update-access-status[data-state="warning"], #update-status[data-state="warning"], #update-status[data-state="error"] {
+  color: light-dark(#854100, #ffd28a);
+  background: light-dark(#fff6e6, #3e2d18);
+  border-color: light-dark(#e4bd7d, #8a6839);
+}

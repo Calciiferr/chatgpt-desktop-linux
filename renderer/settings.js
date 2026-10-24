@@ -4,6 +4,7 @@ const searchShortcutInput = document.querySelector("#search-shortcut");
 const searchNextShortcutInput = document.querySelector("#search-next-shortcut");
 const searchPreviousShortcutInput = document.querySelector("#search-previous-shortcut");
 const reloadShortcutInput = document.querySelector("#reload-shortcut");
+const newTabProjectInput = document.querySelector("#new-tab-project");
 const newTabShortcutInput = document.querySelector("#new-tab-shortcut");
 const closeTabShortcutInput = document.querySelector("#close-tab-shortcut");
 const nextTabShortcutInput = document.querySelector("#next-tab-shortcut");
@@ -76,6 +77,10 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
+    updatesHint: "Les versions sont téléchargées depuis le dépôt GitHub privé. L’installation passe par l’installateur système et nécessite votre confirmation.",
+    updatesLoginHint: "Connectez votre compte GitHub avec le code temporaire affiché. Autorisation sur la page officielle GitHub, aucun jeton à copier. La connexion reste chiffrée dans le trousseau système.",
+    updatesConnect: "Se connecter à GitHub", updatesDisconnect: "Se déconnecter de GitHub", updatesInstall: "Télécharger et ouvrir l’installateur",
+    updatesTitle: "Mises à jour", updatesAuto: "Rechercher les mises à jour au démarrage", updatesCheck: "Rechercher maintenant",
     settingsTitle: "Paramètres", behaviorTitle: "Comportement",
     languageLabel: "Langue de l’application et de ChatGPT",
     languageHint: "Le changement nécessite un redémarrage de l’application.",
@@ -90,7 +95,7 @@ const translations = {
     tabBarModeHint: "En automatique, la barre apparaît à partir de deux onglets.",
     restoreTabsLabel: "Restaurer les onglets au démarrage", restoreTabsHint: "Seules les URLs ChatGPT et l’ordre sont conservés, jamais les brouillons.",
     lastTabBehaviorLabel: "Fermeture du dernier onglet", lastTabHome: "Revenir à l’accueil ChatGPT", lastTabHide: "Cacher la fenêtre", lastTabIgnore: "Ignorer la fermeture",
-    reloadShortcutLabel: "Actualiser", newTabShortcutLabel: "Nouvel onglet", closeTabShortcutLabel: "Fermer l’onglet",
+    newTabTargetLabel: "Destination des nouveaux onglets", newTabTargetHint: "Ctrl+T et bouton + : ChatGPT normal ou un projet synchronisé ci-dessous.", reloadShortcutLabel: "Actualiser", newTabShortcutLabel: "Nouvel onglet", closeTabShortcutLabel: "Fermer l’onglet",
     nextTabShortcutLabel: "Onglet suivant", previousTabShortcutLabel: "Onglet précédent", reopenTabShortcutLabel: "Rouvrir le dernier fermé",
     fixedTabShortcutsHint: "Ctrl+1 à Ctrl+8 sélectionnent un onglet ; Ctrl+9 sélectionne le dernier.",
     companionTitle: "Magic Bar", companionEnabledLabel: "Activer la Magic Bar",
@@ -134,6 +139,7 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
+    updatesTitle: "Updates", updatesAuto: "Check for updates at startup", updatesCheck: "Check now",
     settingsTitle: "Settings", behaviorTitle: "Behavior", languageLabel: "Application and ChatGPT language",
     languageHint: "Changing the language requires restarting the application.", shortcutLabel: "Global shortcut",
     shortcutHint: "Click the field, then press the new key combination.", closeLabel: "When I close the window",
@@ -146,7 +152,7 @@ const translations = {
     tabBarModeHint: "In automatic mode, the bar appears from two tabs.",
     restoreTabsLabel: "Restore tabs on startup", restoreTabsHint: "Only ChatGPT URLs and order are stored, never drafts.",
     lastTabBehaviorLabel: "Closing the last tab", lastTabHome: "Return to ChatGPT home", lastTabHide: "Hide the window", lastTabIgnore: "Ignore closing",
-    reloadShortcutLabel: "Reload", newTabShortcutLabel: "New tab", closeTabShortcutLabel: "Close tab",
+    newTabTargetLabel: "New tab destination", newTabTargetHint: "Ctrl+T and + button: normal ChatGPT or a project synchronized below.", reloadShortcutLabel: "Reload", newTabShortcutLabel: "New tab", closeTabShortcutLabel: "Close tab",
     nextTabShortcutLabel: "Next tab", previousTabShortcutLabel: "Previous tab", reopenTabShortcutLabel: "Reopen last closed",
     fixedTabShortcutsHint: "Ctrl+1 through Ctrl+8 select a tab; Ctrl+9 selects the last one.",
     companionTitle: "Companion", companionEnabledLabel: "Enable quick companion",
@@ -189,6 +195,7 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
+    updatesTitle: "Actualizaciones", updatesAuto: "Buscar actualizaciones al iniciar", updatesCheck: "Buscar ahora",
     settingsTitle: "Ajustes", behaviorTitle: "Comportamiento", languageLabel: "Idioma de la aplicación y ChatGPT",
     languageHint: "Cambiar el idioma requiere reiniciar la aplicación.", shortcutLabel: "Atajo global",
     shortcutHint: "Haz clic en el campo y pulsa la nueva combinación.", closeLabel: "Al cerrar la ventana",
@@ -201,7 +208,7 @@ const translations = {
     tabBarModeHint: "En modo automático, la barra aparece a partir de dos pestañas.",
     restoreTabsLabel: "Restaurar pestañas al iniciar", restoreTabsHint: "Solo se guardan las URLs de ChatGPT y el orden, nunca los borradores.",
     lastTabBehaviorLabel: "Cerrar la última pestaña", lastTabHome: "Volver al inicio de ChatGPT", lastTabHide: "Ocultar la ventana", lastTabIgnore: "Ignorar el cierre",
-    reloadShortcutLabel: "Actualizar", newTabShortcutLabel: "Nueva pestaña", closeTabShortcutLabel: "Cerrar pestaña",
+    newTabTargetLabel: "Destino de nuevas pestañas", newTabTargetHint: "Ctrl+T y botón +: ChatGPT normal o un proyecto sincronizado abajo.", reloadShortcutLabel: "Actualizar", newTabShortcutLabel: "Nueva pestaña", closeTabShortcutLabel: "Cerrar pestaña",
     nextTabShortcutLabel: "Pestaña siguiente", previousTabShortcutLabel: "Pestaña anterior", reopenTabShortcutLabel: "Reabrir la última cerrada",
     fixedTabShortcutsHint: "Ctrl+1 a Ctrl+8 seleccionan una pestaña; Ctrl+9 selecciona la última.",
     companionTitle: "Asistente", companionEnabledLabel: "Activar el asistente rápido",
@@ -440,6 +447,11 @@ function renderProjects(settings) {
     projectList.append(row);
   }
   defaultProjectInput.value = settings.defaultChatGptProjectId || "";
+  const selectedTarget = newTabProjectInput.dataset.loaded === "true"
+    ? newTabProjectInput.value : settings.newTabChatGptProjectId || "";
+  newTabProjectInput.replaceChildren(...[...defaultProjectInput.children].map(child => child.cloneNode(true)));
+  newTabProjectInput.value = currentProjects.some(project => project.id === selectedTarget) ? selectedTarget : "";
+  newTabProjectInput.dataset.loaded = "true";
   updateProjectListVisibility();
   renderProjectSync(settings.projectSyncStatus, currentProjects.length);
 }
@@ -448,6 +460,7 @@ function fillForm(payload) {
   const settings = payload.settings || payload;
   const runtime = payload.runtime;
   applySettingsTheme(runtime);
+  document.querySelector("#updates-auto").checked = settings.checkUpdatesOnStartup !== false;
   shortcut = settings.globalShortcut;
   shortcutInput.value = shortcut;
   searchShortcut = settings.searchShortcut;
@@ -643,6 +656,8 @@ form.addEventListener("submit", async (event) => {
     searchPreviousShortcut,
     reloadShortcut,
     newTabShortcut,
+    checkUpdatesOnStartup: document.querySelector("#updates-auto").checked,
+    newTabChatGptProjectId: newTabProjectInput.value,
     closeTabShortcut,
     nextTabShortcut,
     previousTabShortcut,
@@ -776,3 +791,99 @@ window.desktopApi
 
 window.desktopApi.onProjectScanProgress(renderProjectProgress);
 window.desktopApi.onSettingsTheme(applySettingsTheme);
+
+const updateMessage = document.querySelector("#update-status");
+const updateLoginCode = document.querySelector("#update-login-code");
+const updateCancelLogin = document.querySelector("#updates-cancel-login");
+const updateInstallButton = document.querySelector("#updates-install");
+const updateButtons = [...document.querySelectorAll("#updates-connect, #updates-disconnect, #updates-verify, #updates-check, #updates-install")];
+let updateCanInstall = false;
+async function refreshUpdateStatus(verify = false) {
+  const status = await window.desktopApi.updateStatus(verify);
+  if (!status) return;
+  document.querySelector("#update-version").textContent = `Version installée : ${status.version}`;
+  document.querySelector("#updates-connect").hidden = status.configured;
+  document.querySelector("#updates-disconnect").hidden = !status.configured;
+  document.querySelector("#updates-verify").hidden = !status.configured;
+  const accessStatus = document.querySelector("#update-access-status");
+  accessStatus.dataset.state = status.verified ? "success" : status.error ? "warning" : "neutral";
+  accessStatus.textContent = status.verified
+    ? `✓ Connecté à GitHub : ${status.login}.`
+    : status.configured ? "Connexion GitHub enregistrée." : "Non connecté à GitHub.";
+  if (status.error) { updateMessage.dataset.state = "warning"; updateMessage.textContent = status.error; }
+  updateCanInstall = status.deb;
+  updateInstallButton.disabled = !updateCanInstall;
+}
+async function updateAction(action) {
+  updateButtons.forEach(button => { button.disabled = true; });
+  updateMessage.dataset.state = "neutral";
+  try { await action(); }
+  catch { updateMessage.dataset.state = "error"; updateMessage.textContent = "L’opération n’a pas abouti. Réessayez."; }
+  finally { updateButtons.forEach(button => { button.disabled = false; }); updateInstallButton.disabled = !updateCanInstall; }
+}
+document.querySelector("#updates-connect").addEventListener("click", () => updateAction(async () => {
+  updateMessage.textContent = "Ouverture de la connexion GitHub…";
+  updateInstallButton.hidden = true;
+  const device = await window.desktopApi.connectUpdates();
+  if (!device.ok) { updateMessage.textContent = device.error; return; }
+  updateLoginCode.textContent = `Votre code GitHub : ${device.code} — saisissez-le sur la page GitHub ouverte, puis autorisez Calciiferr Desktop Updates.`;
+  updateLoginCode.hidden = false;
+  updateCancelLogin.hidden = false;
+  updateMessage.textContent = "En attente de votre autorisation sur GitHub…";
+  try {
+    const result = await window.desktopApi.completeUpdateLogin();
+    updateMessage.textContent = result.ok ? "Connexion GitHub enregistrée. Vous pouvez rechercher les mises à jour." : result.error;
+  } finally {
+    updateCancelLogin.hidden = true;
+    updateLoginCode.hidden = true;
+    updateLoginCode.textContent = "";
+    await refreshUpdateStatus(true);
+  }
+}));
+updateCancelLogin.addEventListener("click", () => { void window.desktopApi.cancelUpdateLogin(); });
+document.querySelector("#updates-disconnect").addEventListener("click", () => updateAction(async () => {
+  const result = await window.desktopApi.disconnectUpdates();
+  updateInstallButton.hidden = true;
+  updateMessage.textContent = result.ok ? "Connexion GitHub supprimée de cet ordinateur." : result.error;
+  await refreshUpdateStatus();
+}));
+window.addEventListener("beforeunload", () => { void window.desktopApi.cancelUpdateLogin(); });
+document.querySelector("#updates-check").addEventListener("click", () => updateAction(async () => {
+  updateMessage.textContent = "Recherche en cours…";
+  updateInstallButton.hidden = true;
+  const result = await window.desktopApi.checkUpdates();
+  if (!result.ok) { updateMessage.dataset.state = "error"; updateMessage.textContent = result.error; return; }
+  const comparison = result.comparison;
+  if (comparison?.state === "ahead") {
+    updateMessage.dataset.state = "info";
+    updateMessage.textContent = `↗ Votre version locale ${comparison.installed} est plus récente que la dernière version publiée sur GitHub (${comparison.latest}). Cette version locale n’est pas encore distribuée via les Releases.`;
+  } else if (comparison?.state === "current") {
+    updateMessage.dataset.state = "success";
+    updateMessage.textContent = `✓ À jour : version installée et dernière version publiée sur GitHub identiques (${comparison.latest}).`;
+  } else if (comparison?.state === "available") {
+    updateMessage.dataset.state = "info";
+    updateMessage.textContent = `↓ Version ${comparison.latest} disponible sur GitHub — version installée : ${comparison.installed}.`;
+  } else {
+    updateMessage.dataset.state = "warning";
+    updateMessage.textContent = "Aucun paquet compatible publié dans les Releases GitHub. Impossible de comparer les versions.";
+  }
+  updateInstallButton.hidden = !result.release;
+}));
+updateInstallButton.addEventListener("click", () => updateAction(async () => {
+  updateMessage.textContent = "Téléchargement et vérification du paquet…";
+  const cancel = document.querySelector("#updates-cancel");
+  cancel.hidden = false;
+  let result;
+  try { result = await window.desktopApi.installUpdate(); }
+  finally { cancel.hidden = true; }
+  updateMessage.textContent = result.ok ? "Installateur ouvert. Quittez ChatGPT avant de terminer l’installation, puis relancez-le." : result.error;
+}));
+refreshUpdateStatus(true).catch(() => { updateMessage.textContent = "Informations de mise à jour indisponibles."; });
+
+document.querySelector("#updates-cancel").addEventListener("click", () => { void window.desktopApi.cancelUpdate(); });
+
+document.querySelector("#updates-verify").addEventListener("click", () => updateAction(async () => {
+  updateMessage.textContent = "Vérification de la connexion GitHub…";
+  await refreshUpdateStatus(true);
+  if (updateMessage.textContent === "Vérification de la connexion GitHub…") { updateMessage.dataset.state = "success"; updateMessage.textContent = "✓ Connexion vérifiée."; }
+}));

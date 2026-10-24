@@ -1,3 +1,5 @@
+import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
+import { GitHubUpdater } from "./github-updater";
 import { installAuthNavigation } from "./auth-navigation";
 import {
   app,
@@ -15,6 +17,7 @@ import {
   type Rectangle,
   screen,
   session,
+  safeStorage,
   shell,
   Tray,
   type WebContents,
@@ -75,6 +78,7 @@ import {
   DEFAULT_SETTINGS,
   type DisplayServerMode,
   SettingsStore,
+  newChatTabUrl,
   type ThemeMode,
   validateSettingsInput,
   type WindowDisplayMode,
@@ -798,7 +802,7 @@ function handleChatInput(event: Electron.Event, input: Input): void {
     void safeReloadActiveTab("shortcut");
   } else if (inputMatchesAccelerator(input, currentSettings.newTabShortcut)) {
     event.preventDefault();
-    createChatTab(CHATGPT_URL, true);
+    createChatTab(newChatTabUrl(currentSettings), true);
   } else if (inputMatchesAccelerator(input, currentSettings.closeTabShortcut)) {
     event.preventDefault();
     const tab = activeChatTab();
@@ -3702,7 +3706,111 @@ function isTrustedSearchSender(url: string): boolean {
   return url === searchUrl || url.startsWith(`${searchUrl}?`);
 }
 
+let githubUpdater: GitHubUpdater | null = null;
+function updateTokenPath(): string { return path.join(app.getPath("userData"), "github-update-access.bin"); }
+function loadUpdateSession(): GitHubSession | null {
+  if (!fs.existsSync(updateTokenPath())) return null;
+  try {
+    const session = JSON.parse(safeStorage.decryptString(fs.readFileSync(updateTokenPath())));
+    return typeof session.accessToken === "string" && typeof session.refreshToken === "string" &&
+      Number.isFinite(session.expiresAt) && Number.isFinite(session.refreshExpiresAt) ? session : null;
+  } catch { return null; }
+}
+function assertUpdateKeyring(): void {
+  if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend() === "basic_text") throw new Error("Le trousseau système doit être déverrouillé pour conserver la connexion GitHub.");
+}
+function saveUpdateSession(session: GitHubSession | null): void {
+  if (!session) { fs.rmSync(updateTokenPath(), { force: true }); return; }
+  assertUpdateKeyring();
+  const temporary = updateTokenPath() + ".tmp";
+  fs.writeFileSync(temporary, safeStorage.encryptString(JSON.stringify(session)), { mode: 0o600 });
+  fs.renameSync(temporary, updateTokenPath());
+}
+const updateAuth = new GitHubDeviceAuth(loadUpdateSession, saveUpdateSession);
+function updater(): GitHubUpdater {
+  return githubUpdater ??= new GitHubUpdater(path.join(app.getPath("userData"), "updates"), () => updateAuth.token());
+}
+async function installAvailableUpdate(): Promise<void> {
+  const file = await updater().download();
+  const error = await shell.openPath(file);
+  if (error) {
+    shell.showItemInFolder(file);
+    throw new Error("Paquet téléchargé et vérifié, mais l’installateur n’a pas pu s’ouvrir. Installez le .deb affiché dans le gestionnaire de fichiers.");
+  }
+}
+async function checkUpdatesOnStartup(): Promise<void> {
+  if (!app.isPackaged || !currentSettings.checkUpdatesOnStartup || !fs.existsSync(updateTokenPath())) return;
+  try {
+    const release = await updater().check(app.getVersion());
+    if (!release) return;
+    const answer = await dialog.showMessageBox({
+      type: "info", title: "Mise à jour disponible",
+      message: `ChatGPT Desktop Linux ${release.version} est disponible.`,
+      detail: "Télécharger le paquet vérifié et ouvrir l’installateur système ? Votre confirmation et éventuellement votre mot de passe seront demandés par l’installateur. Quittez l’application avant de terminer l’installation, puis relancez-la.",
+      buttons: ["Plus tard", "Télécharger et installer"], defaultId: 0, cancelId: 0,
+    });
+    if (answer.response === 1) {
+      try { await installAvailableUpdate(); }
+      catch (error) {
+        await dialog.showMessageBox({ type: "error", title: "Mise à jour interrompue", message: error instanceof Error ? error.message : "Téléchargement impossible." });
+      }
+    }
+  } catch (error) {
+    log.warn("[updates] " + (error instanceof Error ? error.message : "Recherche impossible"));
+  }
+}
+
 function registerIpcHandlers(): void {
+  ipcMain.handle("updates:cancel", (event) => {
+    if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) githubUpdater?.cancel();
+  });
+  ipcMain.handle("updates:connect", async (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    try {
+      assertUpdateKeyring();
+      const device = await updateAuth.start();
+      await shell.openExternal(device.url);
+      return { ok: true, ...device };
+    } catch (error) { updateAuth.cancel(); return { ok: false, error: error instanceof Error ? error.message : "Connexion impossible." }; }
+  });
+  ipcMain.handle("updates:complete-login", async (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    try { await updateAuth.complete(); return { ok: true }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Connexion interrompue." }; }
+  });
+  ipcMain.handle("updates:cancel-login", (event) => {
+    if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) updateAuth.cancel();
+  });
+  ipcMain.handle("updates:disconnect", (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    try { githubUpdater?.cancel(); updateAuth.disconnect(); return { ok: true }; }
+    catch { return { ok: false, error: "Déconnexion impossible." }; }
+  });
+  ipcMain.handle("updates:status", async (event, verify: unknown) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return null;
+    const base = { version: app.getVersion(), deb: app.isPackaged && !process.env.APPIMAGE };
+    if (!loadUpdateSession()) return { ...base, configured: false };
+    if (verify !== true) return { ...base, configured: true };
+    try { return { ...base, configured: true, verified: true, login: await updateAuth.verify() }; }
+    catch (error) {
+      if (error instanceof GitHubLoginExpiredError) updateAuth.disconnect();
+      return { ...base, configured: Boolean(loadUpdateSession()), error: error instanceof Error ? error.message : "Vérification impossible." };
+    }
+  });
+  ipcMain.handle("updates:check", async (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    try { const release = await updater().check(app.getVersion()); return { ok: true, release, comparison: updater().comparison }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Recherche impossible." }; }
+  });
+  ipcMain.handle("updates:install", async (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    try {
+      if (!app.isPackaged || process.env.APPIMAGE) throw new Error("Installez la version Debian pour utiliser l’installation intégrée.");
+      await installAvailableUpdate();
+      return { ok: true };
+    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Téléchargement impossible." }; }
+  });
+
   ipcMain.on("tabs:activate", (event, id: unknown) => {
     if (event.senderFrame && isTrustedBrowserShellSender(event.senderFrame.url) && typeof id === "string") {
       activateChatTab(id);
@@ -3715,7 +3823,7 @@ function registerIpcHandlers(): void {
   });
   ipcMain.on("tabs:create", (event) => {
     if (event.senderFrame && isTrustedBrowserShellSender(event.senderFrame.url)) {
-      createChatTab(CHATGPT_URL, true);
+      createChatTab(newChatTabUrl(currentSettings), true);
     }
   });
   ipcMain.on("pull-refresh:progress", (event, value: unknown) => {
@@ -4386,6 +4494,7 @@ if (!hasSingleInstanceLock) {
           startupCommand === "settings" ||
           startupCommand === "companion",
       );
+      setTimeout(() => { void checkUpdatesOnStartup(); }, 12_000);
       syncTray();
       applyGlobalShortcut(currentSettings.globalShortcut);
       applyCompanionShortcut(

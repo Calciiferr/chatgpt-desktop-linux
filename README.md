@@ -70,3 +70,13 @@ Le workflow GitHub Actions vérifie la version, exécute les tests, construit le
 - L’intégration au tray, aux raccourcis globaux, à KRunner et à Dolphin est conçue en priorité pour KDE Plasma ; certaines fonctions peuvent être limitées sur un autre environnement.
 - La session Chromium, les réglages et le cache local des projets sont conservés dans `~/.config/ChatGPT/`.
 - Les paquets générés sont placés dans `release/`. Le code compilé est placé dans `dist/`.
+
+## Mises à jour depuis le dépôt privé
+
+Dans **Paramètres → Mises à jour**, cliquer sur **Se connecter à GitHub**. L'application affiche un code temporaire et ouvre la page officielle GitHub. S'y connecter avec son propre compte, saisir le code, puis autoriser **Calciiferr Desktop Updates**. Aucun jeton ni URL de dépôt à saisir. Le compte doit avoir accès au dépôt privé.
+
+L'intégration GitHub App doit être installée une seule fois par le propriétaire sur le seul dépôt `Calciiferr/chatgpt-desktop-linux`, avec Contents en lecture. Son identité de connexion peut être publique pour permettre au frère de se connecter ; le code et les Releases restent privés. Aucun secret de l'application n'est embarqué, uniquement son identifiant public. L'accès utilisateur et son renouvellement sont conservés chiffrés dans le trousseau système et ne sont jamais inclus dans le `.deb`. **Se déconnecter de GitHub** efface la connexion de cet ordinateur. Les autorisations peuvent aussi être révoquées dans GitHub.
+
+La vérification au démarrage est activée par défaut une fois connecté à GitHub et peut être désactivée avec la case correspondante, puis **Enregistrer**. **Rechercher maintenant** lance la même recherche manuellement. Une installation beta peut recevoir les préversions ; une installation stable ignore les préversions.
+
+Seules les Releases contenant un `.deb` amd64 avec une empreinte SHA-256 sont proposées. Un push de code sans Release ne constitue pas une mise à jour. Le téléchargement vérifie la taille et l'empreinte avant d'ouvrir l'installateur système ; aucune commande Git n'est exécutée pour modifier l'application installée. Quitter ChatGPT avant de terminer l'installation, puis relancer. L'installation finale n'est pas silencieuse et peut demander le mot de passe système. Cette fonction cible les installations Debian, pas les AppImage.

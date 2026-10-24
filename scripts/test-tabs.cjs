@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { DEFAULT_SETTINGS, SettingsStore, validateSettingsInput } = require("../dist/settings-store.js");
+const { DEFAULT_SETTINGS, SettingsStore, validateSettingsInput, newChatTabUrl } = require("../dist/settings-store.js");
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "chatgpt-tabs-test-"));
 const file = path.join(directory, "settings.json");
@@ -59,6 +59,18 @@ try {
       /nombre de lignes/,
     );
   }
+  const { createProjectRecord } = require("../dist/chatgpt-projects.js");
+  const project = createProjectRecord("Projet test", "https://chatgpt.com/g/g-p-abc123/project", "scan");
+  const withProject = { ...DEFAULT_SETTINGS, chatGptProjects: [project] };
+  const selected = validateSettingsInput({ ...withProject, newTabChatGptProjectId: project.id }, withProject);
+  assert.equal(newChatTabUrl(selected), project.url);
+  assert.equal(selected.defaultChatGptProjectId, undefined, "new tabs do not change the Magic Bar default");
+  new SettingsStore(file).save(selected);
+  assert.equal(new SettingsStore(file).load().newTabChatGptProjectId, project.id);
+  assert.equal(newChatTabUrl({ ...selected, chatGptProjects: [] }), "https://chatgpt.com/");
+  assert.equal(newChatTabUrl(validateSettingsInput({ ...withProject, newTabChatGptProjectId: "" }, selected)), "https://chatgpt.com/");
+  assert.equal(newChatTabUrl(validateSettingsInput({ ...withProject, newTabChatGptProjectId: "missing" }, selected)), "https://chatgpt.com/");
+  assert.equal(newChatTabUrl(DEFAULT_SETTINGS), "https://chatgpt.com/");
   console.log("Tabs/settings tests: OK");
 } finally {
   fs.rmSync(directory, { recursive: true, force: true });

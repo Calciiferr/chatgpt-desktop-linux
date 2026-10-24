@@ -1,6 +1,14 @@
 import { contextBridge, ipcRenderer } from "electron";
 
 const desktopApi = {
+  cancelUpdate(): Promise<void> { return ipcRenderer.invoke("updates:cancel"); },
+  updateStatus(verify = false): Promise<any> { return ipcRenderer.invoke("updates:status", verify); },
+  connectUpdates(): Promise<any> { return ipcRenderer.invoke("updates:connect"); },
+  completeUpdateLogin(): Promise<any> { return ipcRenderer.invoke("updates:complete-login"); },
+  cancelUpdateLogin(): Promise<void> { return ipcRenderer.invoke("updates:cancel-login"); },
+  disconnectUpdates(): Promise<any> { return ipcRenderer.invoke("updates:disconnect"); },
+  checkUpdates(): Promise<any> { return ipcRenderer.invoke("updates:check"); },
+  installUpdate(): Promise<any> { return ipcRenderer.invoke("updates:install"); },
   getSettings(): Promise<unknown> {
     return ipcRenderer.invoke("settings:get");
   },

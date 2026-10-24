@@ -119,6 +119,11 @@
               <option value="ignore" data-i18n="lastTabIgnore">Ignorer la fermeture</option>
             </select>
           </label>
+          <label class="field" for="new-tab-project">
+            <span data-i18n="newTabTargetLabel">Destination des nouveaux onglets</span>
+            <select id="new-tab-project"></select>
+            <small data-i18n="newTabTargetHint">S’applique au raccourci Nouvel onglet (Ctrl+T par défaut) et au bouton +. Liste issue des projets synchronisés ci-dessous.</small>
+          </label>
           <div class="size-grid">
             <label class="field" for="reload-shortcut"><span data-i18n="reloadShortcutLabel">Actualiser</span><input id="reload-shortcut" type="text" readonly spellcheck="false" /></label>
             <label class="field" for="new-tab-shortcut"><span data-i18n="newTabShortcutLabel">Nouvel onglet</span><input id="new-tab-shortcut" type="text" readonly spellcheck="false" /></label>
@@ -230,6 +235,26 @@
           <button id="reset-window" class="secondary" type="button">
             <span data-i18n="resetWindow">Recentrer et rétablir cette taille</span>
           </button>
+        </section>
+
+        <section class="card">
+          <h2 data-i18n="updatesTitle">Mises à jour</h2>
+          <p id="update-version"></p>
+          <label class="toggle" for="updates-auto"><span data-i18n="updatesAuto">Rechercher les mises à jour au démarrage</span><input id="updates-auto" type="checkbox" /></label>
+          <p data-i18n="updatesHint">Les versions sont téléchargées depuis le dépôt GitHub privé. L’installation passe par l’installateur système et nécessite votre confirmation.</p>
+          <small data-i18n="updatesLoginHint">Connectez votre compte GitHub pour accéder aux mises à jour privées. Un code temporaire sera affiché ici et une page officielle GitHub s’ouvrira. Aucun jeton à copier.</small>
+          <p id="update-login-code" role="status" hidden></p>
+          <button id="updates-cancel-login" type="button" class="secondary" hidden>Annuler la connexion</button>
+          <p id="update-access-status"></p>
+          <div class="diagnostic-actions">
+            <button id="updates-connect" hidden class="secondary" type="button" data-i18n="updatesConnect">Se connecter à GitHub</button>
+            <button id="updates-disconnect" hidden class="secondary" type="button" data-i18n="updatesDisconnect">Se déconnecter de GitHub</button>
+            <button id="updates-verify" class="secondary" type="button" hidden>↻ Vérifier la connexion</button>
+            <button id="updates-check" class="secondary" type="button" data-i18n="updatesCheck">Rechercher maintenant</button>
+            <button id="updates-install" type="button" hidden data-i18n="updatesInstall">Télécharger et ouvrir l’installateur</button>
+          </div>
+          <button id="updates-cancel" type="button" class="secondary" hidden>Annuler le téléchargement</button>
+          <p id="update-status" role="status" aria-live="polite"></p>
         </section>
 
         <section class="card diagnostics-card">
