@@ -328,12 +328,12 @@ function renderProjectPicker(state, draft) {
   const otherProjects = knownProjects.filter((project) => project.pinned !== true);
   if (pinnedProjects.length > 0) {
     const pinnedGroup = document.createElement("optgroup");
-    pinnedGroup.label = tr("pinnedProjects");
+    pinnedGroup.label = `📌 ${tr("pinnedProjects")}`;
     for (const project of pinnedProjects) addOption(project.id, project.name, false, pinnedGroup);
     projectSelect.append(pinnedGroup);
     if (otherProjects.length > 0) {
       const otherGroup = document.createElement("optgroup");
-      otherGroup.label = tr("otherProjects");
+      otherGroup.label = `📁 ${tr("otherProjects")}`;
       for (const project of otherProjects) addOption(project.id, project.name, false, otherGroup);
       projectSelect.append(otherGroup);
     }

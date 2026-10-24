@@ -1,3 +1,4 @@
+import { installAuthNavigation } from "./auth-navigation";
 import {
   app,
   BrowserWindow,
@@ -849,17 +850,7 @@ function createChatTab(url = CHATGPT_URL, activate = true): ChatTab | null {
   };
   chatTabs.push(tab);
   mainWindow.contentView.addChildView(view);
-  view.webContents.setWindowOpenHandler(({ url: target }) => {
-    if (isChatGptUrl(target)) createChatTab(target, true);
-    else if (/^https?:\/\//.test(target)) openExternal(target);
-    return { action: "deny" };
-  });
-  view.webContents.on("will-navigate", (event, target) => {
-    if (!isChatGptUrl(target)) {
-      event.preventDefault();
-      if (/^https?:\/\//.test(target)) openExternal(target);
-    }
-  });
+  installAuthNavigation(view.webContents, (target) => { createChatTab(target, true); }, openExternal);
   view.webContents.on("before-input-event", handleChatInput);
   view.webContents.on("page-title-updated", (_event, title) => {
     tab.title = normalizeTabTitle(title);
@@ -1354,7 +1345,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
           projectSyncStatus: {
             status: "error",
             at,
-            message: `${result.message} Vérifiez que vous êtes connecté à ChatGPT, puis réessayez.`,
+            message: `${result.message} La liste ChatGPT n’a pas pu être lue. Les projets déjà enregistrés sont conservés ; réessayez la synchronisation.`,
           },
         });
       }
@@ -1372,7 +1363,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       }
       return {
         ok: false,
-        error: `${result.message} Vérifiez que vous êtes connecté à ChatGPT, puis réessayez.`,
+        error: `${result.message} La liste ChatGPT n’a pas pu être lue. Les projets déjà enregistrés sont conservés ; réessayez la synchronisation.`,
         result,
       };
     }

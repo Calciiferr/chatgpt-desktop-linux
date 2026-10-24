@@ -240,9 +240,9 @@ async function testInjectedScriptSyntax() {
             hasMore: delayedBatchIndex < delayedBatches.length || options.hasMore === true,
           };
         }
-        if (code.includes("return entries.map((entry) => entry.name)")) {
+        if (code.includes("return entries.map((entry) => ({ name: entry.name")) {
           const limit = Number(code.match(/slice\(0, (\d+)\)/)?.[1] || currentNames.length);
-          return currentNames.slice(0, limit);
+          return currentNames.slice(0, limit).map((name, index) => ({ name, projectId: options.directIds?.[index] }));
         }
         if (code.includes("const expected =")) {
           const initialIndex = Number(code.match(/const initialIndex = (\d+)/)?.[1] || 0);
@@ -269,6 +269,16 @@ async function testInjectedScriptSyntax() {
     scanId: "test-scan",
     onProgress: (event) => progress.push(event),
   });
+  const directContents = createDomMock(["Même nom", "Même nom"], [], {
+    directIds: ["g-p-abc123", "g-p-def456"],
+  });
+  const directScan = await scanChatGptProjects(directContents, { maxShowMoreClicks: 0 });
+  assert.equal(directScan.status, "ok");
+  assert.deepEqual(directScan.projects.map(project => project.url), [
+    "https://chatgpt.com/g/g-p-abc123/project",
+    "https://chatgpt.com/g/g-p-def456/project",
+  ]);
+  assert.deepEqual(directContents.state().clickedIndexes, []);
   assert.equal(scan.status, "ok");
   assert.equal(scan.projects[0].url, absolute);
   assert.equal(scan.sidebarComplete, false);
@@ -539,6 +549,7 @@ function testProjectEntryDomHelpers() {
       return this;
     }
     getAttribute(name) { return this.attributes.get(name) || null; }
+    hasAttribute(name) { return this.attributes.has(name); }
     getBoundingClientRect() { return this.rect; }
     contains(candidate) {
       for (let current = candidate; current; current = current.parentElement) if (current === this) return true;

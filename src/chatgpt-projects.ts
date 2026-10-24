@@ -53,6 +53,7 @@ export interface ProjectRowDescriptor {
   occurrence: number;
   initialIndex: number;
   duplicateCount: number;
+  projectId?: string;
 }
 
 export interface ProjectScanResult {
@@ -133,6 +134,13 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
   };
   const projectEntriesFor = (section) => {
     if (!section) return [];
+    const modernRows = [...section.querySelectorAll('[data-app-action-sidebar-project-row][data-app-action-sidebar-project-id]')]
+      .filter(isRendered);
+    if (modernRows.length) return modernRows.map((row, initialIndex) => ({
+      button: row, row, initialIndex,
+      name: row.getAttribute('data-app-action-sidebar-project-label') || '',
+      projectId: row.getAttribute('data-app-action-sidebar-project-id'),
+    })).filter((entry) => entry.name);
     const candidates = [
       ...(section.matches?.('button[aria-label]') ? [section] : []),
       ...section.querySelectorAll('button[aria-label]'),
@@ -145,6 +153,7 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
   };
   const pinnedProjectEntriesFor = (section) => {
     if (!section) return [];
+    if (section.querySelector('[data-app-action-sidebar-project-row]')) return projectEntriesFor(section);
     const sidebarItems = [...section.querySelectorAll('[data-sidebar-item="true"]')];
     const candidates = (sidebarItems.length > 0
       ? sidebarItems
@@ -188,6 +197,9 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     return candidates[0]?.element || null;
   };
   const findProjectsSection = () => {
+    const modern = [...document.querySelectorAll('[data-app-action-sidebar-section]')]
+      .find((section) => section.getAttribute('data-app-action-sidebar-section-heading') === 'Projects' && isRendered(section));
+    if (modern) return modern;
     const sidebar = findActiveSidebar();
     const root = sidebar || document;
     const headers = [...root.querySelectorAll('[class*="sidebar-expando-section-header"]')]
@@ -206,6 +218,9 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     })[0];
   };
   const findPinnedSection = () => {
+    const modern = [...document.querySelectorAll('[data-app-action-sidebar-section]')]
+      .find((section) => section.getAttribute('data-app-action-sidebar-section-heading') === 'Pinned' && isRendered(section));
+    if (modern) return modern;
     const sidebar = findActiveSidebar();
     const root = sidebar || document;
     const headers = [...root.querySelectorAll('[class*="sidebar-expando-section-header"]')]
@@ -230,6 +245,7 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
       .filter((control) => isRendered(control) && matchesLabel(control));
     const inside = candidates.find((control) => section.contains(control));
     if (inside) return inside;
+    if (section.hasAttribute('data-app-action-sidebar-section')) return null;
     const sectionRect = section.getBoundingClientRect();
     return candidates
       .map((control) => ({ control, rect: control.getBoundingClientRect() }))
@@ -593,28 +609,30 @@ async function snapshotPinnedProjects(webContents: WebContents): Promise<PinnedP
     expanded: boolean;
     clicked: boolean;
     names: string[];
+    projectIds?: string[];
   }> => (await webContents.executeJavaScript(`(() => {
     ${ACTIVE_PROJECT_SCOPE_HELPERS}
     const shouldClickPinnedHeader = ${clickHeader};
     const section = findPinnedSection();
     if (!section) return { found: false, expanded: true, clicked: false, names: [] };
-    const header = section.querySelector('[class*="sidebar-expando-section-header"]');
+    const header = section.querySelector('[class*="sidebar-expando-section-header"]') || section;
     const headerButton = header
       ? [...header.querySelectorAll('button')].find(exactPinnedText)
       : undefined;
     const names = pinnedProjectEntriesFor(section).map((entry) => entry.name);
     const hasVisibleItems = [...section.querySelectorAll('[data-sidebar-item="true"], a[href]')].some(isRendered);
-    const expanded = hasVisibleItems || headerButton?.getAttribute('aria-expanded') === 'true';
+    const expanded = names.length > 0 || hasVisibleItems || headerButton?.getAttribute('aria-expanded') === 'true';
     if (shouldClickPinnedHeader && !expanded && headerButton instanceof HTMLElement) {
       headerButton.click();
       return { found: true, expanded: false, clicked: true, names: [] };
     }
-    return { found: true, expanded, clicked: false, names };
+    return { found: true, expanded, clicked: false, names, projectIds: pinnedProjectEntriesFor(section).map((entry) => entry.projectId) };
   })()`, true)) as {
     found: boolean;
     expanded: boolean;
     clicked: boolean;
     names: string[];
+    projectIds?: string[];
   };
 
   let result = await read(true);
@@ -638,7 +656,7 @@ async function snapshotPinnedProjects(webContents: WebContents): Promise<PinnedP
       const key = name.toLocaleLowerCase();
       const occurrence = occurrences.get(key) ?? 0;
       occurrences.set(key, occurrence + 1);
-      return { name, occurrence, initialIndex, duplicateCount: totals.get(key) ?? 1 };
+      return { name, occurrence, initialIndex, duplicateCount: totals.get(key) ?? 1, projectId: result.projectIds?.[initialIndex] };
     }),
     complete: !result.found || result.expanded,
   };
@@ -667,7 +685,7 @@ async function probeProjectsSection(
     }
     if (!section) return { found: false, visibleRows: 0, expanded: false };
     if (!headerButton) {
-      const header = section.querySelector('[class*="sidebar-expando-section-header"]');
+      const header = section.querySelector('[class*="sidebar-expando-section-header"]') || section;
       headerButton = header ? [...header.querySelectorAll('button')].find(exactProjectText) : undefined;
     }
     const entries = projectEntriesFor(section);
@@ -788,10 +806,12 @@ async function visibleProjectDescriptors(
     ${ACTIVE_PROJECT_SCOPE_HELPERS}
     const scope = findProjectsSection();
     const entries = projectEntriesFor(scope).slice(0, ${maxProjects});
-    return entries.map((entry) => entry.name).filter(Boolean);
+    return entries.map((entry) => ({ name: entry.name, projectId: entry.projectId })).filter((entry) => entry.name);
   })()`, true)) as unknown;
   if (!Array.isArray(names)) return [];
-  const cleanNames = names.filter((name): name is string => typeof name === "string").map(cleanName);
+  const entries = names.filter((entry): entry is { name: string; projectId?: string } =>
+    Boolean(entry) && typeof entry === "object" && typeof entry.name === "string");
+  const cleanNames = entries.map((entry) => cleanName(entry.name));
   const totals = new Map<string, number>();
   for (const name of cleanNames) {
     const key = name.toLocaleLowerCase();
@@ -802,7 +822,7 @@ async function visibleProjectDescriptors(
     const key = name.toLocaleLowerCase();
     const occurrence = occurrences.get(key) ?? 0;
     occurrences.set(key, occurrence + 1);
-    return { name, occurrence, initialIndex, duplicateCount: totals.get(key) ?? 1 };
+    return { name, occurrence, initialIndex, duplicateCount: totals.get(key) ?? 1, projectId: entries[initialIndex]?.projectId };
   });
 }
 
@@ -825,9 +845,10 @@ export async function snapshotChatGptProjectOrder(
   let previousSignature = "";
   let stablePasses = 0;
   let passes = 0;
-  while (stablePasses < 5 && passes < 16) {
+  while (stablePasses < 5 && passes < 32) {
     throwIfProjectScanAborted(options.signal);
     passes += 1;
+    if (descriptors.length === 0) await probeProjectsSection(webContents, true);
     if (showMoreClicks < maxShowMoreClicks) {
       showMoreClicks += await expandVisibleProjects(
         webContents,
@@ -847,12 +868,15 @@ export async function snapshotChatGptProjectOrder(
     await delay(500);
     throwIfProjectScanAborted(options.signal);
     descriptors = await visibleProjectDescriptors(webContents, maxProjects);
-    const signature = descriptors.map((item) => `${item.name}:${item.occurrence}`).join("\u0000");
-    if (signature === previousSignature) stablePasses += 1;
+    const signature = descriptors.map((item) => `${item.projectId ?? item.name}:${item.occurrence}`).join("\u0000");
+    // An empty DOM just after navigation is often a loading sidebar.
+    // Give it the full bounded discovery window before reporting no projects.
+    if (descriptors.length === 0) stablePasses = 0;
+    else if (signature === previousSignature) stablePasses += 1;
     else stablePasses = 0;
     previousSignature = signature;
   }
-  if (stablePasses < 5) {
+  if (stablePasses < 5 && descriptors.length > 0) {
     throw new Error("La liste des projets ne s’est pas stabilisée.");
   }
   const coverage = (await webContents.executeJavaScript(`(() => {
@@ -1119,7 +1143,10 @@ export async function scanChatGptProjects(
     let ignoredConversation = false;
     let lastError = "bouton d’accueil introuvable";
     try {
-      const opened = item.pinned
+      const directUrl = /^g-p-[a-z0-9]+$/i.test(descriptor.projectId ?? '')
+        ? normalizeProjectUrl(CHATGPT_ORIGIN + '/g/' + descriptor.projectId + '/project')
+        : null;
+      const opened = directUrl ? { clicked: true, previousUrl: webContents.getURL() } : item.pinned
         ? await clickPinnedProjectWithRetries(webContents, descriptor, options.signal)
         : await clickProjectHomeWithRetries(
             webContents,
@@ -1131,7 +1158,7 @@ export async function scanChatGptProjects(
       if (!opened.clicked) {
         lastError = `bouton d’accueil introuvable après 3 tentatives (index ${overallIndex + 1})`;
       } else {
-        let url = await waitForProjectUrl(
+        let url = directUrl || await waitForProjectUrl(
           webContents,
           navigationTimeoutMs,
           opened.previousUrl,
