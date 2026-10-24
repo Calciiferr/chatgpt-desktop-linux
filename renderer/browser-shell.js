@@ -3,6 +3,7 @@ const tabs = document.querySelector("#tabs");
 const add = document.querySelector("#new-tab");
 
 function render(state) {
+  document.querySelector("#update-test-banner").hidden = !state.updateTest;
   document.documentElement.classList.toggle("light", !state.darkMode);
   bar.hidden = !state.barVisible;
   tabs.replaceChildren();

@@ -111,6 +111,7 @@ const SEARCH_VIEW_HEIGHT = 46;
 const SEARCH_VIEW_MARGIN = 12;
 const PROJECT_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const TAB_BAR_HEIGHT = 38;
+const UPDATE_TEST_BANNER_HEIGHT = app.getVersion() === "0.7.0-beta.33" ? 32 : 0;
 const MAX_CHAT_TABS = 8;
 const REFRESH_VIEW_WIDTH = 176;
 const REFRESH_VIEW_HEIGHT = 36;
@@ -693,6 +694,7 @@ function sendTabState(): void {
       active: tab.id === activeChatTabId,
     })),
     barVisible: tabBarIsVisible(),
+    updateTest: UPDATE_TEST_BANNER_HEIGHT > 0,
     canCreate: chatTabs.length < MAX_CHAT_TABS,
     darkMode: nativeTheme.shouldUseDarkColors,
   });
@@ -718,7 +720,7 @@ function syncChatTabThrottling(): void {
 function layoutChatViews(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const bounds = mainWindow.getContentBounds();
-  const top = tabBarIsVisible() ? TAB_BAR_HEIGHT : 0;
+  const top = (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0) + UPDATE_TEST_BANNER_HEIGHT;
   for (const tab of chatTabs) {
     tab.view.setBounds({ x: 0, y: top, width: bounds.width, height: Math.max(1, bounds.height - top) });
     tab.view.setVisible(tab.id === activeChatTabId);
@@ -2933,7 +2935,7 @@ function positionSearchView(): void {
   const width = Math.min(SEARCH_VIEW_WIDTH, Math.max(260, contentBounds.width - 24));
   searchView.setBounds({
     x: Math.max(12, contentBounds.width - width - SEARCH_VIEW_MARGIN),
-    y: (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0) + SEARCH_VIEW_MARGIN,
+    y: (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0) + UPDATE_TEST_BANNER_HEIGHT + SEARCH_VIEW_MARGIN,
     width,
     height: SEARCH_VIEW_HEIGHT,
   });

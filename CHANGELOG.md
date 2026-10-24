@@ -1,5 +1,20 @@
 # Historique des versions
 
+## 0.7.0-beta.33
+
+### Test temporaire du système de mise à jour
+
+Cette préversion sert uniquement à vérifier le téléchargement, l'installation et le redémarrage depuis l'updateur de l'application.
+
+- Bandeau **TEST DE MISE À JOUR — beta 33 installée** visible en haut de la fenêtre principale après installation et redémarrage.
+- Aucun autre changement fonctionnel par rapport à la beta 32.
+
+### Comment tester
+
+Depuis la beta 32, utiliser **Paramètres → Mises à jour → Rechercher maintenant**, puis lancer le téléchargement et l'installation. Ne pas installer cette version manuellement si le but est de vérifier l'updateur. La vérification automatique au démarrage peut également la proposer.
+
+Le bandeau est un repère visuel de la version exécutée après redémarrage. Cette version de test est destinée à être remplacée par une version de nettoyage, puis retirée des Releases à la demande de l'utilisateur.
+
 ## 0.7.0-beta.32
 
 ### Mises à jour : un suivi visible jusqu'au résultat
