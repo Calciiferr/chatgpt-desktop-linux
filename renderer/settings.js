@@ -79,7 +79,7 @@ const translations = {
   fr: {
     updatesHint: "Les versions sont téléchargées depuis le dépôt GitHub privé. L’installation passe par l’installateur système et nécessite votre confirmation.",
     updatesLoginHint: "Connectez votre compte GitHub avec le code temporaire affiché. Autorisation sur la page officielle GitHub, aucun jeton à copier. La connexion reste chiffrée dans le trousseau système.",
-    updatesConnect: "Se connecter à GitHub", updatesDisconnect: "Se déconnecter de GitHub", updatesInstall: "Télécharger et ouvrir l’installateur",
+    updatesConnect: "Se connecter à GitHub", updatesDisconnect: "Se déconnecter de GitHub", updatesInstall: "Télécharger et installer",
     updatesTitle: "Mises à jour", updatesAuto: "Rechercher les mises à jour au démarrage", updatesCheck: "Rechercher maintenant",
     settingsTitle: "Paramètres", behaviorTitle: "Comportement",
     languageLabel: "Langue de l’application et de ChatGPT",
@@ -876,7 +876,7 @@ updateInstallButton.addEventListener("click", () => updateAction(async () => {
   let result;
   try { result = await window.desktopApi.installUpdate(); }
   finally { cancel.hidden = true; }
-  updateMessage.textContent = result.ok ? "Installateur ouvert. Quittez ChatGPT avant de terminer l’installation, puis relancez-le." : result.error;
+  updateMessage.textContent = result.ok ? "Mise à jour installée et confirmée. Utilisez Redémarrer ChatGPT dans la fenêtre de suivi." : result.error;
 }));
 refreshUpdateStatus(true).catch(() => { updateMessage.textContent = "Informations de mise à jour indisponibles."; });
 

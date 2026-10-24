@@ -1,3 +1,4 @@
+import { installDebianPackage } from "./debian-update";
 import { ConversationColorStore } from "./conversation-colors";
 import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
 import { GitHubUpdater } from "./github-updater";
@@ -3731,13 +3732,65 @@ const updateAuth = new GitHubDeviceAuth(loadUpdateSession, saveUpdateSession);
 function updater(): GitHubUpdater {
   return githubUpdater ??= new GitHubUpdater(path.join(app.getPath("userData"), "updates"), () => updateAuth.token());
 }
+let updateProgressWindow: BrowserWindow | null = null;
+let updateInProgress = false;
+let updateCancellationRequested = false;
+let updateProgressState = { phase: "idle", title: "", detail: "", logs: "", percent: undefined as number | undefined };
+function sendUpdateProgress(phase: string, title: string, detail: string, percent?: number): void {
+  updateProgressState = { ...updateProgressState, phase, title, detail, percent };
+  if (updateProgressWindow && !updateProgressWindow.isDestroyed()) updateProgressWindow.webContents.send("update-progress:state", updateProgressState);
+}
 async function installAvailableUpdate(): Promise<void> {
-  const file = await updater().download();
-  const error = await shell.openPath(file);
-  if (error) {
-    shell.showItemInFolder(file);
-    throw new Error("Paquet téléchargé et vérifié, mais l’installateur n’a pas pu s’ouvrir. Installez le .deb affiché dans le gestionnaire de fichiers.");
-  }
+  if (updateInProgress) { updateProgressWindow?.show(); updateProgressWindow?.focus(); throw new Error("Une mise à jour est déjà en cours."); }
+  if (!app.isPackaged || process.env.APPIMAGE) throw new Error("Cette installation intégrée nécessite la version Debian de l’application.");
+  updateInProgress = true;
+  updateCancellationRequested = false;
+  const version = updater().comparison?.latest;
+  let cancelled = false;
+  try {
+    if (!version) throw new Error("Recherchez à nouveau la mise à jour.");
+    updateProgressWindow?.destroy();
+    const window = new BrowserWindow({ width: 580, height: 470, minWidth: 480, minHeight: 380,
+      title: "Mise à jour — ChatGPT", icon: assetPath("icon.png"), autoHideMenuBar: true,
+      webPreferences: { preload: path.join(__dirname, "update-progress-preload.js"), sandbox: true, contextIsolation: true, nodeIntegration: false } });
+    updateProgressWindow = window;
+    updateProgressState.logs = "";
+    sendUpdateProgress("download", "Téléchargement de la version " + version, "Préparation du téléchargement…", 0);
+    window.removeMenu();
+    window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    window.webContents.on("will-navigate", event => event.preventDefault());
+    window.on("close", event => {
+      if (!updateInProgress) return;
+      event.preventDefault();
+      if (["download", "verify"].includes(updateProgressState.phase)) { cancelled = true; githubUpdater?.cancel(); }
+    });
+    window.on("closed", () => { if (updateProgressWindow === window) updateProgressWindow = null; });
+    await window.loadFile(rendererPath("update-progress.html"));
+    window.show(); window.focus();
+    let lastProgress = 0;
+    const file = await updater().download((received, total, phase) => {
+      if (phase === "download" && received < total && Date.now() - lastProgress < 150) return;
+      lastProgress = Date.now();
+      const percent = Math.round(received / total * 100);
+      sendUpdateProgress(phase, phase === "verify" ? "Vérification du paquet" : "Téléchargement de la version " + version,
+        phase === "verify" ? "Contrôle de la taille et de l’empreinte SHA-256…" : `${percent} % — ${(received / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} Mo`, percent);
+    });
+    if (cancelled) throw new Error("Téléchargement annulé.");
+    sendUpdateProgress("authorization", "Autorisation système requise", "Validez la demande de mot de passe affichée par KDE pour autoriser l’installation. Aucun mot de passe n’est lu par ChatGPT.");
+    await installDebianPackage(file, version, text => {
+      updateProgressState.logs = (updateProgressState.logs + text).slice(-24_000);
+      sendUpdateProgress("install", "Installation de la mise à jour", "L’installation est en cours. Ne fermez pas l’application et n’éteignez pas l’ordinateur.");
+    });
+    sendUpdateProgress("success", "✓ Version " + version + " installée", "L’installation a été confirmée par le système. Redémarrez ChatGPT pour utiliser la nouvelle version.", 100);
+    window.show(); window.focus();
+    log.info("[updates] Version installée et confirmée : " + version);
+  } catch (error) {
+    cancelled ||= updateCancellationRequested;
+    const message = cancelled ? "Le téléchargement a été annulé. L’application installée n’a pas été modifiée." : error instanceof Error ? error.message : "Mise à jour interrompue.";
+    sendUpdateProgress(cancelled ? "cancelled" : "error", cancelled ? "Téléchargement annulé" : "La mise à jour n’a pas abouti", message);
+    log.warn("[updates] " + message);
+    throw error;
+  } finally { updateInProgress = false; }
 }
 async function checkUpdatesOnStartup(): Promise<void> {
   if (!app.isPackaged || !currentSettings.checkUpdatesOnStartup || !fs.existsSync(updateTokenPath())) return;
@@ -3747,7 +3800,7 @@ async function checkUpdatesOnStartup(): Promise<void> {
     const answer = await dialog.showMessageBox({
       type: "info", title: "Mise à jour disponible",
       message: `ChatGPT Desktop Linux ${release.version} est disponible.`,
-      detail: "Télécharger le paquet vérifié et ouvrir l’installateur système ? Votre confirmation et éventuellement votre mot de passe seront demandés par l’installateur. Quittez l’application avant de terminer l’installation, puis relancez-la.",
+      detail: "Une fenêtre affichera le téléchargement, la vérification et l’installation. KDE vous demandera d’autoriser l’installation. Vous pourrez ensuite redémarrer ChatGPT.",
       buttons: ["Plus tard", "Télécharger et installer"], defaultId: 0, cancelId: 0,
     });
     if (answer.response === 1) {
@@ -3762,6 +3815,16 @@ async function checkUpdatesOnStartup(): Promise<void> {
 }
 
 function registerIpcHandlers(): void {
+  ipcMain.on("update-progress:ready", event => {
+    if (event.sender === updateProgressWindow?.webContents) event.sender.send("update-progress:state", updateProgressState);
+  });
+  ipcMain.on("update-progress:action", (event, action: unknown) => {
+    if (event.sender !== updateProgressWindow?.webContents) return;
+    if (action === "cancel" && ["download", "verify"].includes(updateProgressState.phase)) { updateCancellationRequested = true; githubUpdater?.cancel(); }
+    if (action === "close" && !updateInProgress) updateProgressWindow?.close();
+    if (action === "restart" && !updateInProgress && updateProgressState.phase === "success") { app.relaunch(); app.quit(); }
+  });
+
   const conversationColors = new ConversationColorStore(path.join(app.getPath("userData"), "conversation-colors.json"));
   const trustedColorSender = (event: Electron.IpcMainInvokeEvent): boolean =>
     Boolean(tabForContents(event.sender) && event.senderFrame && !event.senderFrame.parent && isChatGptUrl(event.senderFrame.url));
@@ -4424,7 +4487,11 @@ if (!hasSingleInstanceLock) {
     }
   });
 
-  app.on("before-quit", () => {
+  app.on("before-quit", event => {
+    if (updateInProgress && ["authorization", "install"].includes(updateProgressState.phase)) {
+      event.preventDefault(); updateProgressWindow?.show(); updateProgressWindow?.focus(); return;
+    }
+    if (updateInProgress) githubUpdater?.cancel();
     isQuitting = true;
     if (tabStateTimer) {
       clearTimeout(tabStateTimer);

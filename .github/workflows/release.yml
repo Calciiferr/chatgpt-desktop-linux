@@ -35,6 +35,8 @@ jobs:
           cache: npm
       - name: Check tag matches package version
         run: node -e 'if (process.env.RELEASE_TAG !== "v" + require("./package.json").version) throw new Error("Tag and package version differ")'
+      - name: Validate release changelog
+        run: node scripts/release-notes.cjs > "$RUNNER_TEMP/release-notes.md"
       - run: npm ci
       - run: npm test
       - run: npm run dist:deb -- --publish never
@@ -53,4 +55,4 @@ jobs:
           if [[ "$version" == *-* ]]; then args+=(--prerelease); fi
           gh release create "$RELEASE_TAG" "$package" SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
-            --title "ChatGPT Desktop Linux $version" --generate-notes "${args[@]}"
+            --title "ChatGPT Desktop Linux $version" --notes-file "$RUNNER_TEMP/release-notes.md" "${args[@]}"

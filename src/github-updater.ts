@@ -86,13 +86,14 @@ export class GitHubUpdater {
       return this.pending;
     } finally { this.busy = false; }
   }
-  async download(): Promise<string> {
+  async download(progress: (received: number, total: number, phase: "download" | "verify") => void = () => {}): Promise<string> {
     if (this.busy) throw new Error("Une recherche ou un téléchargement est déjà en cours.");
     const release = this.pending;
     if (!release) throw new Error("Recherchez d’abord une mise à jour disponible.");
     this.busy = true;
     this.controller = new AbortController();
     let partial = "";
+    progress(0, release.size, "download");
     try {
       const response = await this.request(`${API}/releases/assets/${release.assetId}`, true);
       fs.mkdirSync(this.directory, { recursive: true, mode: 0o700 });
@@ -108,8 +109,10 @@ export class GitHubUpdater {
           if (received > release.size || received > MAX_PACKAGE_BYTES) throw new Error("Taille du téléchargement invalide.");
           hash.update(chunk);
           fs.writeFileSync(descriptor, chunk);
+          progress(received, release.size, "download");
         }
       } finally { fs.closeSync(descriptor); }
+      progress(received, release.size, "verify");
       verifyDownload(received, `sha256:${hash.digest("hex")}`, release);
       fs.renameSync(partial, target);
       return target;

@@ -1,0 +1,12 @@
+const assert = require('node:assert/strict');
+const { releaseNotes } = require('./release-notes.cjs');
+const changelog = '# Versions\n\n## 1.0.1\n\n### Corrections\n\n- Correction du téléchargement.\n\n## 1.0.0\n\n- Première version.\n';
+const notes = releaseNotes(changelog, '1.0.1');
+assert.ok(notes.includes('Correction du téléchargement.'));
+assert.ok(!notes.includes('Première version.'));
+assert.ok(notes.includes('/compare/v1.0.0...v1.0.1'));
+assert.throws(() => releaseNotes(changelog, '1.0.2'), /ne contient pas/);
+assert.throws(() => releaseNotes('## 1.0.1\n', '1.0.1'), /absentes/);
+assert.throws(() => releaseNotes('## 1.0.1 (non publiée)\n- Test\n', '1.0.1'), /publiée/);
+assert.throws(() => releaseNotes(changelog, '../bad'), /invalide/);
+console.log('Release changelog extraction and missing-notes guards passed.');
