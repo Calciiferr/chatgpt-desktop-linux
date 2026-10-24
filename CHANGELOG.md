@@ -1,5 +1,10 @@
 # Historique des versions
 
+## 0.7.0-beta.31
+
+- Couleur par conversation dans le menu des trois points : palette de base, sélecteur personnalisé, aperçu et retour au fond normal.
+- Fonds dégradés légers enregistrés localement par identifiant et appliqués à tous les onglets.
+
 ## 0.7.0-beta.30
 
 - Comparaison explicite entre version installée et dernière Release compatible : plus récente localement, identique, mise à jour disponible, ou aucun paquet comparable.

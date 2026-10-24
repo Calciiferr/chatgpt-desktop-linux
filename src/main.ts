@@ -1,3 +1,4 @@
+import { ConversationColorStore } from "./conversation-colors";
 import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
 import { GitHubUpdater } from "./github-updater";
 import { installAuthNavigation } from "./auth-navigation";
@@ -3761,6 +3762,18 @@ async function checkUpdatesOnStartup(): Promise<void> {
 }
 
 function registerIpcHandlers(): void {
+  const conversationColors = new ConversationColorStore(path.join(app.getPath("userData"), "conversation-colors.json"));
+  const trustedColorSender = (event: Electron.IpcMainInvokeEvent): boolean =>
+    Boolean(tabForContents(event.sender) && event.senderFrame && !event.senderFrame.parent && isChatGptUrl(event.senderFrame.url));
+  ipcMain.handle("conversation-colors:get", (event) => trustedColorSender(event) ? conversationColors.load() : {});
+  ipcMain.handle("conversation-colors:set", (event, id: unknown, color: unknown) => {
+    if (!trustedColorSender(event)) return { ok: false, error: "Source non autorisée." };
+    try {
+      const colors = conversationColors.set(id, color);
+      for (const tab of chatTabs) if (!tab.view.webContents.isDestroyed()) tab.view.webContents.send("conversation-colors:state", colors);
+      return { ok: true, colors };
+    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Enregistrement impossible." }; }
+  });
   ipcMain.handle("updates:cancel", (event) => {
     if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) githubUpdater?.cancel();
   });
