@@ -1,6 +1,12 @@
 name: Publish Debian release
 
 on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to publish
+        required: true
+        type: string
   push:
     tags: ['v*']
 
@@ -17,17 +23,21 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
       - name: Check tag matches package version
-        run: node -e 'if (process.env.GITHUB_REF_NAME !== "v" + require("./package.json").version) throw new Error("Tag and package version differ")'
+        run: node -e 'if (process.env.RELEASE_TAG !== "v" + require("./package.json").version) throw new Error("Tag and package version differ")'
       - run: npm ci
       - run: npm test
-      - run: npm run dist:deb
+      - run: npm run dist:deb -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Publish installer and checksum
@@ -41,6 +51,6 @@ jobs:
           sha256sum "$package" > SHA256SUMS.txt
           args=()
           if [[ "$version" == *-* ]]; then args+=(--prerelease); fi
-          gh release create "$GITHUB_REF_NAME" "$package" SHA256SUMS.txt \
+          gh release create "$RELEASE_TAG" "$package" SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "ChatGPT Desktop Linux $version" --generate-notes "${args[@]}"
