@@ -12,7 +12,7 @@ function releaseNotes(markdown, version) {
   const body = markdown.slice(heading.index + heading[0].length, headings[index + 1]?.index ?? markdown.length).trim();
   if (!body || !/^[-*] /m.test(body)) throw new Error('Notes de version absentes ou sans changements détaillés.');
   const previous = headings[index + 1]?.[1];
-  return body + (previous ? `\n\n**Différences du code :** [v${previous} → v${version}](${repository}/compare/v${previous}...v${version})` : '') + '\n';
+  return body + (previous ? `\n\n**Historique complet :** [v${previous} → v${version}](${repository}/compare/v${previous}...v${version})` : '') + '\n';
 }
 if (require.main === module) {
   try { process.stdout.write(releaseNotes(fs.readFileSync(path.join(__dirname, '../CHANGELOG.md'), 'utf8'), process.argv[2] || require('../package.json').version)); }

@@ -1,82 +1,103 @@
 # ChatGPT Desktop Linux
 
-Application desktop personnelle et non officielle pour utiliser `chatgpt.com` dans une fenêtre dédiée sous Linux. Elle ajoute notamment une navigation par onglets, une icône de zone de notification, des raccourcis globaux, une recherche dans la conversation et une Magic Bar pour préparer un prompt avec du texte ou des fichiers.
+ChatGPT dans une fenêtre dédiée sous Linux, avec des onglets, des raccourcis clavier et une Magic Bar pour préparer ses messages. L'application est conçue pour KDE Plasma et Wayland.
 
-Le projet cible principalement KDE Plasma sous Wayland. Il produit des paquets Debian et AppImage, sans utiliser l’API OpenAI ni envoyer automatiquement les prompts préparés.
+Client non officiel, indépendant d'OpenAI. Un compte ChatGPT est nécessaire ; aucun abonnement API n'est requis.
 
-## Stack technique
+[**Télécharger l'application**](https://github.com/Calciiferr/chatgpt-desktop-linux/releases) · [Notes de version](CHANGELOG.md)
 
-- Electron et Node.js pour l’application desktop ;
-- TypeScript pour le processus principal et les scripts injectés ;
-- HTML, CSS et JavaScript pour les interfaces locales ;
-- electron-builder pour les paquets Linux.
+## Fonctionnalités
 
-## Développement et build
+### Navigation
 
-```bash
-# Installer les dépendances
-npm install
+- Plusieurs conversations ouvertes dans des onglets.
+- Raccourcis pour ouvrir, fermer et retrouver ses onglets.
+- Recherche dans la conversation avec `Ctrl+F`.
+- Ouverture des nouveaux onglets dans ChatGPT ou dans le projet de son choix.
+- Restauration des onglets au démarrage, en option.
 
-# Compiler puis lancer l’application
-npm run dev
+### Magic Bar
 
-# Compiler et exécuter les tests du projet
-npm test
+La Magic Bar s'ouvre avec `Ctrl+Shift+Espace`. Elle permet de préparer un message, d'y joindre des fichiers, des images du presse-papiers ou des captures d'écran, puis de transférer le tout vers ChatGPT.
 
-# Compiler uniquement
-npm run build
+- Choix d'un projet et synchronisation de la liste depuis ChatGPT.
+- Projets épinglés regroupés en tête de liste.
+- Aperçu des images jointes.
+- Capture d'une zone, d'une fenêtre ou de l'écran avec Spectacle.
 
-# Générer les deux formats Linux
-npm run dist
+### Personnalisation
 
-# Générer un format précis
-npm run dist:deb
-npm run dist:appimage
-```
+- Thèmes clair, sombre ou automatique.
+- Couleur par conversation : palette, couleur personnalisée et fond dégradé dans la barre latérale.
+- Raccourcis, dimensions de fenêtre et comportement de fermeture configurables.
+- Interface en français, anglais et espagnol.
 
-## Distribution sur GitHub
+### Intégration au bureau
 
-Le code et son historique sont publiés avec Git. Les installateurs `.deb` sont distribués séparément dans l'onglet **Releases** du dépôt ; ils ne sont pas ajoutés au dépôt Git.
+- Icône dans la zone de notification pour afficher ou masquer l'application.
+- Raccourcis globaux KDE et lancement à l'ouverture de session.
+- Intégrations avec Dolphin et Kate pour envoyer du contenu vers ChatGPT.
+- Notifications de fin de réponse.
 
-Pour installer ou mettre à jour l'application, télécharger le `.deb` depuis **Releases**, quitter complètement ChatGPT, puis lancer :
+## Installation
+
+Le paquet `.deb` est destiné aux systèmes **Kubuntu / KDE Plasma 6 en amd64**.
+
+1. Télécharger le fichier `.deb` depuis les [Releases](https://github.com/Calciiferr/chatgpt-desktop-linux/releases).
+2. Depuis le dossier du téléchargement, l'installer avec APT :
 
 ```bash
 sudo apt install ./ChatGPT-Desktop-Linux-VERSION-amd64.deb
 ```
 
-Remplacer `VERSION` par la version téléchargée. Les réglages et la session ChatGPT sont conservés. Les versions `beta` figurent comme préversions : consulter la liste des Releases, et pas seulement le lien « latest ».
+Remplacer `VERSION` par la version téléchargée. APT installe les dépendances nécessaires. L'application apparaît ensuite sous le nom **ChatGPT** dans le menu des applications.
 
-Pour publier une nouvelle version après avoir enregistré les modifications dans des commits :
+Au premier lancement, se connecter à son compte ChatGPT dans la fenêtre de l'application.
+
+## Raccourcis par défaut
+
+| Action | Raccourci |
+| --- | --- |
+| Afficher ou masquer ChatGPT | `Ctrl+Alt+G` |
+| Ouvrir la Magic Bar | `Ctrl+Shift+Espace` |
+| Nouvel onglet | `Ctrl+T` |
+| Fermer l'onglet | `Ctrl+W` |
+| Onglet suivant / précédent | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
+| Rouvrir le dernier onglet fermé | `Ctrl+Shift+T` |
+| Rechercher dans la conversation | `Ctrl+F` |
+
+Les raccourcis se modifient dans les paramètres.
+
+## Mises à jour
+
+L'application peut rechercher les nouvelles versions au démarrage. Une recherche manuelle est également disponible dans **Paramètres → Mises à jour → Rechercher maintenant**.
+
+Pour accéder aux versions du dépôt privé, cliquer sur **Se connecter à GitHub**, saisir le code affiché sur la page GitHub qui s'ouvre, puis autoriser l'application. Le compte utilisé doit avoir accès au dépôt.
+
+Lorsqu'une mise à jour est disponible, une fenêtre suit le téléchargement et l'installation. KDE peut demander une autorisation système. À la fin, cliquer sur **Redémarrer ChatGPT** pour utiliser la nouvelle version.
+
+Les mises à jour conservent la session et les réglages. La recherche automatique peut être désactivée dans les paramètres. Les installations beta reçoivent les préversions.
+
+## À savoir
+
+L'application utilise le site ChatGPT. Certaines fonctions, comme la synchronisation des projets ou les couleurs de conversations, dépendent de son interface et peuvent nécessiter une adaptation lorsque celle-ci évolue.
+
+L'intégration au bureau est conçue pour KDE Plasma. Les autres environnements Linux ne sont pas la cible principale du projet.
+
+## Développement
+
+Le projet utilise Electron, TypeScript et electron-builder.
 
 ```bash
-# Exemple : choisir une version encore inutilisée.
-npm version 0.7.0-beta.26 --no-git-tag-version
-# Mettre aussi CHANGELOG.md à jour, puis enregistrer les changements.
-git add package.json package-lock.json CHANGELOG.md
-git commit -m "chore: release 0.7.0-beta.26"
-git tag -a v0.7.0-beta.26 -m "ChatGPT Desktop Linux 0.7.0-beta.26"
-git push origin main
-git push origin v0.7.0-beta.26
+npm ci
+npm run dev
 ```
 
-Le workflow GitHub Actions vérifie la version, exécute les tests, construit le `.deb`, puis crée la Release avec l'installateur et sa somme SHA-256. Un simple push de code ne publie pas de nouvelle version. Le workflow nécessite GitHub Actions activé sur le dépôt ; sa première exécution devra être vérifiée.
+```bash
+npm test                 # Tests
+npm run build            # Compilation
+npm run dist:deb         # Paquet Debian
+npm run dist:appimage    # AppImage
+```
 
-## Notes importantes
-
-- Pour partager l’application sur Kubuntu avec Plasma 6, utiliser le `.deb` et l’installer avec `sudo apt install ./ChatGPT-Desktop-Linux-VERSION-amd64.deb` (en remplaçant `VERSION`). APT installe les dépendances manquantes depuis les dépôts ; les paquets déjà installés et satisfaisant les contraintes sont réutilisés.
-- Les dépendances obligatoires du `.deb` sont explicites dans `build.deb.depends` de `package.json` : bibliothèques Electron, Spectacle, outils D-Bus et de configuration KDE 6, KGlobalAccel, KWin/Plasma, portails de bureau, Dolphin et Kate pour leurs intégrations. Cette liste remplace les dépendances par défaut d’electron-builder : conserver les bibliothèques Electron lors des mises à jour.
-- Le paquet ne copie pas le compte ChatGPT ni les réglages personnels. Les permissions de session, les conflits de raccourcis et les pilotes de la machine restent indépendants de l’installation des dépendances.
-
-- L’intégration au tray, aux raccourcis globaux, à KRunner et à Dolphin est conçue en priorité pour KDE Plasma ; certaines fonctions peuvent être limitées sur un autre environnement.
-- La session Chromium, les réglages et le cache local des projets sont conservés dans `~/.config/ChatGPT/`.
-- Les paquets générés sont placés dans `release/`. Le code compilé est placé dans `dist/`.
-
-## Mises à jour depuis le dépôt privé
-
-Dans **Paramètres → Mises à jour**, cliquer sur **Se connecter à GitHub**. L'application affiche un code temporaire et ouvre la page officielle GitHub. S'y connecter avec son propre compte, saisir le code, puis autoriser **Calciiferr Desktop Updates**. Aucun jeton ni URL de dépôt à saisir. Le compte doit avoir accès au dépôt privé.
-
-L'intégration GitHub App doit être installée une seule fois par le propriétaire sur le seul dépôt `Calciiferr/chatgpt-desktop-linux`, avec Contents en lecture. Son identité de connexion peut être publique pour permettre au frère de se connecter ; le code et les Releases restent privés. Aucun secret de l'application n'est embarqué, uniquement son identifiant public. L'accès utilisateur et son renouvellement sont conservés chiffrés dans le trousseau système et ne sont jamais inclus dans le `.deb`. **Se déconnecter de GitHub** efface la connexion de cet ordinateur. Les autorisations peuvent aussi être révoquées dans GitHub.
-
-La vérification au démarrage est activée par défaut une fois connecté à GitHub et peut être désactivée avec la case correspondante, puis **Enregistrer**. **Rechercher maintenant** lance la même recherche manuellement. Une installation beta peut recevoir les préversions ; une installation stable ignore les préversions.
-
-Seules les Releases contenant un `.deb` amd64 avec une empreinte SHA-256 sont proposées. Un push de code sans Release ne constitue pas une mise à jour. Une fenêtre suit le téléchargement, la vérification de la taille et de l'empreinte, puis l'installation APT via une demande d'autorisation KDE (pkexec) ; aucune commande Git n'est exécutée pour modifier l'application installée. Ne pas quitter ChatGPT pendant l'installation. Après confirmation de la version installée par Debian, le bouton Redémarrer ChatGPT permet d'utiliser la nouvelle version. Les erreurs et détails APT restent visibles. L'installation n'est pas silencieuse et peut demander le mot de passe système. Cette fonction cible les installations Debian, pas les AppImage.
+Les paquets sont générés dans `release/`. Chaque version publiée possède une entrée dans le [changelog](CHANGELOG.md), reprise dans sa Release GitHub.
