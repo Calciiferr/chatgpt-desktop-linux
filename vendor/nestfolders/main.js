@@ -824,6 +824,20 @@
                 return;
             }
         }
+        // Electron has no browser extension popup. Ctrl+Alt+Shift+F adds a
+        // top-level folder to the currently open project (or main sidebar).
+        if (event.ctrlKey && event.altKey && event.shiftKey && event.key.toLowerCase() === "f") {
+            event.preventDefault();
+            event.stopPropagation();
+            const scope = activeScope();
+            if (!scope || !scope.folderManager) return;
+            const folder = scope.folderManager.createFolder("Nouveau dossier", { insertAtTop: true });
+            if (folder) {
+                if (typeof folder.inlineRename === "function") folder.inlineRename();
+                scheduleSave(scope, { immediate: true });
+            }
+            return;
+        }
         if (event.ctrlKey && event.key === "\\") {
             event.preventDefault();
             setAllFoldersExpanded(false);
