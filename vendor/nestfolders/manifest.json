@@ -27,7 +27,8 @@
         "globalSettings.js",
         "layoutState.js",
         "dragController.js",
-        "main.js"
+        "main.js",
+        "electronProjectActions.js"
       ],
       "css": [
         "folders.css"
