@@ -360,3 +360,54 @@ html.glyn-site-claude .glyn-folder-row .glyn-folder-menu-btn {
 html.glyn-site-claude .glyn-folder-row .glyn-folder-menu-btn:hover {
   background: var(--nf-row-drop);
 }
+
+
+/* Desktop-only entry point for creating a folder at a project's root.
+ * The real ChatGPT row stays untouched (no nested buttons or click hijacking).
+ * A single fixed-position action tracks the current/hovered project row.
+ */
+.glyn-project-add-folder {
+  position: fixed;
+  z-index: 2147481000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--nf-menu-fg);
+  font: 500 23px/1 system-ui, sans-serif;
+  cursor: pointer;
+  opacity: 0.82;
+  transition: background 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+.glyn-project-add-folder:hover,
+.glyn-project-add-folder:focus-visible {
+  background: var(--nf-menu-hover);
+  border-color: var(--nf-outline);
+  opacity: 1;
+}
+.glyn-project-add-folder:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+.glyn-project-add-folder:disabled { opacity: 0.45; cursor: progress; }
+.glyn-project-add-folder[hidden],
+.glyn-project-folder-feedback[hidden] { display: none !important; }
+
+.glyn-project-folder-feedback {
+  position: fixed;
+  z-index: 2147481001;
+  max-width: 300px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--nf-outline);
+  background: var(--nf-menu-bg);
+  color: var(--nf-menu-fg);
+  box-shadow: var(--nf-menu-shadow);
+  font: 12px/1.4 system-ui, sans-serif;
+  pointer-events: none;
+}
