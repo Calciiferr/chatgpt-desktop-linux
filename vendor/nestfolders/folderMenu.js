@@ -2,6 +2,22 @@
   // @meta FolderMenu renders the contextual actions menu for folders, including colour picker logic.
   const ns = (window.GlynGPT = window.GlynGPT || {});
   const Icons = ns.Icons || {};
+  const language = (document.documentElement.lang || navigator.language || "fr").toLowerCase();
+  const labels = language.startsWith("fr") ? {
+    new: "Nouveau sous-dossier",
+    rename: "Renommer",
+    color: "Choisir une couleur",
+    expand: "Tout déplier",
+    collapse: "Tout replier",
+    delete: "Supprimer"
+  } : {
+    new: "New subfolder",
+    rename: "Rename",
+    color: "Choose color",
+    expand: "Expand all folders",
+    collapse: "Collapse all folders",
+    delete: "Delete"
+  };
 
   class FolderMenu {
     constructor() {
@@ -36,23 +52,23 @@
       menu.innerHTML = `
         <button type="button" data-action="new">
           <span class="glyn-folder-menu-icon">${Icons.folderNew || ""}</span>
-          <span>New folder</span>
+          <span>${labels.new}</span>
         </button>
         <button type="button" data-action="rename">
           <span class="glyn-folder-menu-icon">${Icons.folderRename || ""}</span>
-          <span>Rename</span>
+          <span>${labels.rename}</span>
         </button>
         <button type="button" data-action="color">
           <span class="glyn-folder-menu-icon">${Icons.folderColor || ""}</span>
-          <span>Change color</span>
+          <span>${labels.color}</span>
         </button>
         <button type="button" data-action="expand-all">
           <span class="glyn-folder-menu-icon">${Icons.folderExpandAll || ""}</span>
-          <span>Expand all folders</span>
+          <span>${labels.expand}</span>
         </button>
         <button type="button" data-action="collapse-all">
           <span class="glyn-folder-menu-icon">${Icons.folderCollapseAll || ""}</span>
-          <span>Collapse all folders</span>
+          <span>${labels.collapse}</span>
         </button>
       `;
 
@@ -87,7 +103,7 @@
       deleteBtn.dataset.action = "delete";
       deleteBtn.innerHTML = `
         <span class="glyn-folder-menu-icon">${Icons.folderDelete || ""}</span>
-        <span>Delete</span>
+        <span>${labels.delete}</span>
       `;
       menu.appendChild(deleteBtn);
 
