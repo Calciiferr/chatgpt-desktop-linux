@@ -3,6 +3,8 @@
   const ns = (window.GlynGPT = window.GlynGPT || {});
   const FolderItem = ns.FolderItem;
   const site = ns.site;
+  const french = (document.documentElement.lang || navigator.language || "fr")
+    .toLowerCase().startsWith("fr");
 
   class FolderManager {
     constructor(historyDiv, historyManager, folderMenu) {
@@ -122,7 +124,7 @@
             <span data-glyn-folder-label></span>
           </div>
           <div class="trailing highlight text-token-text-tertiary">
-            <button type="button" aria-label="Open folder options"
+            <button type="button" aria-label="${french ? "Options du dossier" : "Open folder options"}"
               class="__menu-item-trailing-btn glyn-folder-menu-btn"
               data-glyn-folder-menu-btn="true">
               <div>
@@ -525,15 +527,15 @@
       const dialog = document.createElement("div");
       dialog.className = "glyn-folder-confirm-dialog";
       dialog.innerHTML = `
-        <h2>Delete folder?</h2>
+        <h2>${french ? "Supprimer le dossier ?" : "Delete folder?"}</h2>
         <p class="glyn-folder-confirm-body">
-          <strong>This will permanently delete this folder and all child folders.</strong>
-          Any chats within this folder will return to the root. If you want to delete chats, you will need to delete them individually.
+          <strong>${french ? "Ce dossier et tous ses sous-dossiers seront supprimés." : "This will permanently delete this folder and all child folders."}</strong>
+          ${french ? "Les conversations qu'il contient reviendront à la racine du projet. Aucune conversation ne sera supprimée." : "Chats in this folder will return to the root. No chats will be deleted."}
         </p>
-        <p class="glyn-folder-confirm-name">Folder: <span data-glyn-folder-confirm-name></span></p>
+        <p class="glyn-folder-confirm-name">${french ? "Dossier" : "Folder"} : <span data-glyn-folder-confirm-name></span></p>
         <div class="glyn-folder-confirm-actions">
-          <button type="button" data-role="cancel">Cancel</button>
-          <button type="button" data-role="delete">Delete</button>
+          <button type="button" data-role="cancel">${french ? "Annuler" : "Cancel"}</button>
+          <button type="button" data-role="delete">${french ? "Supprimer" : "Delete"}</button>
         </div>
       `;
 
