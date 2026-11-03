@@ -702,18 +702,12 @@
         makeRootLinksDraggable(scope);
         applyProjectIndent(scope);
 
-        // Only the project you are actually looking at gets a starter folder: seeding one into
-        // every project's list the moment its chats render would rewrite parts of the sidebar
-        // the user never asked us to touch.
-        const seedInitialFolder = !projectId || projectId === site.currentProjectId();
-
+        // Never create an unsolicited starter folder: the project's + button
+        // controls when the user creates their first folder.
         scope.ready = scope.layoutState.restore()
             .catch(() => {})
             .then(() => {
                 if (scope.disposed) return scope;
-                if (!scope.folderManager.folders.length && seedInitialFolder) {
-                    scope.folderManager.createInitialFolder("New Folder");
-                }
                 bindScopeChangeHandlers(scope);
                 observeHistory(scope);
                 return scope;
@@ -815,6 +809,27 @@
         });
     }
 
+    // Electron's visible project-row "+" calls this instead of the Chrome
+    // extension popup. Never fall back to the main history when a project list
+    // is unavailable: that would silently file a folder in the wrong scope.
+    ns.createRootFolderForProject = async function (projectId) {
+        if (!projectId || !site.supportsProjectFolders()) {
+            return { ok: false, error: "invalid-project" };
+        }
+        reconcileProjectScopes();
+        const scope = scopes.find((entry) => entry.projectId === projectId);
+        if (!scope) return { ok: false, error: "project-not-expanded" };
+        await scope.ready;
+        if (scope.disposed || !scope.folderManager || !document.contains(scope.historyDiv)) {
+            return { ok: false, error: "project-list-unavailable" };
+        }
+        const folder = scope.folderManager.createFolder("Nouveau dossier", { insertAtTop: true });
+        if (!folder) return { ok: false, error: "creation-failed" };
+        scheduleSave(scope, { immediate: true });
+        if (typeof folder.inlineRename === "function") folder.inlineRename();
+        return { ok: true };
+    };
+
     function handleGlobalShortcuts(event) {
         if (!scopes.length) return;
         const active = document.activeElement;
@@ -823,20 +838,6 @@
             if (tag === "input" || tag === "textarea" || active.isContentEditable) {
                 return;
             }
-        }
-        // Electron has no browser extension popup. Ctrl+Alt+Shift+F adds a
-        // top-level folder to the currently open project (or main sidebar).
-        if (event.ctrlKey && event.altKey && event.shiftKey && event.key.toLowerCase() === "f") {
-            event.preventDefault();
-            event.stopPropagation();
-            const scope = activeScope();
-            if (!scope || !scope.folderManager) return;
-            const folder = scope.folderManager.createFolder("Nouveau dossier", { insertAtTop: true });
-            if (folder) {
-                if (typeof folder.inlineRename === "function") folder.inlineRename();
-                scheduleSave(scope, { immediate: true });
-            }
-            return;
         }
         if (event.ctrlKey && event.key === "\\") {
             event.preventDefault();
