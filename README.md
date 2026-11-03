@@ -28,7 +28,7 @@ La Magic Bar s'ouvre avec `Ctrl+Shift+Espace`. Elle permet de préparer un messa
 ### Personnalisation
 
 - Thèmes clair, sombre ou automatique.
-- Couleur par conversation : palette, couleur personnalisée et fond dégradé dans la barre latérale.
+- Dossiers et sous-dossiers virtuels dans les projets ChatGPT : création via « + » sur la ligne du projet, couleurs des dossiers, glisser-déposer des conversations.
 - Raccourcis, dimensions de fenêtre et comportement de fermeture configurables.
 - Interface en français, anglais et espagnol.
 
@@ -80,7 +80,7 @@ Les mises à jour conservent la session et les réglages. La recherche automatiq
 
 ## À savoir
 
-L'application utilise le site ChatGPT. Certaines fonctions, comme la synchronisation des projets ou les couleurs de conversations, dépendent de son interface et peuvent nécessiter une adaptation lorsque celle-ci évolue.
+L'application utilise le site ChatGPT. Certaines fonctions, comme la synchronisation des projets ou les dossiers NestFolders, dépendent de son interface et peuvent nécessiter une adaptation lorsque celle-ci évolue.
 
 L'intégration au bureau est conçue pour KDE Plasma. Les autres environnements Linux ne sont pas la cible principale du projet.
 
