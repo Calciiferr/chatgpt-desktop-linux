@@ -133,8 +133,11 @@
 
     function expandNativeRow(row) {
         if (!row || !row.isConnected) return;
-        const toggler = row.querySelector('[aria-expanded="false"]');
-        // Do not click a link/button for a different project.
+        const toggler = [...row.querySelectorAll('[aria-expanded="false"]')].find(
+            (element) => element instanceof HTMLElement &&
+                element.getAttribute("aria-haspopup") !== "menu"
+        );
+        // Do not click ChatGPT's own options menu instead of expanding the project.
         if (toggler instanceof HTMLElement) {
             toggler.click();
             return;
