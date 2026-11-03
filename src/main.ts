@@ -4523,7 +4523,7 @@ if (!hasSingleInstanceLock) {
   if (startupCommand === "quit") {
     app.once("ready", quitApplication);
   } else {
-    void app.whenReady().then(() => {
+    void app.whenReady().then(async () => {
       fs.rmSync(COMPANION_TEMP_DIR, { recursive: true, force: true });
       fs.mkdirSync(COMPANION_TEMP_DIR, { recursive: true, mode: 0o700 });
       registerIpcHandlers();
