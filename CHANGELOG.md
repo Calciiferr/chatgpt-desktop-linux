@@ -1,5 +1,15 @@
 # Notes de version
 
+## 0.7.0-beta.34-nestfolders.1 (branche de test, sans Release)
+
+- Remplacement des couleurs des conversations par NestFolders 1.1.0 (licence MIT).
+- Dossiers virtuels imbriqués à l'intérieur des vrais projets ChatGPT, avec glisser-déposer.
+- Bouton discret « + » à droite de la ligne du projet actif ou survolé ; le menu « … » d'un dossier permet de créer un sous-dossier.
+- Aucun raccourci clavier requis ni dossier créé automatiquement.
+- Adaptation Electron : chargement de l'extension dans la session ChatGPT et stockage local `chrome.storage.local` (pas de synchronisation).
+- Essai réservé à la branche `feature/nestfolders-electron` ; aucune publication de mise à jour.
+
+
 ## 0.7.0-beta.33
 
 - Version temporaire pour tester la mise à jour depuis la beta 32.
