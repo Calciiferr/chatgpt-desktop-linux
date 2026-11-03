@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "NestFolders — ChatGPT Desktop Linux",
+  "version": "1.1.0",
+  "description": "Local nested conversation folders for ChatGPT Desktop Linux",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://chatgpt.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "siteAdapter.js",
+        "draggableElement.js",
+        "chatItem.js",
+        "icons.js",
+        "folderItem.js",
+        "historyManager.js",
+        "folderMenu.js",
+        "folderManager.js",
+        "storageService.js",
+        "globalSettings.js",
+        "layoutState.js",
+        "dragController.js",
+        "main.js"
+      ],
+      "css": [
+        "folders.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}
