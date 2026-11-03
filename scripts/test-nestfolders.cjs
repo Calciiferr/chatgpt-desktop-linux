@@ -33,18 +33,18 @@ assert.ok(manifest.content_scripts[0].js.indexOf("electronProjectActions.js") >
 for (const file of manifest.content_scripts[0].js) {
   new vm.Script(fs.readFileSync(path.join(directory, file), "utf8"), { filename: file });
 }
-assert.match(vendoredMain, /ns\\.createRootFolderForProject\\s*=/,
+assert.ok(vendoredMain.includes("ns.createRootFolderForProject"),
   "scoped root folder API must exist");
-assert.match(vendoredMain, /project-not-expanded/,
+assert.ok(vendoredMain.includes("project-not-expanded"),
   "missing project scope must not fall back to global history");
-assert.doesNotMatch(vendoredMain, /Ctrl\\+Alt\\+Shift\\+F|seedInitialFolder/,
+assert.ok(!vendoredMain.includes("Ctrl+Alt+Shift+F") && !vendoredMain.includes("seedInitialFolder"),
   "no keyboard creation shortcut or automatic starter folder");
-assert.match(actions, /glyn-project-add-folder/,
+assert.ok(actions.includes("glyn-project-add-folder"),
   "project row button must be wired");
-assert.match(actions, /action\\.addEventListener\\("click"/,
+assert.ok(actions.includes('action.addEventListener("click"'),
   "click activation must be supported");
-assert.match(actions, /projectIdFromHref/,
+assert.ok(actions.includes("projectIdFromHref"),
   "projects must be identified by real project ID, not title");
-assert.match(stylesheet, /\\.glyn-project-add-folder/,
+assert.ok(stylesheet.includes(".glyn-project-add-folder"),
   "project + must be styled");
 console.log("NestFolders extension manifest, packaging, storage and color migration checks passed.");
