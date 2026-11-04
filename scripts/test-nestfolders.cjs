@@ -47,4 +47,18 @@ assert.ok(actions.includes("projectIdFromHref"),
   "projects must be identified by real project ID, not title");
 assert.ok(stylesheet.includes(".glyn-project-add-folder"),
   "project + must be styled");
-console.log("NestFolders extension manifest, packaging, storage and color migration checks passed.");
+const adapter = fs.readFileSync(path.join(directory, "siteAdapter.js"), "utf8");
+assert.ok(adapter.includes('a[href*="/g/g-p-"][href*="/c/"]'),
+  "project discovery must support ChatGPT's modern unmarked chat links");
+assert.ok(adapter.includes("nonProjectChatLinks"),
+  "global history must exclude native project conversation lists");
+assert.ok(vendoredMain.includes("initOnceHistoryFound(site.findHistoryContainer());"),
+  "the controller must start even when no global history exists");
+assert.ok(vendoredMain.includes("if (historyDiv) {"),
+  "global history scope is optional");
+assert.ok(vendoredMain.includes("if (!site.supportsProjectFolders() || !storageService) return;"),
+  "project scope discovery must not depend on the global history scope");
+assert.ok(actions.includes("function isSidebarProjectRow(") &&
+  !actions.includes("ns.historyDiv && document.contains(ns.historyDiv)"),
+  "project + must not require obsolete global history DOM");
+console.log("NestFolders manifest, packaging, modern project DOM and isolated scopes passed.");
