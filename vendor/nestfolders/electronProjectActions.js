@@ -35,10 +35,14 @@
     feedback.hidden = true;
     document.body.appendChild(feedback);
 
-    function sidebar() {
-        return ns.historyDiv && document.contains(ns.historyDiv)
-            ? site.findSidebarContainer(ns.historyDiv)
-            : null;
+    // The project actions must not depend on a global #history list; it no
+    // longer exists on some ChatGPT layouts. Scope by native row + geometry.
+    function isSidebarProjectRow(row) {
+        if (!row) return false;
+        const rect = row.getBoundingClientRect();
+        if (rect.left >= innerWidth * 0.46 || rect.right >= innerWidth * 0.62) return false;
+        if (row.matches("[data-app-action-sidebar-project-row]")) return true;
+        return !!row.closest('nav, aside, [data-testid="left-sidebar"], [data-testid="left-panel"]');
     }
 
     function idForRow(row) {
@@ -66,8 +70,7 @@
     }
 
     function entryFor(row) {
-        const root = sidebar();
-        if (!root || !row || !root.contains(row) || !isVisible(row)) return null;
+        if (!row || !isVisible(row) || !isSidebarProjectRow(row)) return null;
         const id = idForRow(row);
         return id ? { id, row } : null;
     }
@@ -80,10 +83,9 @@
     }
 
     function currentProjectEntry() {
-        const root = sidebar();
         const id = site.currentProjectId();
-        if (!root || !id) return null;
-        for (const row of root.querySelectorAll(projectRowSelector)) {
+        if (!id) return null;
+        for (const row of document.querySelectorAll(projectRowSelector)) {
             const entry = entryFor(row);
             if (entry && entry.id === id) return entry;
         }
