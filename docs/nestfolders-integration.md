@@ -6,7 +6,7 @@ Implémentation expérimentale, isolée de `main`. Aucun GitHub Release ni push 
 - Les projets sont les projets natifs d'OpenAI. NestFolders range visuellement les conversations **dans chaque projet**, en dossiers et sous-dossiers sans limite programmée.
 - Glisser-déposer : une conversation déjà présente dans un projet peut être déplacée dans ses dossiers. Aucune conversation n'est déplacée d'un projet OpenAI vers un autre.
 - Aucun dossier n'est créé automatiquement. Un bouton discret **+** apparaît à droite de la ligne du projet actif ou survolé, avant son menu natif « … » : il crée un dossier racine dans ce projet. Le menu « … » de chaque dossier permet de créer des sous-dossiers.
-- **Pas de raccourci clavier de création de dossiers** : c'est le bouton + à droite de la ligne du projet qui sert d'entrée principale. Le projet doit être déplié et sa liste de conversations doit être chargée (un message apparaît si le DOM ChatGPT ne permet pas l'accès).
+- **Pas de raccourci clavier de création de dossiers** : c'est le bouton + à droite de la ligne du projet qui sert d'entrée principale. Le projet doit présenter une liste de conversations à intégrer (un message apparaît si le DOM ChatGPT ne permet pas l'accès).
 - La couleur des conversations de l'application a été retirée. Les couleurs des *dossiers* appartiennent à NestFolders.
 
 ## Adaptation Electron
@@ -16,6 +16,7 @@ Implémentation expérimentale, isolée de `main`. Aucun GitHub Release ni push 
 - L'extension native Chrome utilise un popup ; Electron n'affiche pas ce bouton d'extension. Un bouton + est superposé au niveau de chaque ligne de projet, sans changer le composant de navigation natif de ChatGPT. **L'export/import depuis le popup reste à intégrer**. Ne pas considérer cette première version comme une intégration complète.
 - Les dossiers ne modifient ni messages ni instructions des projets. Les chemins et titres des conversations peuvent être conservés dans le stockage de l'extension.
 - Le code de l'extension manipule le DOM de ChatGPT ; son comportement réel nécessite une validation dans une session connectée.
+- Adaptation v2 à la nouvelle interface ChatGPT : le contrôleur NestFolders peut démarrer sans liste globale d'historique ; les listes de projets utilisent des liens non marqués, et le bouton + ne dépend plus de `#history`.
 
 ## Procédure d'essai sur Kubuntu
 Depuis la **racine de l'application**, vérifier d'abord `git status --short`. Ne pas changer de branche si des modifications non commit sont présentes.
@@ -26,7 +27,7 @@ git switch --track origin/feature/nestfolders-electron
 npm ci
 npm test
 npm run dist:deb
-sudo apt install ./release/ChatGPT-Desktop-Linux-0.7.0-beta.34-nestfolders.1-amd64.deb
+sudo apt install ./release/ChatGPT-Desktop-Linux-0.7.0-beta.34-nestfolders.2-amd64.deb
 ```
 
 Si la branche existe déjà localement, utiliser `git switch feature/nestfolders-electron` puis `git pull --ff-only`.
