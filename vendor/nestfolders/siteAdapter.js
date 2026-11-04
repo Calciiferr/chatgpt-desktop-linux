@@ -34,15 +34,14 @@
             // `data-sidebar-item` is ChatGPT's own marker for a sidebar row; `__menu-item` is
             // the older hook. Either identifies a conversation link, in the main history or in
             // a project's chat list (whose hrefs are /g/g-p-<id>/c/<uuid>).
-            chatLinkSelector:
-                'a.__menu-item[href*="/c/"], a[data-sidebar-item="true"][href*="/c/"]',
+            // Current ChatGPT no longer marks every project chat link as a sidebar item.
+            chatLinkSelector: 'a[href*="/c/"]',
             // Chats that belong to a project carry the project id in their own href, which is
             // what lets a project's chat list be recognised without depending on layout
             // classes. See `findProjectChatLists`.
             projects: {
                 label: "project",
-                chatLinkSelector:
-                    'a.__menu-item[href*="/g/g-p-"][href*="/c/"], a[data-sidebar-item="true"][href*="/g/g-p-"][href*="/c/"]',
+                chatLinkSelector: 'a[href*="/g/g-p-"][href*="/c/"]',
                 // /g/g-p-<hex>-<slug>/project (sidebar link) and /g/g-p-<hex>/c/<uuid> (chat)
                 // must resolve to the same id, so the slug is dropped.
                 idFromPath(path) {
@@ -246,36 +245,43 @@
             return node === this.historyDiv || this.rowContainers.has(node) || isFolderContents(node);
         }
 
+        nonProjectChatLinks(root) {
+            if (!root || !root.querySelectorAll) return [];
+            return Array.from(root.querySelectorAll(this.chatLinkSelector)).filter((link) =>
+                !this.projectIdFromHref(link.getAttribute("href")));
+        }
+
         findSidebarRoot() {
             for (const selector of this.sidebarRootSelectors) {
                 const candidates = Array.from(document.querySelectorAll(selector));
-                const match = candidates.find((el) => el.querySelector(this.chatLinkSelector));
+                const match = candidates.find((el) => this.nonProjectChatLinks(el).length > 0);
                 if (match) return match;
             }
             return null;
         }
 
         findHistoryContainer() {
+            // Never make a project chat list into the sidebar's GLOBAL history.
+            // Doing so would mix per-project folder storage with root conversation data.
             for (const selector of this.historySelectors) {
                 const el = document.querySelector(selector);
-                if (el && el.querySelector(this.chatLinkSelector)) {
-                    // A named element (e.g. ChatGPT's #history) says *where* the list is, not
-                    // that it is the element whose children are the rows: current ChatGPT wraps
-                    // the rows in `#history > ul > li`. Descend to the element that actually
-                    // holds the rows, which is #history itself on the older flat markup.
-                    return findChatListContainer(el, this.chatLinkSelector) || el;
+                const links = this.nonProjectChatLinks(el);
+                if (el && links.length) {
+                    return findChatListContainerFromLinks(links, el) || el;
                 }
             }
             const root = this.findSidebarRoot();
             if (root) {
-                const structural = findChatListContainer(root, this.chatLinkSelector);
+                const structural = findChatListContainerFromLinks(this.nonProjectChatLinks(root), root);
                 if (structural) return structural;
             }
-            // Last resort for a sidebar we failed to recognise: fall back to the first
-            // selector match even if it is currently empty (ChatGPT renders #history early).
-            for (const selector of this.historySelectors) {
+            // Only a specifically labelled global-history container may be empty.
+            // General nav/aside elements containing projects are not history lists.
+            for (const selector of this.historySelectors.slice(0, 3)) {
                 const el = document.querySelector(selector);
-                if (el) return el;
+                if (el && !el.querySelector(this.projects && this.projects.chatLinkSelector || "never")) {
+                    return el;
+                }
             }
             return null;
         }
