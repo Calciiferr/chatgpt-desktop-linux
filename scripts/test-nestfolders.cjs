@@ -61,4 +61,50 @@ assert.ok(vendoredMain.includes("if (!site.supportsProjectFolders() || !storageS
 assert.ok(actions.includes("function isSidebarProjectRow(") &&
   !actions.includes("ns.historyDiv && document.contains(ns.historyDiv)"),
   "project + must not require obsolete global history DOM");
+// Reproduce the reported ChatGPT layout: project conversations exist, but no
+// global #history/recents list. This must still discover a per-project tree.
+const fakeEl = (tag) => ({
+  tagName: tag, nodeType: 1, children: [], parentElement: null,
+  classList: { contains: () => false },
+  getAttribute: () => null, matches: () => false,
+  querySelector: () => null, querySelectorAll: () => [],
+  contains(node) { return this === node || this.children.some((child) => child.contains(node)); }
+});
+const host = fakeEl("DIV");
+const projectList = fakeEl("UL");
+host.children.push(projectList);
+projectList.parentElement = host;
+const projectLinks = [];
+for (let i = 0; i < 2; i += 1) {
+  const row = fakeEl("LI");
+  const link = fakeEl("A");
+  row.parentElement = projectList;
+  row.children.push(link);
+  row.querySelector = () => link;
+  link.parentElement = row;
+  link.getAttribute = (name) => name === "href" ? `/g/g-p-abc/c/example-${i}` : null;
+  link.closest = () => null;
+  projectList.children.push(row);
+  projectLinks.push(link);
+}
+const projectSelector = 'a[href*="/g/g-p-"][href*="/c/"]';
+const fakeDocument = {
+  querySelectorAll: (selector) => selector === projectSelector ? projectLinks : [],
+  querySelector: () => null,
+};
+const fakeWindow = {
+  GlynGPT: {},
+  location: { hostname: "chatgpt.com", pathname: "/g/g-p-abc/project", origin: "https://chatgpt.com" }
+};
+new vm.Script(adapter, { filename: "siteAdapter.js" }).runInNewContext({
+  document: fakeDocument, window: fakeWindow
+});
+const adaptedSite = fakeWindow.GlynGPT.site;
+assert.equal(adaptedSite.findHistoryContainer(), null, "the global history is absent");
+const foundProjects = adaptedSite.findProjectChatLists();
+assert.equal(foundProjects.length, 1, "must still find the project chat list");
+assert.equal(foundProjects[0].projectId, "g-p-abc");
+assert.equal(foundProjects[0].container, projectList);
+adaptedSite.registerRowContainer(projectList);
+assert.equal(adaptedSite.childRows(projectList).length, 2, "project chats must be draggable rows");
 console.log("NestFolders manifest, packaging, modern project DOM and isolated scopes passed.");
