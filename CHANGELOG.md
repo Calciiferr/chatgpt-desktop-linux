@@ -1,5 +1,12 @@
 # Notes de version
 
+## 0.7.0-beta.34-nestfolders.2 (branche de test, sans Release)
+
+- Correction de l'initialisation NestFolders lorsque ChatGPT ne fournit plus de liste globale d'historique.
+- Recherche des conversations de projet sans dépendance aux anciens attributs de la barre latérale.
+- Bouton + indépendant de la présence de l'ancien conteneur d'historique.
+- Les conversations des projets restent isolées de l'historique général.
+
 ## 0.7.0-beta.34-nestfolders.1 (branche de test, sans Release)
 
 - Remplacement des couleurs des conversations par NestFolders 1.1.0 (licence MIT).
