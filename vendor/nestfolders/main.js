@@ -32,6 +32,7 @@
     /** Every live folder tree. `scopes[0]` is always the sidebar's. */
     const scopes = [];
     let sidebarScope = null;
+    let extensionInitialized = false;
     let storageService = null;
     let globalSettings = null;
     // One menu element serves every tree; it resolves the tree from the folder it was opened on.
@@ -789,7 +790,7 @@
      * on the same cheap interval as the sidebar container check.
      */
     function reconcileProjectScopes() {
-        if (!site.supportsProjectFolders() || !sidebarScope) return;
+        if (!site.supportsProjectFolders() || !storageService) return;
 
         scopes
             .filter((scope) => scope.projectId && !document.contains(scope.historyDiv))
@@ -848,10 +849,25 @@
     function startContainerMonitor() {
         stopContainerMonitor();
         containerMonitorTimer = setInterval(() => {
-            if (ENABLE_SAFE_REINIT &&
-                (!sidebarScope || !document.contains(sidebarScope.historyDiv))) {
+            if (ENABLE_SAFE_REINIT && sidebarScope &&
+                !document.contains(sidebarScope.historyDiv)) {
                 scheduleReinit("container-detached");
                 return;
+            }
+            // Modern ChatGPT can show projects with no global conversation-history
+            // list. Adopt that list later, if/when it actually appears.
+            if (!sidebarScope) {
+                const history = site.findHistoryContainer();
+                if (history && !scopes.some((scope) => scope.historyDiv === history)) {
+                    sidebarScope = createScope(history, null);
+                    ns.folderManager = sidebarScope.folderManager;
+                    ns.historyManager = sidebarScope.historyManager;
+                    ns.dragController = sidebarScope.dragController;
+                    ns.layoutState = sidebarScope.layoutState;
+                    ns.historyDiv = sidebarScope.historyDiv;
+                    if (ENABLE_SIDEBAR_RESIZER) setupSidebarResizer();
+                    sidebarScope.ready.then(() => enforceFoldersTopOrder());
+                }
             }
             reconcileProjectScopes();
         }, 1000);
@@ -896,6 +912,7 @@
         hideDropMarker();
         scopes.slice().forEach(disposeScope);
         sidebarScope = null;
+        extensionInitialized = false;
         site.setHistoryContainer(null);
         if (ENABLE_SIDEBAR_RESIZER) {
             teardownSidebarResizer();
@@ -909,6 +926,8 @@
     }
 
     function initOnceHistoryFound(historyDiv) {
+        if (extensionInitialized) return;
+        extensionInitialized = true;
         storageService = new StorageService({
             area: "local",
             storageKey: "glynGptState"
@@ -917,8 +936,8 @@
         folderMenu = new FolderMenu();
         wireFolderMenu();
 
-        site.setHistoryContainer(historyDiv);
-        if (ENABLE_SIDEBAR_RESIZER) {
+        site.setHistoryContainer(historyDiv || null);
+        if (historyDiv && ENABLE_SIDEBAR_RESIZER) {
             setupSidebarResizer();
         }
         startThemeWatcher();
@@ -947,51 +966,30 @@
             scope.dragController.handleDrop(source, target, containerEl, evt);
         });
 
-        // The sidebar's own tree. `ns.*` keeps pointing at it, so anything that only ever knew
-        // about one folder tree (popup handlers, tests) is unaffected by project trees.
-        sidebarScope = createScope(historyDiv, null);
-        ns.folderManager = sidebarScope.folderManager;
-        ns.historyManager = sidebarScope.historyManager;
-        ns.dragController = sidebarScope.dragController;
-        ns.layoutState = sidebarScope.layoutState;
-        ns.historyDiv = sidebarScope.historyDiv;
+        // The global history list is optional. Projects can have active chat lists
+        // even when no generic #history/sidebar recents list exists in the DOM.
+        if (historyDiv) {
+            sidebarScope = createScope(historyDiv, null);
+            ns.folderManager = sidebarScope.folderManager;
+            ns.historyManager = sidebarScope.historyManager;
+            ns.dragController = sidebarScope.dragController;
+            ns.layoutState = sidebarScope.layoutState;
+            ns.historyDiv = sidebarScope.historyDiv;
+        }
         ns.scopes = scopes;
 
-        sidebarScope.ready.then(() => {
+        const ready = sidebarScope ? sidebarScope.ready : Promise.resolve();
+        ready.then(() => {
             enforceFoldersTopOrder();
             reconcileProjectScopes();
             startContainerMonitor();
             refreshThemeClass();
             exitSafeMode();
-            console.info(LOG, `folders ready on ${site.label}`);
+            console.info(LOG, `folder controller ready on ${site.label}`);
         });
     }
 
-    // Both hosts are single-page apps: the sidebar can appear long after document_idle (slow
-    // network, collapsed sidebar, a route that renders no chat list yet). Poll quickly at
-    // first, then settle into a cheap idle poll rather than giving up on the page.
-    function init(fastAttempts = 20, fastDelayMs = 250, idleDelayMs = 2000) {
-        let attempts = 0;
-        let warned = false;
-
-        function check() {
-            const historyDiv = site.findHistoryContainer();
-
-            if (historyDiv) {
-                initOnceHistoryFound(historyDiv);
-                return;
-            }
-
-            attempts += 1;
-            if (attempts >= fastAttempts && !warned) {
-                warned = true;
-                console.warn(LOG, `Waiting for the ${site.label} chat list to appear.`);
-            }
-            setTimeout(check, attempts < fastAttempts ? fastDelayMs : idleDelayMs);
-        }
-
-        check();
-    }
-
-    init();
+    // Do not wait for the global history list to appear. ChatGPT's modern
+    // sidebar can have only project rows; project lists mount independently.
+    initOnceHistoryFound(site.findHistoryContainer());
 })();
