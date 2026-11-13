@@ -2,48 +2,13 @@
 
 ## 0.7.5
 
-- Dossiers NestFolders dans les projets ChatGPT : dossiers et sous-dossiers sans limite de profondeur, couleurs, renommage, glisser-déposer des conversations. Les dossiers sont locaux et ne modifient pas les projets ChatGPT.
-- Création d'un dossier depuis le menu « … » natif de chaque projet (« Nouveau dossier »), et sous-dossiers depuis le menu de chaque dossier.
-- Lignes de guide pour lire l'arborescence ; une conversation déposée sur un dossier se place en tête.
-- Plusieurs onglets restent synchronisés sans s'écraser mutuellement.
-- Fenêtre étroite : dossiers visibles dès l'ouverture de la barre latérale, menus et confirmations cliquables.
-- Clic droit natif : couper, copier, coller, tout sélectionner, annuler/rétablir, orthographe, liens et images.
-- Les onglets reprennent la bonne taille après une maximisation sous XWayland.
-- Les couleurs des conversations sont remplacées par NestFolders.
-
-## 0.7.0-beta.34-nestfolders.4 (branche de test, sans Release)
-
-- Glisser-déposer : les conversations peuvent de nouveau être déplacées dans un dossier ou sous-dossier (ChatGPT annulait le glisser natif).
-- Une conversation déposée sur le nom d'un dossier se place en tête de ce dossier ; les déplacements à l'intérieur d'un même dossier sont enregistrés.
-- Lignes de guide verticales : l'appartenance de chaque conversation à son dossier est lisible à toute profondeur.
-- Clic droit natif : Couper, Copier, Coller, Tout sélectionner, Annuler/Rétablir, suggestions d'orthographe, actions sur les liens (nouvel onglet, navigateur, copier l'adresse) et sur les images.
-
-## 0.7.0-beta.34-nestfolders.3 (branche de test, sans Release)
-
-- Le bouton « + » flottant est supprimé : « Nouveau dossier » est ajouté au menu « … » natif de chaque projet ChatGPT.
-- Plusieurs onglets ne peuvent plus écraser leurs dossiers mutuellement : écritures sérialisées, copie périmée rechargée au lieu d'être enregistrée, resynchronisation immédiate des autres onglets, identifiants de dossiers uniques.
-- Fenêtre étroite : les dossiers restent visibles dans la barre latérale superposée, et leurs menus et la confirmation de suppression sont de nouveau cliquables.
-- Glisser-déposer : un dossier déplacé accepte toujours les dépôts, et un glisser interrompu ne bloque plus les dossiers.
-- La réinitialisation après un re-rendu de la barre latérale fonctionne de nouveau ; la fenêtre cachée de synchronisation des projets n'exécute plus NestFolders.
-- Défilement nettement plus léger : NestFolders n'exécute plus de mesures à chaque défilement ou mouvement de souris.
-- Les onglets reprennent la bonne taille après une maximisation sous XWayland.
-
-## 0.7.0-beta.34-nestfolders.2 (branche de test, sans Release)
-
-- Correction de l'initialisation NestFolders lorsque ChatGPT ne fournit plus de liste globale d'historique.
-- Recherche des conversations de projet sans dépendance aux anciens attributs de la barre latérale.
-- Bouton + indépendant de la présence de l'ancien conteneur d'historique.
-- Les conversations des projets restent isolées de l'historique général.
-
-## 0.7.0-beta.34-nestfolders.1 (branche de test, sans Release)
-
-- Remplacement des couleurs des conversations par NestFolders 1.1.0 (licence MIT).
-- Dossiers virtuels imbriqués à l'intérieur des vrais projets ChatGPT, avec glisser-déposer.
-- Bouton discret « + » à droite de la ligne du projet actif ou survolé ; le menu « … » d'un dossier permet de créer un sous-dossier.
-- Aucun raccourci clavier requis ni dossier créé automatiquement.
-- Adaptation Electron : chargement de l'extension dans la session ChatGPT et stockage local `chrome.storage.local` (pas de synchronisation).
-- Essai réservé à la branche `feature/nestfolders-electron` ; aucune publication de mise à jour.
-
+- Nouveaux **dossiers** dans les projets ChatGPT : dossiers et sous-dossiers sans limite de profondeur, avec couleurs et renommage.
+- Entrée **Nouveau dossier** dans le menu « … » de chaque projet ; le menu de chaque dossier permet d'ajouter un sous-dossier, renommer, changer la couleur, tout déplier ou replier et supprimer.
+- Glisser-déposer des conversations dans les dossiers, avec lignes de guide pour lire l'arborescence.
+- Dossiers enregistrés localement, synchronisés entre les onglets ; les projets ChatGPT ne sont pas modifiés.
+- Nouveau **clic droit** : couper, copier, coller, tout sélectionner, annuler, orthographe, liens et images.
+- Les couleurs des conversations sont remplacées par les dossiers.
+- Correction de la taille des onglets après une maximisation.
 
 ## 0.7.0-beta.33
 
