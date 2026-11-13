@@ -1,5 +1,16 @@
 # Notes de version
 
+## 0.7.5
+
+- Dossiers NestFolders dans les projets ChatGPT : dossiers et sous-dossiers sans limite de profondeur, couleurs, renommage, glisser-déposer des conversations. Les dossiers sont locaux et ne modifient pas les projets ChatGPT.
+- Création d'un dossier depuis le menu « … » natif de chaque projet (« Nouveau dossier »), et sous-dossiers depuis le menu de chaque dossier.
+- Lignes de guide pour lire l'arborescence ; une conversation déposée sur un dossier se place en tête.
+- Plusieurs onglets restent synchronisés sans s'écraser mutuellement.
+- Fenêtre étroite : dossiers visibles dès l'ouverture de la barre latérale, menus et confirmations cliquables.
+- Clic droit natif : couper, copier, coller, tout sélectionner, annuler/rétablir, orthographe, liens et images.
+- Les onglets reprennent la bonne taille après une maximisation sous XWayland.
+- Les couleurs des conversations sont remplacées par NestFolders.
+
 ## 0.7.0-beta.34-nestfolders.4 (branche de test, sans Release)
 
 - Glisser-déposer : les conversations peuvent de nouveau être déplacées dans un dossier ou sous-dossier (ChatGPT annulait le glisser natif).
