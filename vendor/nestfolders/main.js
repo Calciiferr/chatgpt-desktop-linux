@@ -931,6 +931,29 @@
         }
     }
 
+    /**
+     * Opening the narrow-window sidebar renders a new copy of the project lists. The 1 s
+     * monitor would adopt it up to a second later, so the folders popped in late. React
+     * right away to what opens it (a click, a resize, a layer added to <body>): one pass
+     * right after, one after the slide-in animation. Each pass is a cheap reconcile.
+     */
+    let promptTimers = [];
+    function promptReconcile() {
+        if (promptTimers.length) return;
+        promptTimers = [40, 260].map((delay, index, all) => setTimeout(() => {
+            if (index === all.length - 1) promptTimers = [];
+            try { reconcileProjectScopes(); } catch (err) { console.warn(LOG, err); }
+        }, delay));
+    }
+
+    function installPromptReconcile() {
+        document.addEventListener("click", promptReconcile, true);
+        window.addEventListener("resize", promptReconcile);
+        if (document.body) {
+            new MutationObserver(promptReconcile).observe(document.body, { childList: true });
+        }
+    }
+
     function startContainerMonitor() {
         stopContainerMonitor();
         containerMonitorTimer = setInterval(() => {
@@ -1008,6 +1031,7 @@
         }
         startStorageSync();
         installDragSafetyNet();
+        installPromptReconcile();
         globalSettings.load()
             .then(() => applyGlobalSettings())
             .catch(() => applyGlobalSettings());
