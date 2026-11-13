@@ -28,7 +28,7 @@
         "layoutState.js",
         "dragController.js",
         "main.js",
-        "electronProjectActions.js"
+        "projectMenuEntry.js"
       ],
       "css": [
         "folders.css"

@@ -178,13 +178,28 @@
             if (this.type === "folder" && DraggableElement.unhighlightDropTarget) {
                 DraggableElement.unhighlightDropTarget(this.el);
             }
-            this.hoverBandHandlers.forEach(({ band, onOver, onLeave, onDrop }) => {
-                band.removeEventListener("dragover", onOver);
-                band.removeEventListener("dragleave", onLeave);
-                band.removeEventListener("drop", onDrop);
-            });
-            this.hoverBandHandlers = [];
-            if (document && document.documentElement) {
+            // The hover band is this folder's drop zone for *other* items; it must outlive
+            // this folder's own drags (it used to be removed here and never reinstalled).
+            DraggableElement.resetDragState();
+        }
+
+        /**
+         * Clear every trace of a drag. Called on dragend, and as a safety net from
+         * document-level listeners: if dragend never reaches the source (row detached by
+         * the host mid-drag), a stuck drag state would leave the hover bands capturing
+         * clicks over every folder row.
+         */
+        static resetDragState() {
+            if (DraggableElement.hideDropMarker) {
+                DraggableElement.hideDropMarker();
+            }
+            const current = DraggableElement.currentDrag;
+            if (current && current.type === "folder" && DraggableElement.unhighlightDropTarget) {
+                DraggableElement.unhighlightDropTarget(current.el);
+            }
+            document.querySelectorAll(".glyn-folder-row-drop-target")
+                .forEach((row) => row.classList.remove("glyn-folder-row-drop-target"));
+            if (document.documentElement.classList.contains("glyn-drag-active")) {
                 document.documentElement.classList.remove("glyn-drag-active");
             }
             DraggableElement.currentDrag = null;

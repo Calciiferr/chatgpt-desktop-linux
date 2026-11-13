@@ -19,6 +19,21 @@
     delete: "Delete"
   };
 
+  function showInTopLayer(el) {
+    if (el && typeof el.showPopover === "function" && !el.matches(":popover-open")) {
+      try { el.showPopover(); } catch (_err) { /* not a popover / detached */ }
+    }
+  }
+
+  function hideFromTopLayer(el) {
+    if (el && typeof el.hidePopover === "function" && el.matches(":popover-open")) {
+      try { el.hidePopover(); } catch (_err) { /* already hidden */ }
+    }
+  }
+
+  ns.showInTopLayer = showInTopLayer;
+  ns.hideFromTopLayer = hideFromTopLayer;
+
   class FolderMenu {
     constructor() {
       this.el = null;
@@ -129,6 +144,16 @@
       this.colorRow = colorRow;
       this.colorInput = input;
 
+      // Shown in the browser's top layer (Popover API). In narrow windows ChatGPT's sidebar
+      // is a modal layer that sets pointer-events:none on <body> and covers the page; a
+      // plain body-level menu was visible there but could not be clicked.
+      menu.setAttribute("popover", "manual");
+      // Interactions inside the menu are ours: keep them from reaching the host's
+      // "click outside closes the sidebar" handlers.
+      ["pointerdown", "mousedown", "click"].forEach((type) => {
+        menu.addEventListener(type, (event) => event.stopPropagation());
+      });
+
       document.body.appendChild(menu);
       this.el = menu;
     }
@@ -146,6 +171,7 @@
       this.el.style.top = `${top}px`;
       this.el.style.left = `${left}px`;
       this.el.style.display = "block";
+      showInTopLayer(this.el);
 
       // Prevent the menu from overflowing past the viewport edges.
       const menuRect = this.el.getBoundingClientRect();
@@ -171,6 +197,7 @@
     close() {
       if (!this.el) return;
 
+      hideFromTopLayer(this.el);
       this.el.style.display = "none";
 
       document.removeEventListener("mousedown", this.outsideHandler, true);

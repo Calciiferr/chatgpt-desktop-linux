@@ -12,6 +12,11 @@
         // Not a host we support; the content script simply does nothing.
         return;
     }
+    // The desktop app's hidden project-scan window marks its document (scan preload):
+    // it must never host a folder tree, which would make it one more storage writer.
+    if (document.documentElement.hasAttribute("data-cdl-no-nestfolders")) {
+        return;
+    }
     const LOG = "[NestFolders]";
     const DraggableElement = ns.DraggableElement;
     const ChatItem = ns.ChatItem;
@@ -27,6 +32,8 @@
     const SIDEBAR_WIDTH_VAR = site.sidebarWidthVar;
     const ENABLE_SIDEBAR_RESIZER = site.enableSidebarResizer;
     const ENABLE_SAFE_REINIT = true;
+    const DEFAULT_FOLDER_NAME = (document.documentElement.lang || navigator.language || "fr")
+        .toLowerCase().startsWith("fr") ? "Nouveau dossier" : "New folder";
     const DEFAULT_SHOW_SIDEBAR_HANDLE = true;
 
     /** Every live folder tree. `scopes[0]` is always the sidebar's. */
@@ -43,8 +50,6 @@
     window.FOLDER_ICON_STYLE = window.FOLDER_ICON_STYLE || "outline";
     let messageListenerBound = false;
     let containerMonitorTimer = null;
-    let reinitPending = false;
-    let safeModeActive = false;
     let sidebarContainer = null;
     let sidebarResizerEl = null;
     let sidebarResizeSession = null;
@@ -329,7 +334,7 @@
             if (message.glynCommand === "createFolder") {
                 const scope = activeScope();
                 if (scope && scope.folderManager) {
-                    const folder = scope.folderManager.createFolder("New Folder");
+                    const folder = scope.folderManager.createFolder(DEFAULT_FOLDER_NAME);
                     if (folder && typeof folder.inlineRename === "function") {
                         folder.inlineRename();
                     }
@@ -705,15 +710,77 @@
 
         // Never create an unsolicited starter folder: the project's + button
         // controls when the user creates their first folder.
+        scope.layoutState.onConflict = () => refreshScope(scope);
         scope.ready = scope.layoutState.restore()
             .catch(() => {})
             .then(() => {
                 if (scope.disposed) return scope;
+                scope.restored = true;
                 bindScopeChangeHandlers(scope);
                 observeHistory(scope);
                 return scope;
             });
         return scope;
+    }
+
+    /**
+     * Rebuild a tree from storage: another tab saved it, or our own save was refused
+     * because this tree was stale. Coalesced, so a burst of changes costs one rebuild.
+     */
+    function refreshScope(scope) {
+        if (!scope || scope.disposed || !scope.restored) return;
+        if (scope.refreshing) {
+            scope.refreshAgain = true;
+            return;
+        }
+        scope.refreshing = true;
+        scope.layoutState.restore()
+            .catch((err) => console.warn(LOG, "reload from storage failed", err))
+            .then(() => {
+                scope.refreshing = false;
+                if (scope.disposed) return;
+                scanHistory(scope);
+                enforceFoldersTopOrder();
+                if (scope.refreshAgain) {
+                    scope.refreshAgain = false;
+                    refreshScope(scope);
+                }
+            });
+    }
+
+    /**
+     * Every tab keeps its own tree in memory; storage is the shared truth. When another
+     * tab writes a tree we also display, reload it at once so that our next save starts
+     * from the latest revision (a stale save is refused anyway, see LayoutState#save).
+     */
+    function startStorageSync() {
+        if (typeof chrome === "undefined" || !chrome.storage || !chrome.storage.onChanged) return;
+        chrome.storage.onChanged.addListener((changes, area) => {
+            if (area !== "local") return;
+            const keys = Object.keys(changes || {});
+            scopes.forEach((scope) => {
+                const layout = scope.layoutState;
+                if (!layout || scope.disposed || !scope.restored || layout.saving) return;
+                if (!keys.some((key) => layout.ownsRootKey(key))) return;
+                layout.storedRevision().then((stored) => {
+                    if (!scope.disposed && !layout.saving && stored !== layout.rev) {
+                        refreshScope(scope);
+                    }
+                });
+            });
+        });
+    }
+
+    /** Safety net for drags whose dragend never reaches the source element. */
+    function installDragSafetyNet() {
+        const reset = () => {
+            if (DraggableElement.currentDrag) DraggableElement.resetDragState();
+        };
+        document.addEventListener("dragend", reset, true);
+        document.addEventListener("drop", () => setTimeout(reset, 0), true);
+        // No pointer events are dispatched during a native drag, so a pointerdown while a
+        // drag is still recorded means that drag ended without telling us.
+        document.addEventListener("pointerdown", reset, true);
     }
 
     /** The tree that owns a folder, so one shared menu can act on any of them. */
@@ -727,7 +794,7 @@
         folderMenu.onNew = (folderItem) => {
             const scope = scopeForFolder(folderItem);
             if (!scope) return;
-            const newFolder = scope.folderManager.createFolder("New Folder", {
+            const newFolder = scope.folderManager.createFolder(DEFAULT_FOLDER_NAME, {
                 parentFolder: folderItem,
                 insertAtTop: true
             });
@@ -770,6 +837,14 @@
             scope.layoutState.dispose();
         }
         if (scope.folderManager) {
+            // A list we stop managing may stay in the page (ChatGPT keeps its docked
+            // sidebar hidden while the overlay copy is shown): put its chats back at the
+            // list root so no dead, non-saving folder UI is left behind.
+            if (scope.historyDiv && scope.historyDiv.isConnected) {
+                scope.folderManager.suspendNotifications();
+                scope.folderManager.clearAllFolders();
+                scope.folderManager.resumeNotifications();
+            }
             scope.folderManager.destroy();
         }
         if (scope.historyManager) {
@@ -796,8 +871,18 @@
             .filter((scope) => scope.projectId && !document.contains(scope.historyDiv))
             .forEach(disposeScope);
 
+        // ChatGPT renders two copies of its sidebar (docked, and the overlay used in narrow
+        // windows) and hides one. A tree must live in the copy that is actually shown,
+        // otherwise its folders exist but are invisible until a resize swaps the copies.
+        const rendered = site.findProjectChatLists({ renderedOnly: true });
+        scopes
+            .filter((scope) => scope.projectId && !site.isRendered(scope.historyDiv) &&
+                rendered.some((entry) => entry.projectId === scope.projectId &&
+                    entry.container !== scope.historyDiv))
+            .forEach(disposeScope);
+
         const seen = new Set(scopes.filter((s) => s.projectId).map((s) => s.projectId));
-        site.findProjectChatLists().forEach(({ projectId, container }) => {
+        rendered.forEach(({ projectId, container }) => {
             if (seen.has(projectId)) return;
             if (scopes.some((scope) => scope.historyDiv === container)) return;
             seen.add(projectId);
@@ -824,7 +909,7 @@
         if (scope.disposed || !scope.folderManager || !document.contains(scope.historyDiv)) {
             return { ok: false, error: "project-list-unavailable" };
         }
-        const folder = scope.folderManager.createFolder("Nouveau dossier", { insertAtTop: true });
+        const folder = scope.folderManager.createFolder(DEFAULT_FOLDER_NAME, { insertAtTop: true });
         if (!folder) return { ok: false, error: "creation-failed" };
         scheduleSave(scope, { immediate: true });
         if (typeof folder.inlineRename === "function") folder.inlineRename();
@@ -880,49 +965,24 @@
         }
     }
 
-    function enterSafeMode(reason) {
-        if (!ENABLE_SAFE_REINIT) return;
-        if (safeModeActive) return;
-        safeModeActive = true;
-        console.warn("[NestFolders] Entering safe mode:", reason);
-        if (sidebarScope && sidebarScope.folderManager) {
-            try {
-                sidebarScope.folderManager.suspendNotifications();
-                sidebarScope.folderManager.clearAllFolders();
-            } catch (err) {
-                console.warn("[NestFolders] Failed to clear folders during safe mode", err);
-            } finally {
-                sidebarScope.folderManager.resumeNotifications();
-            }
-        }
-    }
-
-    function exitSafeMode() {
-        safeModeActive = false;
-    }
-
+    /**
+     * The global history list was replaced by the host (re-render, sidebar mode switch).
+     * Only that tree is affected: release it and let the container monitor adopt the new
+     * list on its next pass. Project trees, storage, settings and the menu stay as they
+     * are. (This used to tear everything down and call an init function that no longer exists, leaving
+     * folders on screen that no longer saved.)
+     */
     function scheduleReinit(reason) {
-        if (!ENABLE_SAFE_REINIT) return;
-        enterSafeMode(reason);
-        if (reinitPending) return;
-        reinitPending = true;
-        console.warn("[NestFolders] Reinitialising folders:", reason);
-        stopContainerMonitor();
-        stopThemeWatcher();
+        if (!ENABLE_SAFE_REINIT || !sidebarScope) return;
+        console.warn("[NestFolders] Global history list replaced:", reason);
         hideDropMarker();
-        scopes.slice().forEach(disposeScope);
+        const stale = sidebarScope;
         sidebarScope = null;
-        extensionInitialized = false;
+        disposeScope(stale);
         site.setHistoryContainer(null);
         if (ENABLE_SIDEBAR_RESIZER) {
             teardownSidebarResizer();
         }
-        storageService = null;
-        globalSettings = null;
-        setTimeout(() => {
-            reinitPending = false;
-            init();
-        }, 300);
     }
 
     function initOnceHistoryFound(historyDiv) {
@@ -946,6 +1006,8 @@
             document.addEventListener("keydown", handleGlobalShortcuts, true);
             shortcutHandlerBound = true;
         }
+        startStorageSync();
+        installDragSafetyNet();
         globalSettings.load()
             .then(() => applyGlobalSettings())
             .catch(() => applyGlobalSettings());
@@ -984,7 +1046,6 @@
             reconcileProjectScopes();
             startContainerMonitor();
             refreshThemeClass();
-            exitSafeMode();
             console.info(LOG, `folder controller ready on ${site.label}`);
         });
     }

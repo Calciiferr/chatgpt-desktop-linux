@@ -338,12 +338,21 @@
          * marker attribute as well, so a project whose every chat has been filed into a folder
          * does not look like it has no chat list.
          */
-        findProjectChatLists() {
+        /** Whether an element takes part in layout (false inside a hidden sidebar copy). */
+        isRendered(el) {
+            if (!isElement(el)) return false;
+            if (typeof el.getClientRects !== "function") return true;
+            return el.getClientRects().length > 0;
+        }
+
+        findProjectChatLists(options) {
             if (!this.supportsProjectFolders()) return [];
+            const renderedOnly = !!(options && options.renderedOnly);
 
             const byId = new Map();
             const remember = (projectId, container) => {
                 if (!projectId || !container) return;
+                if (renderedOnly && !this.isRendered(container)) return;
                 if (this.historyDiv && (container === this.historyDiv || this.historyDiv.contains(container))) {
                     return;
                 }
@@ -360,6 +369,10 @@
             Array.from(document.querySelectorAll(this.projects.chatLinkSelector)).forEach((link) => {
                 if (link.closest(`.${FOLDER_WRAPPER_CLASS}`)) return;
                 if (this.historyDiv && this.historyDiv.contains(link)) return;
+                if (renderedOnly && !this.isRendered(link)) return;
+                // Folders live in the sidebar. A project page also lists its chats in the
+                // main area; grouping those links in would pick the wrong container.
+                if (renderedOnly && typeof link.closest === "function" && !link.closest("nav")) return;
                 const projectId = this.projectIdFromHref(link.getAttribute("href"));
                 if (!projectId || byId.has(projectId)) return;
                 if (!groups.has(projectId)) groups.set(projectId, []);

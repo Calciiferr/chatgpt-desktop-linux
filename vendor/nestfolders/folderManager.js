@@ -98,8 +98,7 @@
           }
         }
       } else {
-        this.counter += 1;
-        id = "folder-" + this.counter;
+        id = "folder-" + this._newFolderNumber();
       }
 
       const folderName = (opts.data && opts.data.name) || opts.name || name || "Folder";
@@ -195,19 +194,6 @@
       folder.setParentFolder(parentFolder);
 
       folder.enableDrag();
-      if (hoverBandEl && rowEl) {
-        const updateBandSize = () => {
-          const bandHeight = 36;
-          hoverBandEl.style.height = `${bandHeight}px`;
-          hoverBandEl.style.top = "";
-        };
-        updateBandSize();
-        if (typeof ResizeObserver !== "undefined") {
-          const ro = new ResizeObserver(updateBandSize);
-          ro.observe(rowEl);
-          hoverBandEl.__glynResizeObserver = ro;
-        }
-      }
       folder.isExpanded = typeof opts.expanded === "boolean" ? opts.expanded : true;
       folder.data.expanded = folder.isExpanded;
       if (folder.contentsEl) {
@@ -243,6 +229,19 @@
 
       this.triggerChange("create-folder");
       return folder;
+    }
+
+    /**
+     * Folder ids must be unique across every tab writing the same project: a per-tab
+     * counter gave two tabs the same "folder-N". Time-based with random low digits, kept
+     * numeric because stored layouts index folders by number (well below 2^53).
+     */
+    _newFolderNumber() {
+      let candidate;
+      do {
+        candidate = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+      } while (this.getRecordById("folder-" + candidate));
+      return candidate;
     }
 
     getRecordByFolderItem(folderItem) {
@@ -426,8 +425,13 @@
         .find(row => site.hrefOf(row) === target) || null;
     }
 
+    /**
+     * Unwrap every folder in this list, including wrappers left behind by an earlier
+     * (disposed) tree over the same list: chat rows go back to the list root so that a
+     * rebuild never deletes a host row along with a stale wrapper.
+     */
     clearAllFolders() {
-      if (!this.historyDiv || !this.folders.length) return;
+      if (!this.historyDiv) return;
       const wrappers = Array.from(this.historyDiv.querySelectorAll(".glyn-folder-wrapper"));
       wrappers.forEach((wrapper) => {
         const folder = wrapper.__glynFolderItem;
@@ -502,6 +506,7 @@
         if (this._confirmBackdrop) {
           this._confirmBackdrop.style.display = "flex";
           this._confirmBackdrop.setAttribute("aria-hidden", "false");
+          if (ns.showInTopLayer) ns.showInTopLayer(this._confirmBackdrop);
         }
         if (this._confirmDialog) {
           const name = folderItem && folderItem.data && folderItem.data.name
@@ -523,6 +528,11 @@
       const backdrop = document.createElement("div");
       backdrop.className = "glyn-folder-confirm-backdrop";
       backdrop.style.display = "none";
+      // Top layer, like the folder menu: must stay usable above ChatGPT's modal sidebar.
+      backdrop.setAttribute("popover", "manual");
+      ["pointerdown", "mousedown", "click"].forEach((type) => {
+        backdrop.addEventListener(type, (event) => event.stopPropagation());
+      });
 
       const dialog = document.createElement("div");
       dialog.className = "glyn-folder-confirm-dialog";
@@ -572,6 +582,7 @@
 
     _closeConfirmDialog(result) {
       if (this._confirmBackdrop) {
+        if (ns.hideFromTopLayer) ns.hideFromTopLayer(this._confirmBackdrop);
         this._confirmBackdrop.style.display = "none";
         this._confirmBackdrop.setAttribute("aria-hidden", "true");
       }

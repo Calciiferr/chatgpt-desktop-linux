@@ -27,6 +27,14 @@
             this.pendingAssignments = new Map();
             this._folderChunkCounts = new Map();
             this._rootChunkCount = 0;
+            // Concurrency between tabs (every tab runs its own tree over the same keys):
+            // the root payload carries a revision `r`. A save happens under a cross-tab
+            // Web Lock and only if the stored revision is still the one this tree was
+            // built from; otherwise the tree is stale and must reload instead of
+            // overwriting another tab's changes. See save() and main.js#refreshScope.
+            this.rev = 0;
+            this.saving = false;
+            this.onConflict = null;
         }
 
         _defaultState() {
@@ -45,9 +53,14 @@
             const rootPayload = await this._loadFolderPayload(ROOT_FOLDER_ID);
             if (!rootPayload) {
                 this._knownFolderIds.clear();
+                this.rev = 0;
+                this.folderManager.suspendNotifications();
+                this.folderManager.clearAllFolders();
+                this.folderManager.resumeNotifications();
                 this.data = this._defaultState();
                 return false;
             }
+            this.rev = typeof rootPayload.r === "number" ? rootPayload.r : 0;
 
             const folderIds = Array.isArray(rootPayload.fi) ? rootPayload.fi : [];
             const folderPayloadMap = new Map();
@@ -313,9 +326,54 @@
             this._saveTimer = null;
         }
 
+        /** Key shared by every tab's tree for this list (sidebar or one project). */
+        lockName() {
+            return `glyn-layout:${this._folderKey(ROOT_FOLDER_ID)}`;
+        }
+
+        /** True when a storage change concerns this tree's root record. */
+        ownsRootKey(key) {
+            const base = this._folderKey(ROOT_FOLDER_ID);
+            return key === base || key === this._metaKeyFor(ROOT_FOLDER_ID);
+        }
+
+        /** Revision currently stored for this tree (0 when nothing is stored yet). */
+        async storedRevision() {
+            const payload = await this._loadFolderPayload(ROOT_FOLDER_ID);
+            return payload && typeof payload.r === "number" ? payload.r : 0;
+        }
+
         async save() {
             if (!this.storage || this.disposed) return false;
+            const locks = typeof navigator !== "undefined" ? navigator.locks : null;
+            const run = () => this._saveLocked();
+            return locks && typeof locks.request === "function"
+                ? locks.request(this.lockName(), run)
+                : run();
+        }
+
+        async _saveLocked() {
+            if (!this.storage || this.disposed) return false;
+            this.saving = true;
+            try {
+                const storedRev = await this.storedRevision();
+                if (storedRev !== this.rev) {
+                    // Another tab wrote since this tree was built: never overwrite it.
+                    console.warn("[NestFolders] Layout changed in another tab; reloading instead of saving.");
+                    if (typeof this.onConflict === "function") {
+                        setTimeout(() => this.onConflict(), 0);
+                    }
+                    return false;
+                }
+                return await this._write(storedRev + 1);
+            } finally {
+                this.saving = false;
+            }
+        }
+
+        async _write(nextRev) {
             const snapshot = this._buildSnapshot();
+            snapshot.root.r = nextRev;
             const setObj = {};
             const removals = [];
 
@@ -339,6 +397,7 @@
 
             await this.storage.saveKeys(setObj, removals);
             this._knownFolderIds = keptIds;
+            this.rev = nextRev;
             this.data = this._defaultState();
             return true;
         }

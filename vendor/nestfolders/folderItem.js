@@ -239,7 +239,13 @@
             if (!historyDiv || !this.wrapperEl) return;
 
             site.queryChatRows(this.wrapperEl).forEach((row) => {
-                historyDiv.appendChild(row);
+                // Stub rows are our own stand-ins for chats the host is not listing; the
+                // root never stores chats, so they would only linger as dead links.
+                if (row.classList && row.classList.contains("glyn-chat-stub")) {
+                    row.remove();
+                } else {
+                    historyDiv.appendChild(row);
+                }
             });
 
             if (this.wrapperEl.parentNode) {
