@@ -1,5 +1,6 @@
 import { installDebianPackage } from "./debian-update";
 import { loadNestFoldersExtension } from "./nestfolders-extension";
+import { installContextMenu } from "./context-menu";
 import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
 import { GitHubUpdater } from "./github-updater";
 import { installAuthNavigation } from "./auth-navigation";
@@ -4521,6 +4522,16 @@ if (!hasSingleInstanceLock) {
     log.error(
       `[process] Sous-processus arrêté : type=${details.type}, raison=${details.reason}, code=${details.exitCode}.`,
     );
+  });
+
+  // Text, link and image context menus for every web contents (tabs, popups, Magic Bar).
+  app.on("web-contents-created", (_event, contents) => {
+    installContextMenu(contents, {
+      language: () => activeLanguage,
+      openInNewTab: (url) => { createChatTab(url, true); },
+      openExternal,
+      isInternalUrl: isChatGptUrl,
+    });
   });
 
   app.on("window-all-closed", () => {
