@@ -2,6 +2,7 @@
 # Launch ChatGPT Desktop Linux on an isolated *test* profile with debugging ports.
 # Default: repository build under XWayland (does not load the shared KWin Magic Bar
 # script nor touch KGlobalAccel, so it can run next to the real application).
+# --wayland: repository build under native Wayland (close the real app first).
 # --installed: installed package under native Wayland (close the real app first).
 set -euo pipefail
 PROFILE="${PROFILE:?Set PROFILE to a COPY of ~/.config/ChatGPT}"
@@ -19,4 +20,10 @@ if [[ "${1:-}" == "--installed" ]]; then
 fi
 cd "$ROOT"
 npm run build >/dev/null
+if [[ "${1:-}" == "--wayland" ]]; then
+  # Native Wayland, like daily use. Loads the shared KWin Magic Bar script: close the
+  # real application first.
+  shift
+  exec node_modules/.bin/electron . "${DEBUG_ARGS[@]}" "$@"
+fi
 exec env -u WAYLAND_DISPLAY XDG_SESSION_TYPE=x11 node_modules/.bin/electron . "${DEBUG_ARGS[@]}" "$@"

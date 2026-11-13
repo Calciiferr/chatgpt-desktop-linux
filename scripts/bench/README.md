@@ -9,6 +9,7 @@ jamais viser le profil réel.
 ```bash
 PROFILE=~/Documents/Diagnostics-Kubuntu/ChatGPT-Desktop-Audit/profil-test \
   scripts/bench/run-test-profile.sh            # build du dépôt, XWayland
+scripts/bench/run-test-profile.sh --wayland    # build du dépôt, Wayland natif
 scripts/bench/run-test-profile.sh --installed  # paquet installé, Wayland
 ```
 
@@ -18,7 +19,7 @@ scripts/bench/run-test-profile.sh --installed  # paquet installé, Wayland
 - Le mode build force XWayland : l'instance de test ne charge alors pas le script KWin
   de la Magic Bar et ne touche pas KGlobalAccel. Elle peut donc tourner à côté de
   l'application réelle.
-- `--installed` lance le paquet installé en Wayland natif. **Fermez d'abord l'application
+- `--wayland` (build du dépôt) et `--installed` (paquet installé) tournent en Wayland natif. **Fermez d'abord l'application
   réelle** : ce mode recharge le script KWin partagé.
 - Ports : inspecteur du processus principal sur `127.0.0.1:9229`, DevTools des onglets
   sur `127.0.0.1:9222`.
