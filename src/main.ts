@@ -1219,6 +1219,7 @@ async function createHiddenProjectScanWindow(isBackground: boolean): Promise<Bro
     title: "ChatGPT Project Scanner",
     webPreferences: {
       partition: PERSISTENT_PARTITION,
+      preload: path.join(__dirname, "project-scan-preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -3126,6 +3127,14 @@ function createMainWindow(startHidden: boolean): void {
     scheduleWindowBoundsSave();
     layoutChatViews();
   });
+  // Under XWayland the content size can settle after "resize" fires on maximize, leaving
+  // the tab views at their old size. Lay out again once the state change has landed.
+  for (const event of ["maximize", "unmaximize", "enter-full-screen", "leave-full-screen"] as const) {
+    mainWindow.on(event as "maximize", () => {
+      layoutChatViews();
+      setTimeout(layoutChatViews, 120);
+    });
+  }
 
   mainWindow.on("close", (event) => {
     if (isQuitting) {
