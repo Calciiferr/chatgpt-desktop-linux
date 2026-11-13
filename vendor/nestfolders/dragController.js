@@ -23,8 +23,9 @@
     }
 
     // Move a chat (ChatItem) into a folder (FolderItem), from root or from another folder
-    moveChatToFolder(folderItem, chatItem, beforeChatItem) {
+    moveChatToFolder(folderItem, chatItem, beforeChatItem, options) {
       if (!folderItem || !chatItem) return;
+      const atTop = !!(options && options.atTop);
 
       const href = chatItem.id;
       // If the chat is currently in the root history, remove it from the root order
@@ -42,14 +43,20 @@
         }
       }
 
-      // Finally, add to the destination folder
+      // Finally, add to the destination folder. addChild only reports a change for a
+      // chat new to this folder; a move within the same folder is reported below.
+      const alreadyChild = folderItem.children.includes(chatItem);
       folderItem.addChild(chatItem);
       if (beforeChatItem && typeof folderItem.moveChildBefore === "function") {
         folderItem.moveChildBefore(chatItem.id, beforeChatItem.id);
       }
 
       if (folderItem.contentsEl) {
-        if (beforeChatItem &&
+        if (atTop) {
+          // Dropped on the folder's header: show it right under that header, where the
+          // user is looking, rather than after every nested subfolder.
+          folderItem.contentsEl.insertBefore(chatItem.el, folderItem.contentsEl.firstChild);
+        } else if (beforeChatItem &&
             beforeChatItem.el &&
             folderItem.contentsEl.contains(beforeChatItem.el)) {
           folderItem.contentsEl.insertBefore(chatItem.el, beforeChatItem.el);
@@ -58,11 +65,14 @@
         }
       }
 
-      if (typeof folderItem.applyChildOrderToDOM === "function") {
+      if (!atTop && typeof folderItem.applyChildOrderToDOM === "function") {
         folderItem.applyChildOrderToDOM();
       }
       if (typeof folderItem.syncChildrenFromDOM === "function") {
         folderItem.syncChildrenFromDOM();
+      }
+      if (alreadyChild && typeof folderItem.emitChildrenChange === "function") {
+        folderItem.emitChildrenChange("folder-children");
       }
     }
 
@@ -215,7 +225,7 @@
 
       // 3) Chat → folder row (drop on the folder header itself)
       if (target.type === "folder") {
-        this.moveChatToFolder(target, source, null);
+        this.moveChatToFolder(target, source, null, { atTop: true });
       }
     }
 

@@ -10,6 +10,7 @@
   --nf-row-hover: rgba(255, 255, 255, 0.08);
   --nf-row-drop: rgba(255, 255, 255, 0.16);
   --nf-outline: rgba(255, 255, 255, 0.22);
+  --nf-guide: rgba(255, 255, 255, 0.16);
   --nf-marker: rgba(255, 255, 255, 0.28);
   --nf-menu-bg: #353535;
   --nf-menu-fg: #ffffff;
@@ -33,6 +34,7 @@ html.glyn-theme-light {
   --nf-row-hover: rgba(0, 0, 0, 0.06);
   --nf-row-drop: rgba(0, 0, 0, 0.12);
   --nf-outline: rgba(0, 0, 0, 0.22);
+  --nf-guide: rgba(0, 0, 0, 0.16);
   --nf-marker: rgba(0, 0, 0, 0.28);
   --nf-menu-bg: #ffffff;
   --nf-menu-fg: #1f1f1f;
@@ -78,6 +80,18 @@ html.glyn-theme-light {
 
 .glyn-folder-wrapper {
   position: relative;
+}
+
+/*
+ * Folder body. The vertical guide line runs under the folder's chevron down along
+ * everything the folder contains. ChatGPT gives its own chat rows a large inner inset,
+ * so without the line a chat filed after a nested subfolder looks like it belongs to
+ * the deepest subfolder above it.
+ */
+[data-glyn-folder-contents] {
+  margin-left: 17px;
+  padding-left: 7px;
+  border-left: 1px solid var(--nf-guide);
 }
 
 /*

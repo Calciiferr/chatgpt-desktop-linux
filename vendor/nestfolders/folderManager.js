@@ -137,7 +137,7 @@
           </div>
         </div>
         <div class="glyn-folder-hover-band" data-glyn-folder-hover="${id}"></div>
-        <div data-glyn-folder-contents="${id}" style="margin-left: 24px;"></div>
+        <div data-glyn-folder-contents="${id}"></div>
       `;
 
       const insertBeforeWrapperEl = opts.insertBeforeEl;
