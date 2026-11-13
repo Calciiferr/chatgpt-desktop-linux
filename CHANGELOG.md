@@ -1,5 +1,15 @@
 # Notes de version
 
+## 0.7.0-beta.34-nestfolders.3 (branche de test, sans Release)
+
+- Le bouton « + » flottant est supprimé : « Nouveau dossier » est ajouté au menu « … » natif de chaque projet ChatGPT.
+- Plusieurs onglets ne peuvent plus écraser leurs dossiers mutuellement : écritures sérialisées, copie périmée rechargée au lieu d'être enregistrée, resynchronisation immédiate des autres onglets, identifiants de dossiers uniques.
+- Fenêtre étroite : les dossiers restent visibles dans la barre latérale superposée, et leurs menus et la confirmation de suppression sont de nouveau cliquables.
+- Glisser-déposer : un dossier déplacé accepte toujours les dépôts, et un glisser interrompu ne bloque plus les dossiers.
+- La réinitialisation après un re-rendu de la barre latérale fonctionne de nouveau ; la fenêtre cachée de synchronisation des projets n'exécute plus NestFolders.
+- Défilement nettement plus léger : NestFolders n'exécute plus de mesures à chaque défilement ou mouvement de souris.
+- Les onglets reprennent la bonne taille après une maximisation sous XWayland.
+
 ## 0.7.0-beta.34-nestfolders.2 (branche de test, sans Release)
 
 - Correction de l'initialisation NestFolders lorsque ChatGPT ne fournit plus de liste globale d'historique.
