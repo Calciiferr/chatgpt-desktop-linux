@@ -62,6 +62,12 @@
         }
 
         onDragStart(evt) {
+            // ChatGPT arms its own pointer-based drag on pointerdown over a chat row, and
+            // that handler (listening above the row) cancels any native dragstart. Keep
+            // our drag from reaching it, or the conversation can never be picked up.
+            // Once the native drag starts, the browser sends pointercancel, which stops
+            // ChatGPT's own drag gesture.
+            evt.stopPropagation();
             DraggableElement.currentDrag = this;
             if (document && document.documentElement) {
                 document.documentElement.classList.add("glyn-drag-active");

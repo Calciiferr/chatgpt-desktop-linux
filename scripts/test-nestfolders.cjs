@@ -67,6 +67,8 @@ const folderManagerSrc = fs.readFileSync(path.join(directory, "folderManager.js"
 assert.ok(!folderManagerSrc.includes("ResizeObserver"), "no per-folder ResizeObserver");
 assert.ok(!folderManagerSrc.includes("this.counter += 1"), "folder ids are not a per-tab counter");
 const draggableSrc = fs.readFileSync(path.join(directory, "draggableElement.js"), "utf8");
+assert.ok(/onDragStart\(evt\) \{[\s\S]{0,600}evt\.stopPropagation\(\);/.test(draggableSrc),
+  "our dragstart must not reach ChatGPT's handler, which cancels native drags");
 assert.ok(!draggableSrc.includes('band.removeEventListener("drop"'),
   "a folder keeps its drop zone after being dragged itself");
 assert.ok(fs.readFileSync(path.join(root, "src", "main.ts"), "utf8").includes("project-scan-preload.js"),
