@@ -1,5 +1,12 @@
 # Notes de version
 
+## 0.7.0-beta.34-nestfolders.4 (branche de test, sans Release)
+
+- Glisser-déposer : les conversations peuvent de nouveau être déplacées dans un dossier ou sous-dossier (ChatGPT annulait le glisser natif).
+- Une conversation déposée sur le nom d'un dossier se place en tête de ce dossier ; les déplacements à l'intérieur d'un même dossier sont enregistrés.
+- Lignes de guide verticales : l'appartenance de chaque conversation à son dossier est lisible à toute profondeur.
+- Clic droit natif : Couper, Copier, Coller, Tout sélectionner, Annuler/Rétablir, suggestions d'orthographe, actions sur les liens (nouvel onglet, navigateur, copier l'adresse) et sur les images.
+
 ## 0.7.0-beta.34-nestfolders.3 (branche de test, sans Release)
 
 - Le bouton « + » flottant est supprimé : « Nouveau dossier » est ajouté au menu « … » natif de chaque projet ChatGPT.
