@@ -9,7 +9,10 @@ function releaseNotes(markdown, version) {
   if (index < 0) throw new Error(`CHANGELOG.md has no entry for version ${version}.`);
   const heading = headings[index];
   if (heading[2].trim()) throw new Error('The version heading must not carry a note such as "(unreleased)" in CHANGELOG.md.');
-  const body = markdown.slice(heading.index + heading[0].length, headings[index + 1]?.index ?? markdown.length).trim();
+  // A version's notes end at the next second-level heading, whatever it is.
+  const start = heading.index + heading[0].length;
+  const nextSection = markdown.slice(start).search(/^## /m);
+  const body = markdown.slice(start, nextSection < 0 ? markdown.length : start + nextSection).trim();
   if (!body || !/^[-*] /m.test(body)) throw new Error('Release notes are missing or list no changes.');
   const previous = headings[index + 1]?.[1];
   return body + (previous ? `\n\n**Full changelog:** [v${previous} → v${version}](${repository}/compare/v${previous}...v${version})` : '') + '\n';
