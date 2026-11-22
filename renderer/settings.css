@@ -574,3 +574,66 @@ code {
 small[hidden] {
   display: none;
 }
+
+.section-title {
+  margin-top: 8px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.user-extension-list {
+  display: grid;
+  gap: 12px;
+}
+
+.user-extension-list:empty,
+.empty-extensions[hidden] {
+  display: none;
+}
+
+.user-extension {
+  gap: 12px;
+}
+
+.user-extension-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.user-extension-error {
+  color: var(--error);
+  font-size: 12px;
+}
+
+.user-extension-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.user-extension-actions button {
+  min-height: 32px;
+}
+
+.create-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.create-option {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.create-option button {
+  justify-self: start;
+}
+
+.prompt-language {
+  max-width: 260px;
+}

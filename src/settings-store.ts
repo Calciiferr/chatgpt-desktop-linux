@@ -43,6 +43,8 @@ export interface AppSettings {
   companionEnabled: boolean;
   nestFoldersEnabled: boolean;
   displayName: string;
+  /** Custom extensions the user turned off, by folder name. */
+  disabledExtensions: string[];
   companionShortcut: string;
   companionPromptMaxLines: number;
   themeMode: ThemeMode;
@@ -89,6 +91,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   companionEnabled: false,
   nestFoldersEnabled: true,
   displayName: DEFAULT_DISPLAY_NAME,
+  disabledExtensions: [],
   companionShortcut: "Ctrl+Shift+Space",
   companionPromptMaxLines: 3,
   themeMode: "system",
@@ -253,6 +256,9 @@ function normalizeStoredSettings(value: unknown): AppSettings {
       typeof value.companionEnabled === "boolean" ? value.companionEnabled : DEFAULT_SETTINGS.companionEnabled,
     nestFoldersEnabled: value.nestFoldersEnabled !== false,
     displayName: cleanDisplayName(value.displayName) ?? DEFAULT_DISPLAY_NAME,
+    disabledExtensions: Array.isArray(value.disabledExtensions)
+      ? [...new Set(value.disabledExtensions.filter((id): id is string => typeof id === "string" && /^[a-z0-9][a-z0-9-]{0,49}$/.test(id)))]
+      : [],
     companionShortcut:
       typeof value.companionShortcut === "string" && value.companionShortcut.trim()
         ? value.companionShortcut.trim()

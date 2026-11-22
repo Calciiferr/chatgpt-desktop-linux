@@ -249,6 +249,7 @@
         <section class="panel" id="panel-extensions" role="tabpanel" aria-labelledby="tab-extensions" data-panel="extensions" hidden>
           <h2 class="panel-title" data-i18n="tabExtensions">Extensions</h2>
           <p class="panel-copy" data-i18n="extensionsHint">Optional features. A disabled extension is not loaded at all. Changes apply after a restart.</p>
+          <h3 class="section-title" data-i18n="extBuiltInTitle">Built-in</h3>
 
           <div class="card extension" id="extension-companion">
             <label class="toggle extension-header" for="companion-enabled">
@@ -293,6 +294,41 @@
               </span>
               <input id="nestfolders-enabled" type="checkbox" />
             </label>
+          </div>
+
+          <h3 class="section-title" data-i18n="extInstalledTitle">Your extensions</h3>
+          <p class="panel-copy" data-i18n="extInstalledHint">Extensions you add apply immediately: open ChatGPT tabs reload.</p>
+          <div id="user-extension-list" class="user-extension-list"></div>
+          <p id="user-extension-empty" class="card-copy empty-extensions" data-i18n="extEmpty">No extension installed yet.</p>
+          <div class="diagnostic-actions">
+            <button id="extension-add" type="button" data-i18n="extAdd">Add an extension (.zip)…</button>
+            <button id="extension-open-folder" class="secondary" type="button" data-i18n="extOpenFolder">Open the extensions folder</button>
+            <button id="extension-reload" class="secondary" type="button" data-i18n="extReload">Reload extensions</button>
+          </div>
+
+          <h3 class="section-title" data-i18n="extCreateTitle">Create your own</h3>
+          <div class="card">
+            <p class="card-copy" data-i18n="extCreateIntro">Describe the extension you want to an AI, then install the .zip it gives you. Extensions can only change the ChatGPT page.</p>
+            <label class="field prompt-language" for="extension-prompt-language">
+              <span data-i18n="extPromptLanguage">Prompt language</span>
+              <select id="extension-prompt-language">
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+              </select>
+              <small data-i18n="extPromptLanguageHint">The AI answers in this language. Technical terms stay in English.</small>
+            </label>
+            <div class="create-options">
+              <div class="create-option">
+                <button id="extension-create" type="button" data-i18n="extCreate">Create with ChatGPT</button>
+                <small data-i18n="extCreateHint">Opens a new ChatGPT tab with the instructions already in the message box. Describe your extension at the end, send the message, then install the .zip you get.</small>
+              </div>
+              <div class="create-option">
+                <button id="extension-copy-prompt" class="secondary" type="button" data-i18n="extCopyPrompt">Copy the AI prompt</button>
+                <small data-i18n="extCopyHint">Copies the instructions to paste into another AI, such as Claude or Codex.</small>
+              </div>
+            </div>
+            <small data-i18n="extDevHint">Developers: edit your extensions directly in the extensions folder, then reload them. The full guide is docs/EXTENSIONS.md in the project repository.</small>
           </div>
         </section>
 

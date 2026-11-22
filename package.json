@@ -40,7 +40,8 @@
       "assets/icon.png",
       "assets/tray-icon.png",
       "assets/tray-icon-light.png",
-      "package.json"
+      "package.json",
+      "docs/extension-prompt*.md"
     ],
     "extraResources": [
       {

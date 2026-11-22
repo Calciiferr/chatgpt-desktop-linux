@@ -1,5 +1,6 @@
 import { installDebianPackage } from "./debian-update";
 import { loadNestFoldersExtension } from "./nestfolders-extension";
+import { ExtensionError, UserExtensions, type UserExtensionInfo } from "./user-extensions";
 import { resolveUserDataDirectory } from "./data-migration";
 import { setLanguage, t } from "./i18n";
 import { cleanDisplayName, SYSTEM_LAUNCHER_PATH, syncLauncherName } from "./display-name";
@@ -3907,11 +3908,240 @@ function showWelcomeWindow(): void {
   });
 }
 
+// ---------- Custom extensions ----------
+
+let userExtensions: UserExtensions | null = null;
+const loadedUserExtensions = new Map<string, string>();
+
+function customExtensions(): UserExtensions {
+  return userExtensions ??= new UserExtensions(path.join(app.getPath("userData"), "extensions"));
+}
+
+function listUserExtensions(): UserExtensionInfo[] {
+  return customExtensions().list(currentSettings.disabledExtensions);
+}
+
+/** Loads the enabled custom extensions into the ChatGPT session, replacing those already loaded. */
+async function loadUserExtensions(): Promise<void> {
+  const chatSession = session.fromPartition(PERSISTENT_PARTITION);
+  for (const electronId of loadedUserExtensions.values()) {
+    try { chatSession.extensions.removeExtension(electronId); } catch { /* already gone */ }
+  }
+  loadedUserExtensions.clear();
+  for (const extension of listUserExtensions()) {
+    if (extension.error) {
+      log.warn(`[extensions] "${extension.id}" not loaded: ${extension.error}`);
+      continue;
+    }
+    if (!extension.enabled) continue;
+    try {
+      const loaded = await chatSession.extensions.loadExtension(customExtensions().folder(extension.id), { allowFileAccess: false });
+      loadedUserExtensions.set(extension.id, loaded.id);
+      log.info(`[extensions] Loaded "${extension.name}" ${extension.version}.`);
+    } catch (error) {
+      log.warn(`[extensions] "${extension.id}" not loaded:`, error);
+    }
+  }
+}
+
+/** Applies extension changes right away: content scripts only run on pages loaded after them. */
+async function reloadUserExtensions(): Promise<void> {
+  await loadUserExtensions();
+  for (const tab of chatTabs) {
+    if (!tab.view.webContents.isDestroyed()) tab.view.webContents.reload();
+  }
+}
+
+function extensionErrorMessage(error: unknown): string {
+  if (!(error instanceof ExtensionError)) return t("extensionInstallFailed");
+  const reasons: Record<string, Parameters<typeof t>[0]> = {
+    notZip: "extensionErrorNotZip",
+    tooLarge: "extensionErrorTooLarge",
+    unsupportedZip: "extensionErrorUnsupportedZip",
+    unsafeZip: "extensionErrorUnsafe",
+    noManifest: "extensionErrorNoManifest",
+  };
+  // Rule violations keep the precise English detail, which is what the author needs to fix it.
+  return reasons[error.code] ? t(reasons[error.code]) : t("extensionErrorRules", { detail: error.message });
+}
+
+function promptLanguage(value: unknown): AppLanguage {
+  return value === "fr" || value === "es" || value === "en" ? value : activeLanguage;
+}
+
+/** The prompt that explains the extension rules to an AI, in the chosen language. */
+function extensionPrompt(language: AppLanguage): string {
+  const file = language === "en" ? "extension-prompt.md" : `extension-prompt.${language}.md`;
+  return fs.readFileSync(path.join(app.getAppPath(), "docs", file), "utf8").trim() + "\n\n";
+}
+
+/**
+ * Puts multi-line text in the ChatGPT message box as a paste, which keeps its
+ * paragraphs (setting the text directly would merge them into one line).
+ */
+async function pasteIntoChatComposer(contents: WebContents, text: string): Promise<boolean> {
+  try {
+    return (await contents.executeJavaScript(
+      `(() => {
+        const target = document.querySelector('#prompt-textarea') || document.querySelector('form [contenteditable="true"]');
+        if (!target) return false;
+        target.focus();
+        const data = new DataTransfer();
+        data.setData('text/plain', ${JSON.stringify(text)});
+        target.dispatchEvent(new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true }));
+        return true;
+      })()`,
+      true,
+    )) as boolean;
+  } catch (error) {
+    log.warn("[extensions] Unable to place the prompt in ChatGPT:", error);
+    return false;
+  }
+}
+
+/** Opens a new ChatGPT tab with the extension prompt in the message box, ready to be completed. */
+async function createExtensionWithChatGpt(language: AppLanguage): Promise<boolean> {
+  const tab = createChatTab(CHATGPT_URL, true);
+  if (!tab) return false;
+  showWindow();
+  const prompt = extensionPrompt(language);
+  for (let attempt = 0; attempt < 40; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (tab.view.webContents.isDestroyed()) return false;
+    if (tab.view.webContents.isLoading() || !(await pasteIntoChatComposer(tab.view.webContents, prompt))) continue;
+    // The editor handles the paste asynchronously: check once, and never paste twice.
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const filled = (await tab.view.webContents.executeJavaScript(
+      `(() => {
+        const e = document.querySelector('#prompt-textarea') || document.querySelector('form [contenteditable="true"]');
+        if (!e || !(e.innerText || e.value || '').trim()) return false;
+        // Put the cursor after the last word and show the end, so the user only has to type.
+        e.focus();
+        const range = document.createRange();
+        range.selectNodeContents(e);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        for (let node = e; node; node = node.parentElement) {
+          if (node.scrollHeight > node.clientHeight) node.scrollTop = node.scrollHeight;
+        }
+        return true;
+      })()`,
+      true,
+    ).catch(() => false)) as boolean;
+    return filled || fillChatComposer(prompt);
+  }
+  return false;
+}
+
 function isTrustedWelcomeSender(url: string): boolean {
   return url === pathToFileURL(rendererPath("welcome.html")).href;
 }
 
 function registerIpcHandlers(): void {
+  const settingsOnly = (event: Electron.IpcMainInvokeEvent): boolean =>
+    Boolean(event.senderFrame && isTrustedSettingsSender(event.senderFrame.url));
+
+  ipcMain.handle("extensions:list", (event) => (settingsOnly(event) ? listUserExtensions() : []));
+
+  ipcMain.handle("extensions:add", async (event) => {
+    if (!settingsOnly(event)) return { ok: false, error: t("unauthorizedSource") };
+    const parent = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : undefined;
+    const picked = await (parent
+      ? dialog.showOpenDialog(parent, { title: t("extensionChooseZip"), properties: ["openFile"], filters: [{ name: "Extension (.zip)", extensions: ["zip"] }] })
+      : dialog.showOpenDialog({ title: t("extensionChooseZip"), properties: ["openFile"], filters: [{ name: "Extension (.zip)", extensions: ["zip"] }] }));
+    if (picked.canceled || picked.filePaths.length === 0) return { ok: true, cancelled: true, extensions: listUserExtensions() };
+    try {
+      const inspected = customExtensions().inspect(picked.filePaths[0]);
+      const { name, version, author, description } = inspected.manifest;
+      const details = [author ? `${t("extensionAuthor")}: ${author}` : "", description].filter(Boolean).join("\n");
+      const options = {
+        type: "warning" as const,
+        title: t("extensionInstallTitle"),
+        message: t(inspected.exists ? "extensionReplaceMessage" : "extensionInstallMessage", { name, version }),
+        detail: `${details ? `${details}\n\n` : ""}${t("extensionInstallWarning")}`,
+        buttons: [mainText().cancel, t("extensionInstallButton")],
+        defaultId: 0,
+        cancelId: 0,
+      };
+      const answer = await (parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options));
+      if (answer.response !== 1) return { ok: true, cancelled: true, extensions: listUserExtensions() };
+      customExtensions().install(inspected);
+      log.info(`[extensions] Installed "${name}" ${version}.`);
+      if (!currentSettings.disabledExtensions.includes(inspected.id)) await reloadUserExtensions();
+      return { ok: true, installed: name, extensions: listUserExtensions() };
+    } catch (error) {
+      log.warn("[extensions] Installation refused:", error);
+      return { ok: false, error: extensionErrorMessage(error), extensions: listUserExtensions() };
+    }
+  });
+
+  ipcMain.handle("extensions:set-enabled", async (event, id: unknown, enabled: unknown) => {
+    if (!settingsOnly(event) || typeof id !== "string" || typeof enabled !== "boolean") return { ok: false, error: t("invalidRequest") };
+    const disabled = currentSettings.disabledExtensions.filter((item) => item !== id);
+    const nextSettings = { ...currentSettings, disabledExtensions: enabled ? disabled : [...disabled, id] };
+    try {
+      settingsStore?.save(nextSettings);
+      currentSettings = nextSettings;
+    } catch {
+      return { ok: false, error: t("settingsSaveFailed") };
+    }
+    await reloadUserExtensions();
+    return { ok: true, extensions: listUserExtensions() };
+  });
+
+  ipcMain.handle("extensions:remove", async (event, id: unknown) => {
+    if (!settingsOnly(event) || typeof id !== "string") return { ok: false, error: t("invalidRequest") };
+    const extension = listUserExtensions().find((item) => item.id === id);
+    if (!extension) return { ok: false, error: t("invalidRequest") };
+    const parent = settingsWindow && !settingsWindow.isDestroyed() ? settingsWindow : undefined;
+    const options = {
+      type: "warning" as const,
+      message: t("extensionRemoveMessage", { name: extension.name }),
+      detail: t("extensionRemoveDetail"),
+      buttons: [mainText().cancel, t("extensionRemoveButton")],
+      defaultId: 0,
+      cancelId: 0,
+    };
+    const answer = await (parent ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options));
+    if (answer.response !== 1) return { ok: true, cancelled: true, extensions: listUserExtensions() };
+    try {
+      customExtensions().remove(id);
+      const nextSettings = { ...currentSettings, disabledExtensions: currentSettings.disabledExtensions.filter((item) => item !== id) };
+      settingsStore?.save(nextSettings);
+      currentSettings = nextSettings;
+    } catch (error) {
+      log.warn("[extensions] Removal failed:", error);
+      return { ok: false, error: t("extensionRemoveFailed"), extensions: listUserExtensions() };
+    }
+    await reloadUserExtensions();
+    return { ok: true, extensions: listUserExtensions() };
+  });
+
+  ipcMain.handle("extensions:open-folder", async (event) => {
+    if (!settingsOnly(event)) return;
+    fs.mkdirSync(customExtensions().directory, { recursive: true });
+    await shell.openPath(customExtensions().directory);
+  });
+
+  ipcMain.handle("extensions:reload", async (event) => {
+    if (!settingsOnly(event)) return { ok: false, error: t("unauthorizedSource") };
+    await reloadUserExtensions();
+    return { ok: true, extensions: listUserExtensions() };
+  });
+
+  ipcMain.handle("extensions:create-with-chatgpt", async (event, language: unknown) => {
+    if (!settingsOnly(event)) return { ok: false, error: t("unauthorizedSource") };
+    return (await createExtensionWithChatGpt(promptLanguage(language))) ? { ok: true } : { ok: false, error: t("extensionPromptFailed") };
+  });
+
+  ipcMain.handle("extensions:copy-prompt", (event, language: unknown) => {
+    if (!settingsOnly(event)) return { ok: false, error: t("unauthorizedSource") };
+    clipboard.writeText(extensionPrompt(promptLanguage(language)), "clipboard");
+    return { ok: true };
+  });
+
   ipcMain.handle("welcome:state", (event) => {
     if (!event.senderFrame || !isTrustedWelcomeSender(event.senderFrame.url)) throw new Error(t("unauthorizedSource"));
     return { name: appDisplayName(), language: activeLanguage };
@@ -4659,6 +4889,7 @@ if (!hasSingleInstanceLock) {
       } else {
         log.info("[extensions] NestFolders disabled.");
       }
+      await loadUserExtensions();
       applyThemeMode(currentSettings.themeMode);
 
       nativeTheme.on("updated", () => {

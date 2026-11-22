@@ -82,6 +82,29 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
+    extPromptLanguage: "Langue du prompt", extPromptLanguageHint: "L’IA vous répond dans cette langue. Les termes techniques restent en anglais.",
+    extBuiltInTitle: "Intégrées",
+    extInstalledTitle: "Vos extensions",
+    extInstalledHint: "Les extensions que vous ajoutez s’appliquent tout de suite : les onglets ChatGPT ouverts se rechargent.",
+    extEmpty: "Aucune extension installée pour l’instant.",
+    extAdd: "Ajouter une extension (.zip)…",
+    extOpenFolder: "Ouvrir le dossier des extensions",
+    extReload: "Recharger les extensions",
+    extCreateTitle: "Créer la vôtre",
+    extCreateIntro: "Décrivez l’extension que vous voulez à une IA, puis installez le .zip qu’elle vous donne. Les extensions ne peuvent modifier que la page de ChatGPT.",
+    extCreate: "Créer avec ChatGPT",
+    extCreateHint: "Ouvre un nouvel onglet ChatGPT avec les instructions déjà dans la zone de message. Décrivez votre extension à la fin, envoyez le message, puis installez le .zip obtenu.",
+    extCopyPrompt: "Copier le prompt pour une IA",
+    extCopyHint: "Copie les instructions à coller dans une autre IA, comme Claude ou Codex.",
+    extDevHint: "Développeurs : modifiez vos extensions directement dans le dossier des extensions, puis rechargez-les. Le guide complet est docs/EXTENSIONS.md dans le dépôt du projet.",
+    extRemove: "Supprimer",
+    extBy: "par {author}",
+    extInstalled: "« {name} » installée.",
+    extReloaded: "Extensions rechargées.",
+    extPromptCopied: "Prompt copié. Collez-le dans votre IA et décrivez votre extension à la fin.",
+    extPromptOpened: "Un onglet ChatGPT est prêt : décrivez votre extension à la fin du message.",
+    extNotLoaded: "Non chargée : {error}",
+    extensionsHint: "Fonctions optionnelles. Une extension désactivée n’est pas chargée du tout. Les extensions intégrées changent après un redémarrage.",
     updatesOpenPage: "Ouvrir la page de téléchargement", updManual: "Téléchargez le nouveau paquet depuis la page de la version.",
     displayNameLabel: "Nom de l’application", displayNameHint: "Affiché dans le menu des applications, la recherche, la barre des tâches et les fenêtres de l’application. La commande du terminal reste chatgpt-desktop-linux.", displayNameUnavailable: "Le renommage n’est disponible que pour les installations .deb et .rpm.",
     trayUnavailable: "Aucune zone de notification n’a été trouvée : la fenêtre est réduite dans la barre des tâches à la place. Sous GNOME, installez l’extension AppIndicator pour avoir l’icône.",
@@ -97,7 +120,6 @@ const translations = {
     updInfoUnavailable: "Informations de mise à jour indisponibles.",
     tabGeneral: "Général", tabTabs: "Onglets", tabShortcuts: "Raccourcis", tabWindow: "Fenêtre", tabExtensions: "Extensions", tabAbout: "À propos",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Onglets",
-    extensionsHint: "Fonctions optionnelles. Une extension désactivée n’est pas chargée du tout. Les changements s’appliquent après un redémarrage.",
     nestFoldersTitle: "Dossiers de projets (NestFolders)", nestFoldersHint: "Dossiers et sous-dossiers dans les projets ChatGPT, avec couleurs et glisser-déposer. Vos dossiers sont conservés si l’extension est désactivée.", dependsOnChatGpt: "Dépend de l’interface de ChatGPT",
     kdeOnly: "KDE Plasma uniquement", extensionUnavailable: "Indisponible : cette extension nécessite KDE Plasma.",
     extensionsRestartPrompt: "Les extensions ont changé. Redémarrer l’application maintenant pour appliquer le changement ?",
@@ -164,6 +186,29 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
+    extPromptLanguage: "Prompt language", extPromptLanguageHint: "The AI answers in this language. Technical terms stay in English.",
+    extBuiltInTitle: "Built-in",
+    extInstalledTitle: "Your extensions",
+    extInstalledHint: "Extensions you add apply immediately: open ChatGPT tabs reload.",
+    extEmpty: "No extension installed yet.",
+    extAdd: "Add an extension (.zip)…",
+    extOpenFolder: "Open the extensions folder",
+    extReload: "Reload extensions",
+    extCreateTitle: "Create your own",
+    extCreateIntro: "Describe the extension you want to an AI, then install the .zip it gives you. Extensions can only change the ChatGPT page.",
+    extCreate: "Create with ChatGPT",
+    extCreateHint: "Opens a new ChatGPT tab with the instructions already in the message box. Describe your extension at the end, send the message, then install the .zip you get.",
+    extCopyPrompt: "Copy the AI prompt",
+    extCopyHint: "Copies the instructions to paste into another AI, such as Claude or Codex.",
+    extDevHint: "Developers: edit your extensions directly in the extensions folder, then reload them. The full guide is docs/EXTENSIONS.md in the project repository.",
+    extRemove: "Remove",
+    extBy: "by {author}",
+    extInstalled: "“{name}” installed.",
+    extReloaded: "Extensions reloaded.",
+    extPromptCopied: "Prompt copied. Paste it into your AI and describe your extension at the end.",
+    extPromptOpened: "A ChatGPT tab is ready: describe your extension at the end of the message.",
+    extNotLoaded: "Not loaded: {error}",
+    extensionsHint: "Optional features. A disabled extension is not loaded at all. Built-in extensions change after a restart.",
     updatesOpenPage: "Open the download page", updManual: "Download the new package from the release page.",
     displayNameLabel: "Application name", displayNameHint: "Shown in your applications menu, search and taskbar, and in the application's windows. The terminal command stays chatgpt-desktop-linux.", displayNameUnavailable: "Renaming is only available for .deb and .rpm installations.",
     trayUnavailable: "No system tray was found, so the window is minimized to the taskbar instead. On GNOME, install the AppIndicator extension to get the tray icon.",
@@ -181,7 +226,6 @@ const translations = {
     updInfoUnavailable: "Update information unavailable.",
     tabGeneral: "General", tabTabs: "Tabs", tabShortcuts: "Shortcuts", tabWindow: "Window", tabExtensions: "Extensions", tabAbout: "About",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Tabs",
-    extensionsHint: "Optional features. A disabled extension is not loaded at all. Changes apply after a restart.",
     nestFoldersTitle: "Project folders (NestFolders)", nestFoldersHint: "Folders and subfolders inside ChatGPT projects, with colors and drag and drop. Your folders are kept when the extension is disabled.", dependsOnChatGpt: "Depends on the ChatGPT interface",
     kdeOnly: "KDE Plasma only", extensionUnavailable: "Unavailable: this extension requires KDE Plasma.",
     extensionsRestartPrompt: "Extensions changed. Restart the application now to apply the change?",
@@ -243,6 +287,29 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
+    extPromptLanguage: "Idioma del prompt", extPromptLanguageHint: "La IA te responde en este idioma. Los términos técnicos siguen en inglés.",
+    extBuiltInTitle: "Integradas",
+    extInstalledTitle: "Tus extensiones",
+    extInstalledHint: "Las extensiones que añades se aplican al instante: las pestañas de ChatGPT abiertas se recargan.",
+    extEmpty: "Todavía no hay ninguna extensión instalada.",
+    extAdd: "Añadir una extensión (.zip)…",
+    extOpenFolder: "Abrir la carpeta de extensiones",
+    extReload: "Recargar las extensiones",
+    extCreateTitle: "Crea la tuya",
+    extCreateIntro: "Describe la extensión que quieres a una IA y después instala el .zip que te dé. Las extensiones solo pueden modificar la página de ChatGPT.",
+    extCreate: "Crear con ChatGPT",
+    extCreateHint: "Abre una nueva pestaña de ChatGPT con las instrucciones ya en el cuadro de mensaje. Describe tu extensión al final, envía el mensaje e instala el .zip que obtengas.",
+    extCopyPrompt: "Copiar el prompt para una IA",
+    extCopyHint: "Copia las instrucciones para pegarlas en otra IA, como Claude o Codex.",
+    extDevHint: "Desarrolladores: editad vuestras extensiones directamente en la carpeta de extensiones y recargadlas. La guía completa es docs/EXTENSIONS.md en el repositorio del proyecto.",
+    extRemove: "Eliminar",
+    extBy: "de {author}",
+    extInstalled: "«{name}» instalada.",
+    extReloaded: "Extensiones recargadas.",
+    extPromptCopied: "Prompt copiado. Pégalo en tu IA y describe tu extensión al final.",
+    extPromptOpened: "Una pestaña de ChatGPT está lista: describe tu extensión al final del mensaje.",
+    extNotLoaded: "No cargada: {error}",
+    extensionsHint: "Funciones opcionales. Una extensión desactivada no se carga en absoluto. Las extensiones integradas cambian tras reiniciar.",
     updatesOpenPage: "Abrir la página de descarga", updManual: "Descarga el nuevo paquete desde la página de la versión.",
     displayNameLabel: "Nombre de la aplicación", displayNameHint: "Se muestra en el menú de aplicaciones, la búsqueda, la barra de tareas y las ventanas de la aplicación. El comando de terminal sigue siendo chatgpt-desktop-linux.", displayNameUnavailable: "El cambio de nombre solo está disponible en instalaciones .deb y .rpm.",
     trayUnavailable: "No se encontró ninguna bandeja del sistema, así que la ventana se minimiza en la barra de tareas. En GNOME, instala la extensión AppIndicator para tener el icono.",
@@ -260,7 +327,6 @@ const translations = {
     updInfoUnavailable: "Información de actualización no disponible.",
     tabGeneral: "General", tabTabs: "Pestañas", tabShortcuts: "Atajos", tabWindow: "Ventana", tabExtensions: "Extensiones", tabAbout: "Acerca de",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Pestañas",
-    extensionsHint: "Funciones opcionales. Una extensión desactivada no se carga en absoluto. Los cambios se aplican tras reiniciar.",
     nestFoldersTitle: "Carpetas de proyectos (NestFolders)", nestFoldersHint: "Carpetas y subcarpetas dentro de los proyectos de ChatGPT, con colores y arrastrar y soltar. Tus carpetas se conservan si desactivas la extensión.", dependsOnChatGpt: "Depende de la interfaz de ChatGPT",
     kdeOnly: "Solo KDE Plasma", extensionUnavailable: "No disponible: esta extensión requiere KDE Plasma.",
     extensionsRestartPrompt: "Las extensiones han cambiado. ¿Reiniciar ahora para aplicar el cambio?",
@@ -586,6 +652,9 @@ function fillForm(payload) {
 
   if (runtime) {
     applyTranslations(runtime.activeLanguage);
+    // The prompt follows the application language until the user picks another one.
+    const promptLanguage = document.querySelector("#extension-prompt-language");
+    if (promptLanguage && !promptLanguage.dataset.chosen) promptLanguage.value = runtime.activeLanguage;
     shortcutStatus.textContent = runtime.shortcutRegistered
       ? `${tr("shortcutActive")} : ${settings.globalShortcut}`
       : tr("shortcutUnavailable");
@@ -987,3 +1056,98 @@ updateInstallButton.addEventListener("click", () => updateAction(async () => {
 refreshUpdateStatus().catch(() => { updateMessage.textContent = tr("updInfoUnavailable"); });
 
 document.querySelector("#updates-cancel").addEventListener("click", () => { void window.desktopApi.cancelUpdate(); });
+
+// ---------- Custom extensions ----------
+
+const userExtensionList = document.querySelector("#user-extension-list");
+const promptLanguageInput = document.querySelector("#extension-prompt-language");
+promptLanguageInput.addEventListener("change", () => { promptLanguageInput.dataset.chosen = "true"; });
+const userExtensionEmpty = document.querySelector("#user-extension-empty");
+
+function renderUserExtensions(extensions) {
+  if (!Array.isArray(extensions)) return;
+  userExtensionList.replaceChildren();
+  userExtensionEmpty.hidden = extensions.length > 0;
+  for (const extension of extensions) {
+    const card = document.createElement("div");
+    card.className = "card extension user-extension";
+    const header = document.createElement("label");
+    header.className = "toggle extension-header";
+    const info = document.createElement("span");
+    const title = document.createElement("strong");
+    title.textContent = extension.name;
+    info.append(title);
+    const meta = [extension.version && `v${extension.version}`, extension.author && trf("extBy", { author: extension.author })].filter(Boolean).join(" · ");
+    if (meta) {
+      const metaLine = document.createElement("small");
+      metaLine.className = "user-extension-meta";
+      metaLine.textContent = meta;
+      info.append(metaLine);
+    }
+    if (extension.description) {
+      const description = document.createElement("small");
+      description.textContent = extension.description;
+      info.append(description);
+    }
+    if (extension.error) {
+      const error = document.createElement("small");
+      error.className = "user-extension-error";
+      error.textContent = trf("extNotLoaded", { error: extension.error });
+      info.append(error);
+    }
+    header.append(info);
+    if (!extension.error) {
+      const toggle = document.createElement("input");
+      toggle.type = "checkbox";
+      toggle.checked = extension.enabled;
+      toggle.setAttribute("aria-label", extension.name);
+      toggle.addEventListener("change", async () => {
+        toggle.disabled = true;
+        const result = await window.desktopApi.setExtensionEnabled(extension.id, toggle.checked);
+        if (result?.ok) { renderUserExtensions(result.extensions); setStatus(tr("extReloaded"), "success"); }
+        else { toggle.checked = !toggle.checked; toggle.disabled = false; setStatus(result?.error || tr("saveError"), "error"); }
+      });
+      header.append(toggle);
+    }
+    const actions = document.createElement("div");
+    actions.className = "user-extension-actions";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "danger";
+    remove.textContent = tr("extRemove");
+    remove.addEventListener("click", async () => {
+      const result = await window.desktopApi.removeExtension(extension.id);
+      if (result?.extensions) renderUserExtensions(result.extensions);
+      if (result && !result.ok) setStatus(result.error, "error");
+    });
+    actions.append(remove);
+    card.append(header, actions);
+    userExtensionList.append(card);
+  }
+}
+
+function refreshUserExtensions() {
+  window.desktopApi.listExtensions().then(renderUserExtensions).catch(() => {});
+}
+
+document.querySelector("#extension-add").addEventListener("click", async () => {
+  const result = await window.desktopApi.addExtension();
+  if (result?.extensions) renderUserExtensions(result.extensions);
+  if (result?.ok && result.installed) setStatus(trf("extInstalled", { name: result.installed }), "success");
+  else if (result && !result.ok) setStatus(result.error, "error");
+});
+document.querySelector("#extension-open-folder").addEventListener("click", () => { void window.desktopApi.openExtensionsFolder(); });
+document.querySelector("#extension-reload").addEventListener("click", async () => {
+  const result = await window.desktopApi.reloadExtensions();
+  if (result?.ok) { renderUserExtensions(result.extensions); setStatus(tr("extReloaded"), "success"); }
+});
+document.querySelector("#extension-create").addEventListener("click", async () => {
+  const result = await window.desktopApi.createExtensionWithChatGpt(promptLanguageInput.value);
+  setStatus(result?.ok ? tr("extPromptOpened") : result?.error || "", result?.ok ? "success" : "error");
+});
+document.querySelector("#extension-copy-prompt").addEventListener("click", async () => {
+  const result = await window.desktopApi.copyExtensionPrompt(promptLanguageInput.value);
+  setStatus(result?.ok ? tr("extPromptCopied") : result?.error || "", result?.ok ? "success" : "error");
+});
+
+refreshUserExtensions();
