@@ -47,6 +47,7 @@ window.browserShellApi.onState(render);
 // Drag-and-drop reordering (pointer events: the tab bar is its own small view, so the
 // tab follows the cursor and the main process is told the final index on release).
 let drag = null;
+document.addEventListener("selectstart", (event) => event.preventDefault());
 const DRAG_THRESHOLD = 5;
 
 tabs.addEventListener("pointerdown", (event) => {
