@@ -23,6 +23,7 @@ Unofficial client, not affiliated with OpenAI. A ChatGPT account is required; no
 - Notification when a response finishes while the window is hidden.
 - Light, dark or automatic theme.
 - Interface in English, French and Spanish. ChatGPT itself follows the selected language.
+- Choose your own application name on first launch, or later in **Settings → General**: it is used in menus, search and the taskbar (`.deb` and `.rpm` installations).
 
 ### Extensions
 
@@ -84,7 +85,7 @@ Shortcuts can be changed in **Settings → Shortcuts**.
 
 ## Updates
 
-The application checks for new versions at startup; this can be turned off in **Settings → About**. With the `.deb` package, updates can be downloaded and installed from the application, after confirming with your system password.
+The application checks for new versions at startup; this can be turned off in **Settings → About**. With the `.deb` package, updates can be downloaded and installed from the application, after confirming with your system password. With the `.rpm` and AppImage packages, the application opens the download page.
 
 ## Privacy
 

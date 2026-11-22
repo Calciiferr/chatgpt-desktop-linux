@@ -1,6 +1,6 @@
 {
   "name": "chatgpt-desktop-linux",
-  "version": "0.7.8",
+  "version": "0.8.0",
   "description": "Unofficial ChatGPT desktop app for Linux, with tabs, global shortcuts and KDE Plasma integration",
   "homepage": "https://github.com/Calciiferr/chatgpt-desktop-linux",
   "repository": {
