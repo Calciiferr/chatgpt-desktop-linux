@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -7,273 +7,317 @@
       content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Paramètres — ChatGPT</title>
+    <title>Settings — ChatGPT</title>
     <link rel="stylesheet" href="settings.css" />
   </head>
   <body>
-    <header>
-      <img src="../assets/tray-icon.png" alt="" width="48" height="48" />
-      <div>
-        <h1 data-i18n="settingsTitle">Paramètres</h1>
-        <p>ChatGPT Desktop Linux</p>
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="../assets/tray-icon.png" alt="" width="32" height="32" />
+        <div>
+          <h1 data-i18n="settingsTitle">Settings</h1>
+          <p>ChatGPT Desktop Linux</p>
+        </div>
       </div>
-    </header>
+      <nav class="tabs" role="tablist" aria-orientation="vertical">
+        <button type="button" role="tab" data-tab="general" id="tab-general" aria-controls="panel-general" data-i18n="tabGeneral">General</button>
+        <button type="button" role="tab" data-tab="tabs" id="tab-tabs" aria-controls="panel-tabs" data-i18n="tabTabs">Tabs</button>
+        <button type="button" role="tab" data-tab="shortcuts" id="tab-shortcuts" aria-controls="panel-shortcuts" data-i18n="tabShortcuts">Shortcuts</button>
+        <button type="button" role="tab" data-tab="window" id="tab-window" aria-controls="panel-window" data-i18n="tabWindow">Window</button>
+        <button type="button" role="tab" data-tab="extensions" id="tab-extensions" aria-controls="panel-extensions" data-i18n="tabExtensions">Extensions</button>
+        <button type="button" role="tab" data-tab="about" id="tab-about" aria-controls="panel-about" data-i18n="tabAbout">About</button>
+      </nav>
+    </aside>
 
     <main>
       <form id="settings-form">
-        <section class="card">
-          <h2 data-i18n="behaviorTitle">Comportement</h2>
-
-          <label class="field" for="language">
-            <span data-i18n="languageLabel">Langue de l’application et de ChatGPT</span>
-            <select id="language">
-              <option value="fr">Français</option>
-              <option value="en">English</option>
-              <option value="es">Español</option>
-            </select>
-            <small data-i18n="languageHint">Le changement nécessite un redémarrage de l’application.</small>
-          </label>
-
-          <label class="field" for="shortcut">
-            <span data-i18n="shortcutLabel">Raccourci global</span>
-            <input id="shortcut" type="text" readonly spellcheck="false" />
-            <small data-i18n="shortcutHint">Cliquez dans le champ puis pressez la nouvelle combinaison.</small>
-            <small id="shortcut-status" class="runtime-status"></small>
-          </label>
-
-          <label class="field" for="close-behavior">
-            <span data-i18n="closeLabel">Quand je ferme la fenêtre</span>
-            <select id="close-behavior">
-              <option value="hide" data-i18n="closeHide">Cacher dans la zone de notification</option>
-              <option value="quit" data-i18n="closeQuit">Quitter complètement</option>
-            </select>
-            <small id="close-behavior-hint"></small>
-          </label>
-
-          <label class="toggle" for="response-notifications">
-            <span>
-              <strong data-i18n="responseNotificationsLabel">Notifier à la fin d’une réponse</strong>
-              <small data-i18n="responseNotificationsHint">Uniquement lorsque la fenêtre ChatGPT est cachée, réduite ou sans focus.</small>
-            </span>
-            <input id="response-notifications" type="checkbox" />
-          </label>
-
-          <label class="toggle" for="launch-at-login">
-            <span>
-              <strong data-i18n="autostartLabel">Lancer à la connexion</strong>
-              <small data-i18n="autostartHint">Démarre discrètement dans la zone de notification KDE.</small>
-            </span>
-            <input id="launch-at-login" type="checkbox" />
-          </label>
-        </section>
-
-        <section class="card">
-          <h2 data-i18n="searchTitle">Recherche dans la conversation</h2>
-          <label class="field" for="search-shortcut">
-            <span data-i18n="searchShortcutLabel">Ouvrir la recherche</span>
-            <input id="search-shortcut" type="text" readonly spellcheck="false" />
-          </label>
-          <div class="size-grid">
-            <label class="field" for="search-next-shortcut">
-              <span data-i18n="searchNextShortcutLabel">Résultat suivant</span>
-              <input id="search-next-shortcut" type="text" readonly spellcheck="false" />
+        <!-- General -->
+        <section class="panel" id="panel-general" role="tabpanel" aria-labelledby="tab-general" data-panel="general">
+          <h2 class="panel-title" data-i18n="tabGeneral">General</h2>
+          <div class="card">
+            <label class="field" for="language">
+              <span data-i18n="languageLabel">Application and ChatGPT language</span>
+              <select id="language">
+                <option value="en">English</option>
+                <option value="fr">Français</option>
+                <option value="es">Español</option>
+              </select>
+              <small data-i18n="languageHint">Changing the language requires restarting the application.</small>
             </label>
-            <label class="field" for="search-previous-shortcut">
-              <span data-i18n="searchPreviousShortcutLabel">Résultat précédent</span>
-              <input id="search-previous-shortcut" type="text" readonly spellcheck="false" />
+            <label class="field" for="theme-mode">
+              <span data-i18n="themeModeLabel">Theme</span>
+              <select id="theme-mode">
+                <option value="system" data-i18n="themeSystem">Automatic (system)</option>
+                <option value="light" data-i18n="themeLight">Light</option>
+                <option value="dark" data-i18n="themeDark">Dark</option>
+              </select>
+              <small data-i18n="themeModeHint">Applied to ChatGPT and to the application windows.</small>
             </label>
           </div>
-          <small data-i18n="searchShortcutHint">La recherche se met à jour à chaque lettre ; ces raccourcis fonctionnent dans la fenêtre ChatGPT.</small>
-        </section>
-
-        <section class="card">
-          <h2 data-i18n="tabsTitle">Navigation et onglets</h2>
-          <label class="toggle" for="pull-to-refresh-enabled">
-            <span>
-              <strong data-i18n="pullToRefreshLabel">Activer « tirer pour actualiser »</strong>
-              <small data-i18n="pullToRefreshHint">Geste précis du pavé tactile, uniquement lorsque la page est tout en haut.</small>
-            </span>
-            <input id="pull-to-refresh-enabled" type="checkbox" />
-          </label>
-          <label class="field" for="tab-bar-mode">
-            <span data-i18n="tabBarModeLabel">Visibilité de la barre d’onglets</span>
-            <select id="tab-bar-mode">
-              <option value="auto" data-i18n="tabBarAuto">Automatique</option>
-              <option value="always" data-i18n="tabBarAlways">Toujours visible</option>
-              <option value="hidden" data-i18n="tabBarHidden">Toujours cachée</option>
-            </select>
-            <small data-i18n="tabBarModeHint">En automatique, la barre apparaît à partir de deux onglets.</small>
-          </label>
-          <label class="toggle" for="restore-tabs-on-startup">
-            <span>
-              <strong data-i18n="restoreTabsLabel">Restaurer les onglets au démarrage</strong>
-              <small data-i18n="restoreTabsHint">Seules les URLs ChatGPT et l’ordre sont conservés, jamais les brouillons.</small>
-            </span>
-            <input id="restore-tabs-on-startup" type="checkbox" />
-          </label>
-          <label class="field" for="last-tab-close-behavior">
-            <span data-i18n="lastTabBehaviorLabel">Fermeture du dernier onglet</span>
-            <select id="last-tab-close-behavior">
-              <option value="home" data-i18n="lastTabHome">Revenir à l’accueil ChatGPT</option>
-              <option value="hide" data-i18n="lastTabHide">Cacher la fenêtre</option>
-              <option value="ignore" data-i18n="lastTabIgnore">Ignorer la fermeture</option>
-            </select>
-          </label>
-          <label class="field" for="new-tab-project">
-            <span data-i18n="newTabTargetLabel">Destination des nouveaux onglets</span>
-            <select id="new-tab-project"></select>
-            <small data-i18n="newTabTargetHint">S’applique au raccourci Nouvel onglet (Ctrl+T par défaut) et au bouton +. Liste issue des projets synchronisés ci-dessous.</small>
-          </label>
-          <div class="size-grid">
-            <label class="field" for="reload-shortcut"><span data-i18n="reloadShortcutLabel">Actualiser</span><input id="reload-shortcut" type="text" readonly spellcheck="false" /></label>
-            <label class="field" for="new-tab-shortcut"><span data-i18n="newTabShortcutLabel">Nouvel onglet</span><input id="new-tab-shortcut" type="text" readonly spellcheck="false" /></label>
-            <label class="field" for="close-tab-shortcut"><span data-i18n="closeTabShortcutLabel">Fermer l’onglet</span><input id="close-tab-shortcut" type="text" readonly spellcheck="false" /></label>
-            <label class="field" for="next-tab-shortcut"><span data-i18n="nextTabShortcutLabel">Onglet suivant</span><input id="next-tab-shortcut" type="text" readonly spellcheck="false" /></label>
-            <label class="field" for="previous-tab-shortcut"><span data-i18n="previousTabShortcutLabel">Onglet précédent</span><input id="previous-tab-shortcut" type="text" readonly spellcheck="false" /></label>
-            <label class="field" for="reopen-tab-shortcut"><span data-i18n="reopenTabShortcutLabel">Rouvrir le dernier fermé</span><input id="reopen-tab-shortcut" type="text" readonly spellcheck="false" /></label>
-          </div>
-          <small data-i18n="fixedTabShortcutsHint">Ctrl+1 à Ctrl+8 sélectionnent un onglet ; Ctrl+9 sélectionne le dernier.</small>
-        </section>
-
-        <section class="card">
-          <h2 data-i18n="companionTitle">Magic Bar</h2>
-          <label class="toggle" for="companion-enabled">
-            <span>
-              <strong data-i18n="companionEnabledLabel">Activer la Magic Bar</strong>
-              <small data-i18n="companionEnabledHint">Ouvre un popup local pour préparer du texte, des fichiers et des captures avant de les envoyer.</small>
-            </span>
-            <input id="companion-enabled" type="checkbox" />
-          </label>
-          <label class="field" for="companion-shortcut">
-            <span data-i18n="companionShortcutLabel">Raccourci de la Magic Bar</span>
-            <input id="companion-shortcut" type="text" readonly spellcheck="false" />
-            <small data-i18n="companionShortcutHint">Par défaut : Ctrl+Shift+Space.</small>
-            <small id="companion-shortcut-status" class="runtime-status"></small>
-          </label>
-          <label class="field" for="companion-prompt-max-lines">
-            <span data-i18n="companionPromptLinesLabel">Lignes maximales du message</span>
-            <input id="companion-prompt-max-lines" type="number" min="1" max="10" step="1" />
-            <small data-i18n="companionPromptLinesHint">La barre grandit jusqu’à cette limite, puis le message défile. Par défaut : 3.</small>
-          </label>
-          <label class="field" for="theme-mode">
-            <span data-i18n="themeModeLabel">Thème global</span>
-            <select id="theme-mode">
-              <option value="system" data-i18n="themeSystem">Automatique (système)</option>
-              <option value="light" data-i18n="themeLight">Clair</option>
-              <option value="dark" data-i18n="themeDark">Sombre</option>
-            </select>
-            <small data-i18n="themeModeHint">Appliqué à ChatGPT, la Magic Bar et aux paramètres. Le mode automatique suit KDE sans redémarrage.</small>
-          </label>
-          <small><span data-i18n="companionFallback">Commande de secours de la Magic Bar</span> : <code id="companion-fallback-command"></code></small>
-        </section>
-
-        <section class="card projects-card">
-          <div class="card-title-row">
-            <h2 data-i18n="projectsTitle">Projets ChatGPT</h2>
-            <span class="experimental-badge" data-i18n="experimental">Expérimental</span>
-          </div>
-          <p class="card-copy" data-i18n="projectsHint">Cache local utilisé par la Magic Bar, actualisé sur demande et automatiquement toutes les cinq minutes.</p>
-
-          <div class="project-actions">
-            <button id="scan-projects" type="button" data-i18n="syncProjects">Synchroniser automatiquement depuis ChatGPT</button>
-            <button id="reset-projects" class="danger" type="button" data-i18n="resetProjects">Réinitialiser tous les projets…</button>
-          </div>
-          <small id="project-sync-status" class="runtime-status"></small>
-
-          <label class="field" for="default-project">
-            <span data-i18n="defaultProject">Projet par défaut dans la Magic Bar</span>
-            <select id="default-project"></select>
-          </label>
-
-          <button id="toggle-project-list" class="secondary project-list-toggle" type="button" aria-expanded="false">
-            Afficher les projets (0)
-          </button>
-          <div id="project-list-panel" hidden>
-            <div id="project-list" class="project-list"></div>
-            <p id="project-list-empty" class="empty-copy" data-i18n="noProjects">Aucun projet dans le cache local.</p>
-          </div>
-          <small data-i18n="projectsDomWarning">La synchronisation ouvre automatiquement la sidebar et la section Projets. Elle repose sur l’interface de chatgpt.com, pas sur une API officielle.</small>
-          <small data-i18n="resetProjectsHint">La réinitialisation vide uniquement le cache local ; elle ne supprime aucun projet sur ChatGPT.</small>
-        </section>
-
-        <section class="card">
-          <h2 data-i18n="windowTitle">Fenêtre</h2>
-          <label class="field" for="window-display-mode">
-            <span data-i18n="windowDisplayModeLabel">Présence de l’application</span>
-            <select id="window-display-mode">
-              <option value="tray" data-i18n="windowDisplayTray">Zone de notification seulement</option>
-              <option value="taskbar" data-i18n="windowDisplayTaskbar">Barre des tâches seulement</option>
-              <option value="both" data-i18n="windowDisplayBoth">Les deux</option>
-            </select>
-            <small data-i18n="windowDisplayModeHint">En mode barre des tâches seulement, fermer avec X réduit la fenêtre afin qu’elle reste accessible.</small>
-          </label>
-          <label class="field" for="display-server-mode">
-            <span data-i18n="displayModeLabel">Serveur d’affichage</span>
-            <select id="display-server-mode">
-              <option value="wayland" data-i18n="waylandNative">Wayland natif</option>
-            </select>
-            <small id="display-mode-hint"></small>
-          </label>
-          <label class="toggle" for="remember-window-position">
-            <span>
-              <strong data-i18n="rememberPositionLabel">Mémoriser l’emplacement de la fenêtre</strong>
-              <small data-i18n="rememberPositionHint">Demande à KWin de restaurer la dernière position connue après le masquage dans le tray.</small>
-              <small id="position-memory-status" class="runtime-status"></small>
-            </span>
-            <input id="remember-window-position" type="checkbox" />
-          </label>
-          <div class="size-grid">
-            <label class="field" for="default-width">
-              <span data-i18n="widthLabel">Largeur</span>
-              <input id="default-width" type="number" min="420" max="3840" step="1" />
+          <div class="card">
+            <label class="toggle" for="launch-at-login">
+              <span>
+                <strong data-i18n="autostartLabel">Launch at login</strong>
+                <small data-i18n="autostartHint">Starts quietly using the selected display mode.</small>
+              </span>
+              <input id="launch-at-login" type="checkbox" />
             </label>
-            <label class="field" for="default-height">
-              <span data-i18n="heightLabel">Hauteur</span>
-              <input id="default-height" type="number" min="560" max="2160" step="1" />
+            <label class="toggle" for="response-notifications">
+              <span>
+                <strong data-i18n="responseNotificationsLabel">Notify when a response finishes</strong>
+                <small data-i18n="responseNotificationsHint">Only when the ChatGPT window is hidden, minimized, or unfocused.</small>
+              </span>
+              <input id="response-notifications" type="checkbox" />
             </label>
           </div>
-          <button id="reset-window" class="secondary" type="button">
-            <span data-i18n="resetWindow">Recentrer et rétablir cette taille</span>
-          </button>
         </section>
 
-        <section class="card">
-          <h2 data-i18n="updatesTitle">Mises à jour</h2>
-          <p id="update-version"></p>
-          <label class="toggle" for="updates-auto"><span data-i18n="updatesAuto">Rechercher les mises à jour au démarrage</span><input id="updates-auto" type="checkbox" /></label>
-          <p data-i18n="updatesHint">Les versions sont téléchargées depuis le dépôt GitHub privé. L’installation passe par l’installateur système et nécessite votre confirmation.</p>
-          <small data-i18n="updatesLoginHint">Connectez votre compte GitHub pour accéder aux mises à jour privées. Un code temporaire sera affiché ici et une page officielle GitHub s’ouvrira. Aucun jeton à copier.</small>
-          <p id="update-login-code" role="status" hidden></p>
-          <button id="updates-cancel-login" type="button" class="secondary" hidden>Annuler la connexion</button>
-          <p id="update-access-status"></p>
-          <div class="diagnostic-actions">
-            <button id="updates-connect" hidden class="secondary" type="button" data-i18n="updatesConnect">Se connecter à GitHub</button>
-            <button id="updates-disconnect" hidden class="secondary" type="button" data-i18n="updatesDisconnect">Se déconnecter de GitHub</button>
-            <button id="updates-verify" class="secondary" type="button" hidden>↻ Vérifier la connexion</button>
-            <button id="updates-check" class="secondary" type="button" data-i18n="updatesCheck">Rechercher maintenant</button>
-            <button id="updates-install" type="button" hidden data-i18n="updatesInstall">Télécharger et ouvrir l’installateur</button>
+        <!-- Tabs -->
+        <section class="panel" id="panel-tabs" role="tabpanel" aria-labelledby="tab-tabs" data-panel="tabs" hidden>
+          <h2 class="panel-title" data-i18n="tabTabs">Tabs</h2>
+          <div class="card">
+            <label class="field" for="tab-bar-mode">
+              <span data-i18n="tabBarModeLabel">Tab bar visibility</span>
+              <select id="tab-bar-mode">
+                <option value="auto" data-i18n="tabBarAuto">Automatic</option>
+                <option value="always" data-i18n="tabBarAlways">Always visible</option>
+                <option value="hidden" data-i18n="tabBarHidden">Always hidden</option>
+              </select>
+              <small data-i18n="tabBarModeHint">In automatic mode, the bar appears from two tabs.</small>
+            </label>
+            <label class="toggle" for="restore-tabs-on-startup">
+              <span>
+                <strong data-i18n="restoreTabsLabel">Restore tabs on startup</strong>
+                <small data-i18n="restoreTabsHint">Only ChatGPT URLs and order are stored, never drafts.</small>
+              </span>
+              <input id="restore-tabs-on-startup" type="checkbox" />
+            </label>
+            <label class="field" for="last-tab-close-behavior">
+              <span data-i18n="lastTabBehaviorLabel">Closing the last tab</span>
+              <select id="last-tab-close-behavior">
+                <option value="home" data-i18n="lastTabHome">Return to ChatGPT home</option>
+                <option value="hide" data-i18n="lastTabHide">Hide the window</option>
+                <option value="ignore" data-i18n="lastTabIgnore">Ignore closing</option>
+              </select>
+            </label>
+            <label class="field" for="new-tab-project">
+              <span data-i18n="newTabTargetLabel">New tab destination</span>
+              <select id="new-tab-project"></select>
+              <small data-i18n="newTabTargetHint">New tab shortcut and + button: regular ChatGPT or one of the projects below.</small>
+            </label>
+            <label class="toggle" for="pull-to-refresh-enabled">
+              <span>
+                <strong data-i18n="pullToRefreshLabel">Enable pull to refresh</strong>
+                <small data-i18n="pullToRefreshHint">Precise touchpad gesture, only when the page is already at the top.</small>
+              </span>
+              <input id="pull-to-refresh-enabled" type="checkbox" />
+            </label>
           </div>
-          <button id="updates-cancel" type="button" class="secondary" hidden>Annuler le téléchargement</button>
-          <p id="update-status" role="status" aria-live="polite"></p>
+
+          <div class="card projects-card">
+            <div class="card-title-row">
+              <h3 data-i18n="projectsTitle">ChatGPT Projects</h3>
+              <span class="experimental-badge" data-i18n="experimental">Experimental</span>
+            </div>
+            <p class="card-copy" data-i18n="projectsHint">Local list of your ChatGPT projects, refreshed on request and automatically every five minutes.</p>
+            <div class="project-actions">
+              <button id="scan-projects" type="button" data-i18n="syncProjects">Sync automatically from ChatGPT</button>
+              <button id="reset-projects" class="danger" type="button" data-i18n="resetProjects">Reset all projects…</button>
+            </div>
+            <small id="project-sync-status" class="runtime-status"></small>
+            <button id="toggle-project-list" class="secondary project-list-toggle" type="button" aria-expanded="false">
+              Show projects (0)
+            </button>
+            <div id="project-list-panel" hidden>
+              <div id="project-list" class="project-list"></div>
+              <p id="project-list-empty" class="empty-copy" data-i18n="noProjects">No project in the local cache.</p>
+            </div>
+            <small data-i18n="projectsDomWarning">Synchronization automatically opens the sidebar and Projects section. It uses the chatgpt.com interface, not an official API.</small>
+            <small data-i18n="resetProjectsHint">Resetting only clears the local cache; it does not delete any project from ChatGPT.</small>
+          </div>
         </section>
 
-        <section class="card diagnostics-card">
-          <h2 data-i18n="diagnosticsTitle">Diagnostic</h2>
-          <p id="fallback-command"></p>
-          <small><span data-i18n="logLabel">Journal</span> : <code id="log-path"></code></small>
-          <div class="diagnostic-actions">
-            <button id="copy-log-file" class="secondary" type="button" data-i18n="copyLogFile">Copier le fichier journal</button>
-            <button id="copy-log-tail" class="secondary" type="button" data-i18n="copyLogTail">Copier les 100 dernières lignes</button>
-            <button id="clear-log" class="danger" type="button" data-i18n="clearLog">Vider le journal…</button>
+        <!-- Shortcuts -->
+        <section class="panel" id="panel-shortcuts" role="tabpanel" aria-labelledby="tab-shortcuts" data-panel="shortcuts" hidden>
+          <h2 class="panel-title" data-i18n="tabShortcuts">Shortcuts</h2>
+          <p class="panel-copy" data-i18n="shortcutHint">Click a field, then press the new key combination.</p>
+          <div class="card">
+            <h3 data-i18n="globalShortcutTitle">Global</h3>
+            <label class="field" for="shortcut">
+              <span data-i18n="shortcutLabel">Show or hide ChatGPT</span>
+              <input id="shortcut" class="shortcut-input" type="text" readonly spellcheck="false" />
+              <small id="shortcut-status" class="runtime-status"></small>
+            </label>
+            <small><span data-i18n="fallback">Fallback command</span> : <code id="fallback-command"></code></small>
+          </div>
+          <div class="card">
+            <h3 data-i18n="tabsShortcutsTitle">Tabs</h3>
+            <div class="size-grid">
+              <label class="field" for="new-tab-shortcut"><span data-i18n="newTabShortcutLabel">New tab</span><input id="new-tab-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" /></label>
+              <label class="field" for="close-tab-shortcut"><span data-i18n="closeTabShortcutLabel">Close tab</span><input id="close-tab-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" /></label>
+              <label class="field" for="next-tab-shortcut"><span data-i18n="nextTabShortcutLabel">Next tab</span><input id="next-tab-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" /></label>
+              <label class="field" for="previous-tab-shortcut"><span data-i18n="previousTabShortcutLabel">Previous tab</span><input id="previous-tab-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" /></label>
+              <label class="field" for="reopen-tab-shortcut"><span data-i18n="reopenTabShortcutLabel">Reopen last closed</span><input id="reopen-tab-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" /></label>
+              <label class="field" for="reload-shortcut"><span data-i18n="reloadShortcutLabel">Reload</span><input id="reload-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" /></label>
+            </div>
+            <small data-i18n="fixedTabShortcutsHint">Ctrl+1 through Ctrl+8 select a tab; Ctrl+9 selects the last one.</small>
+          </div>
+          <div class="card">
+            <h3 data-i18n="searchTitle">Find in conversation</h3>
+            <label class="field" for="search-shortcut">
+              <span data-i18n="searchShortcutLabel">Open search</span>
+              <input id="search-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" />
+            </label>
+            <div class="size-grid">
+              <label class="field" for="search-next-shortcut">
+                <span data-i18n="searchNextShortcutLabel">Next result</span>
+                <input id="search-next-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" />
+              </label>
+              <label class="field" for="search-previous-shortcut">
+                <span data-i18n="searchPreviousShortcutLabel">Previous result</span>
+                <input id="search-previous-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" />
+              </label>
+            </div>
+            <small data-i18n="searchShortcutHint">Search updates with every typed character; these shortcuts work inside the ChatGPT window.</small>
           </div>
         </section>
 
-        <section class="card danger-card">
-          <div>
-            <h2 data-i18n="sessionTitle">Session locale</h2>
-            <p data-i18n="sessionHint">Efface les cookies et le cache de ChatGPT, puis vous déconnecte.</p>
+        <!-- Window -->
+        <section class="panel" id="panel-window" role="tabpanel" aria-labelledby="tab-window" data-panel="window" hidden>
+          <h2 class="panel-title" data-i18n="tabWindow">Window</h2>
+          <div class="card">
+            <label class="field" for="window-display-mode">
+              <span data-i18n="windowDisplayModeLabel">Application presence</span>
+              <select id="window-display-mode">
+                <option value="tray" data-i18n="windowDisplayTray">System tray only</option>
+                <option value="taskbar" data-i18n="windowDisplayTaskbar">Taskbar only</option>
+                <option value="both" data-i18n="windowDisplayBoth">Both</option>
+              </select>
+              <small data-i18n="windowDisplayModeHint">In taskbar-only mode, closing with X minimizes the window so it remains accessible.</small>
+            </label>
+            <label class="field" for="close-behavior">
+              <span data-i18n="closeLabel">When I close the window</span>
+              <select id="close-behavior">
+                <option value="hide" data-i18n="closeHide">Hide in the system tray</option>
+                <option value="quit" data-i18n="closeQuit">Quit completely</option>
+              </select>
+              <small id="close-behavior-hint"></small>
+            </label>
           </div>
-          <button id="reset-session" class="danger" type="button" data-i18n="resetSession">Réinitialiser la session…</button>
+          <div class="card">
+            <div class="size-grid">
+              <label class="field" for="default-width">
+                <span data-i18n="widthLabel">Width</span>
+                <input id="default-width" type="number" min="420" max="3840" step="1" />
+              </label>
+              <label class="field" for="default-height">
+                <span data-i18n="heightLabel">Height</span>
+                <input id="default-height" type="number" min="560" max="2160" step="1" />
+              </label>
+            </div>
+            <button id="reset-window" class="secondary fit" type="button">
+              <span data-i18n="resetWindow">Recenter and restore this size</span>
+            </button>
+            <label class="toggle" for="remember-window-position">
+              <span>
+                <strong data-i18n="rememberPositionLabel">Remember window position</strong>
+                <small data-i18n="rememberPositionHint">Asks KWin to restore the last known position after hiding to the tray.</small>
+                <small id="position-memory-status" class="runtime-status"></small>
+              </span>
+              <input id="remember-window-position" type="checkbox" />
+            </label>
+            <label class="field" for="display-server-mode">
+              <span data-i18n="displayModeLabel">Display server</span>
+              <select id="display-server-mode">
+                <option value="wayland" data-i18n="waylandNative">Native Wayland</option>
+              </select>
+              <small id="display-mode-hint"></small>
+            </label>
+          </div>
+        </section>
+
+        <!-- Extensions -->
+        <section class="panel" id="panel-extensions" role="tabpanel" aria-labelledby="tab-extensions" data-panel="extensions" hidden>
+          <h2 class="panel-title" data-i18n="tabExtensions">Extensions</h2>
+          <p class="panel-copy" data-i18n="extensionsHint">Optional features. A disabled extension is not loaded at all. Changes apply after a restart.</p>
+
+          <div class="card extension" id="extension-companion">
+            <label class="toggle extension-header" for="companion-enabled">
+              <span>
+                <strong data-i18n="companionTitle">Magic Bar</strong>
+                <small data-i18n="companionEnabledHint">A floating bar to prepare text, files and screenshots before sending them to ChatGPT. Includes the Dolphin and Kate integrations.</small>
+                <span class="badges">
+                  <span class="experimental-badge" data-i18n="experimental">Experimental</span>
+                  <span class="platform-badge" data-i18n="kdeOnly">KDE Plasma only</span>
+                </span>
+              </span>
+              <input id="companion-enabled" type="checkbox" />
+            </label>
+            <div class="extension-settings" data-extension-settings="companion">
+              <label class="field" for="companion-shortcut">
+                <span data-i18n="companionShortcutLabel">Magic Bar shortcut</span>
+                <input id="companion-shortcut" class="shortcut-input" type="text" readonly spellcheck="false" />
+                <small id="companion-shortcut-status" class="runtime-status"></small>
+              </label>
+              <label class="field" for="default-project">
+                <span data-i18n="defaultProject">Default project in the Magic Bar</span>
+                <select id="default-project"></select>
+              </label>
+              <label class="field" for="companion-prompt-max-lines">
+                <span data-i18n="companionPromptLinesLabel">Maximum message lines</span>
+                <input id="companion-prompt-max-lines" type="number" min="1" max="10" step="1" />
+                <small data-i18n="companionPromptLinesHint">The bar grows to this limit, then the message scrolls. Default: 3.</small>
+              </label>
+              <small><span data-i18n="companionFallback">Magic Bar fallback command</span> : <code id="companion-fallback-command"></code></small>
+            </div>
+          </div>
+        </section>
+
+        <!-- About -->
+        <section class="panel" id="panel-about" role="tabpanel" aria-labelledby="tab-about" data-panel="about" hidden>
+          <h2 class="panel-title" data-i18n="tabAbout">About</h2>
+          <div class="card">
+            <h3 data-i18n="updatesTitle">Updates</h3>
+            <p id="update-version"></p>
+            <label class="toggle" for="updates-auto"><span data-i18n="updatesAuto">Check for updates at startup</span><input id="updates-auto" type="checkbox" /></label>
+            <p class="card-copy" data-i18n="updatesHint">Versions are downloaded from the GitHub repository. Installation goes through the system installer and requires your confirmation.</p>
+            <small data-i18n="updatesLoginHint"></small>
+            <p id="update-login-code" role="status" hidden></p>
+            <button id="updates-cancel-login" type="button" class="secondary fit" hidden>Cancel sign-in</button>
+            <p id="update-access-status"></p>
+            <div class="diagnostic-actions">
+              <button id="updates-connect" hidden class="secondary" type="button" data-i18n="updatesConnect">Sign in to GitHub</button>
+              <button id="updates-disconnect" hidden class="secondary" type="button" data-i18n="updatesDisconnect">Sign out of GitHub</button>
+              <button id="updates-verify" class="secondary" type="button" hidden>↻ Verify sign-in</button>
+              <button id="updates-check" class="secondary" type="button" data-i18n="updatesCheck">Check now</button>
+              <button id="updates-install" type="button" hidden data-i18n="updatesInstall">Download and install</button>
+            </div>
+            <button id="updates-cancel" type="button" class="secondary fit" hidden>Cancel download</button>
+            <p id="update-status" role="status" aria-live="polite"></p>
+          </div>
+
+          <div class="card diagnostics-card">
+            <h3 data-i18n="diagnosticsTitle">Diagnostics</h3>
+            <small><span data-i18n="logLabel">Log</span> : <code id="log-path"></code></small>
+            <div class="diagnostic-actions">
+              <button id="copy-log-file" class="secondary" type="button" data-i18n="copyLogFile">Copy log file</button>
+              <button id="copy-log-tail" class="secondary" type="button" data-i18n="copyLogTail">Copy last 100 lines</button>
+              <button id="clear-log" class="danger" type="button" data-i18n="clearLog">Clear log…</button>
+            </div>
+          </div>
+
+          <div class="card danger-card">
+            <div>
+              <h3 data-i18n="sessionTitle">Local session</h3>
+              <p data-i18n="sessionHint">Clears ChatGPT cookies and cache, then signs you out.</p>
+            </div>
+            <button id="reset-session" class="danger" type="button" data-i18n="resetSession">Reset session…</button>
+          </div>
+
+          <p class="about-footer">
+            <span data-i18n="aboutUnofficial">Unofficial application, not affiliated with OpenAI.</span>
+            <span data-i18n="aboutLicense">Free software under the MIT license.</span>
+          </p>
         </section>
       </form>
     </main>
@@ -281,8 +325,8 @@
     <footer>
       <p id="status" role="status"></p>
       <div>
-        <button id="cancel" class="secondary" type="button" data-i18n="closeButton">Fermer</button>
-        <button id="save" form="settings-form" type="submit" data-i18n="saveButton">Enregistrer</button>
+        <button id="cancel" class="secondary" type="button" data-i18n="closeButton">Close</button>
+        <button id="save" form="settings-form" type="submit" data-i18n="saveButton">Save</button>
       </div>
     </footer>
 

@@ -61,48 +61,109 @@
 }
 
 body {
-  min-width: 480px;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  min-width: 640px;
+  height: 100vh;
   margin: 0;
+  overflow: hidden;
   background: var(--background);
 }
 
-header {
+.sidebar {
   display: flex;
-  gap: 14px;
-  align-items: center;
-  padding: 26px 30px 20px;
-  border-bottom: 1px solid var(--border);
+  flex-direction: column;
+  gap: 18px;
+  padding: 22px 12px 90px;
+  border-right: 1px solid var(--border);
+  background: var(--surface-subtle);
+  overflow-y: auto;
 }
 
-header img {
-  border-radius: 14px;
+.brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 0 8px;
+}
+
+.brand img {
+  border-radius: 9px;
 }
 
 h1,
 h2,
+h3,
 p {
   margin: 0;
 }
 
 h1 {
-  font-size: 22px;
-  letter-spacing: -0.02em;
+  font-size: 17px;
+  letter-spacing: -0.01em;
 }
 
-header p,
+.brand p,
 .danger-card p {
-  margin-top: 3px;
+  margin-top: 2px;
   color: var(--muted-strong);
-  font-size: 13px;
+  font-size: 11px;
+}
+
+.tabs {
+  display: grid;
+  gap: 2px;
+}
+
+.tabs button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--field-text);
+  font-weight: 600;
+  text-align: left;
+}
+
+.tabs button:hover {
+  background: var(--secondary-background);
+  filter: none;
+}
+
+.tabs button[aria-selected="true"] {
+  background: var(--secondary-background);
+  color: var(--text);
+  box-shadow: inset 3px 0 0 #84aaf0;
 }
 
 main {
-  padding: 22px 30px 100px;
+  padding: 26px 30px 100px;
+  overflow-y: auto;
 }
 
 form {
+  display: block;
+}
+
+.panel {
   display: grid;
   gap: 16px;
+  max-width: 680px;
+}
+
+.panel[hidden] {
+  display: none;
+}
+
+.panel-title {
+  font-size: 20px;
+  letter-spacing: -0.02em;
+}
+
+.panel-copy {
+  color: var(--muted-strong);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .card {
@@ -114,10 +175,61 @@ form {
   background: var(--surface);
 }
 
-.card h2 {
+.card h3 {
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.01em;
+}
+
+button.fit {
+  justify-self: start;
+}
+
+.extension-header > span {
+  gap: 6px;
+}
+
+.extension-header strong {
+  font-size: 15px;
+}
+
+.badges {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.platform-badge {
+  padding: 4px 8px;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  color: var(--muted-strong);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.extension-settings {
+  display: grid;
+  gap: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+
+.extension-settings[hidden] {
+  display: none;
+}
+
+.extension-unavailable {
+  color: var(--badge);
+  font-size: 12px;
+}
+
+.about-footer {
+  display: grid;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .field {
@@ -160,11 +272,7 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(118, 158, 232, 0.14);
 }
 
-#shortcut,
-#companion-shortcut,
-#search-shortcut,
-#search-next-shortcut,
-#search-previous-shortcut {
+.shortcut-input {
   cursor: pointer;
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }
@@ -242,6 +350,7 @@ button.danger {
 
 footer {
   position: fixed;
+  z-index: 2;
   right: 0;
   bottom: 0;
   left: 0;
@@ -406,4 +515,60 @@ code {
   color: light-dark(#854100, #ffd28a);
   background: light-dark(#fff6e6, #3e2d18);
   border-color: light-dark(#e4bd7d, #8a6839);
+}
+
+/* Checkboxes render as switches. */
+.toggle input[type="checkbox"] {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 38px;
+  height: 22px;
+  margin: 0;
+  border: 1px solid var(--control-border);
+  border-radius: 999px;
+  background: var(--secondary-background);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.toggle input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--muted-strong);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.toggle input[type="checkbox"]:checked {
+  border-color: #84aaf0;
+  background: #84aaf0;
+}
+
+.toggle input[type="checkbox"]:checked::after {
+  background: #ffffff;
+  transform: translateX(16px);
+}
+
+.toggle input[type="checkbox"]:focus-visible {
+  outline: 2px solid #8bb4ff;
+  outline-offset: 2px;
+}
+
+.toggle,
+#update-version,
+#update-access-status,
+#update-status,
+#update-login-code {
+  color: var(--field-text);
+  font-size: 13px;
+}
+
+#update-access-status:empty,
+#update-status:empty {
+  display: none;
 }

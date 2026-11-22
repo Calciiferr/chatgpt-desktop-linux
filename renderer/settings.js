@@ -63,8 +63,9 @@ let closeTabShortcut = "Ctrl+W";
 let nextTabShortcut = "Ctrl+Tab";
 let previousTabShortcut = "Ctrl+Shift+Tab";
 let reopenTabShortcut = "Ctrl+Shift+T";
-let activeUiLanguage = "fr";
-let storedLanguage = "fr";
+let activeUiLanguage = "en";
+let storedLanguage = "en";
+let storedCompanionEnabled = false;
 let shortcutCaptureTarget = null;
 let currentProjects = [];
 let projectsExpanded = false;
@@ -77,6 +78,13 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
+    tabGeneral: "Général", tabTabs: "Onglets", tabShortcuts: "Raccourcis", tabWindow: "Fenêtre", tabExtensions: "Extensions", tabAbout: "À propos",
+    globalShortcutTitle: "Global", tabsShortcutsTitle: "Onglets",
+    extensionsHint: "Fonctions optionnelles. Une extension désactivée n’est pas chargée du tout. Les changements s’appliquent après un redémarrage.",
+    kdeOnly: "KDE Plasma uniquement", extensionUnavailable: "Indisponible : cette extension nécessite KDE Plasma.",
+    extensionsRestartPrompt: "Les extensions ont changé. Redémarrer l’application maintenant pour appliquer le changement ?",
+    extensionsRestartLater: "Extensions enregistrées. Le changement sera appliqué au prochain redémarrage.",
+    aboutUnofficial: "Application non officielle, sans lien avec OpenAI.", aboutLicense: "Logiciel libre sous licence MIT.",
     updatesHint: "Les versions sont téléchargées depuis le dépôt GitHub privé. L’installation passe par l’installateur système et nécessite votre confirmation.",
     updatesLoginHint: "Connectez votre compte GitHub avec le code temporaire affiché. Autorisation sur la page officielle GitHub, aucun jeton à copier. La connexion reste chiffrée dans le trousseau système.",
     updatesConnect: "Se connecter à GitHub", updatesDisconnect: "Se déconnecter de GitHub", updatesInstall: "Télécharger et installer",
@@ -84,7 +92,7 @@ const translations = {
     settingsTitle: "Paramètres", behaviorTitle: "Comportement",
     languageLabel: "Langue de l’application et de ChatGPT",
     languageHint: "Le changement nécessite un redémarrage de l’application.",
-    shortcutLabel: "Raccourci global",
+    shortcutLabel: "Afficher ou masquer ChatGPT",
     shortcutHint: "Cliquez dans le champ puis pressez la nouvelle combinaison.",
     searchTitle: "Recherche dans la conversation", searchShortcutLabel: "Ouvrir la recherche",
     searchNextShortcutLabel: "Résultat suivant", searchPreviousShortcutLabel: "Résultat précédent",
@@ -95,17 +103,17 @@ const translations = {
     tabBarModeHint: "En automatique, la barre apparaît à partir de deux onglets.",
     restoreTabsLabel: "Restaurer les onglets au démarrage", restoreTabsHint: "Seules les URLs ChatGPT et l’ordre sont conservés, jamais les brouillons.",
     lastTabBehaviorLabel: "Fermeture du dernier onglet", lastTabHome: "Revenir à l’accueil ChatGPT", lastTabHide: "Cacher la fenêtre", lastTabIgnore: "Ignorer la fermeture",
-    newTabTargetLabel: "Destination des nouveaux onglets", newTabTargetHint: "Ctrl+T et bouton + : ChatGPT normal ou un projet synchronisé ci-dessous.", reloadShortcutLabel: "Actualiser", newTabShortcutLabel: "Nouvel onglet", closeTabShortcutLabel: "Fermer l’onglet",
+    newTabTargetLabel: "Destination des nouveaux onglets", newTabTargetHint: "Raccourci Nouvel onglet et bouton + : ChatGPT normal ou l’un des projets ci-dessous.", reloadShortcutLabel: "Actualiser", newTabShortcutLabel: "Nouvel onglet", closeTabShortcutLabel: "Fermer l’onglet",
     nextTabShortcutLabel: "Onglet suivant", previousTabShortcutLabel: "Onglet précédent", reopenTabShortcutLabel: "Rouvrir le dernier fermé",
     fixedTabShortcutsHint: "Ctrl+1 à Ctrl+8 sélectionnent un onglet ; Ctrl+9 sélectionne le dernier.",
     companionTitle: "Magic Bar", companionEnabledLabel: "Activer la Magic Bar",
-    companionEnabledHint: "Ouvre une barre locale pour préparer du texte, des fichiers et des captures avant de les envoyer.",
+    companionEnabledHint: "Une barre flottante pour préparer du texte, des fichiers et des captures avant de les envoyer à ChatGPT. Inclut les intégrations Dolphin et Kate.",
     companionShortcutLabel: "Raccourci de la Magic Bar", companionShortcutHint: "Par défaut : Ctrl+Shift+Space.",
     companionPromptLinesLabel: "Lignes maximales du message", companionPromptLinesHint: "La barre grandit jusqu’à cette limite, puis le message défile. Par défaut : 3.",
     responseNotificationsLabel: "Notifier à la fin d’une réponse",
     responseNotificationsHint: "Uniquement lorsque la fenêtre ChatGPT est cachée, réduite ou sans focus.",
-    themeModeLabel: "Thème global", themeSystem: "Automatique (système)", themeLight: "Clair", themeDark: "Sombre",
-    themeModeHint: "Appliqué à ChatGPT, la Magic Bar et aux paramètres. Le mode automatique suit KDE sans redémarrage.",
+    themeModeLabel: "Thème", themeSystem: "Automatique (système)", themeLight: "Clair", themeDark: "Sombre",
+    themeModeHint: "Appliqué à ChatGPT et aux fenêtres de l’application. Le mode automatique suit le système sans redémarrage.",
     companionFallback: "Commande de secours de la Magic Bar",
     closeLabel: "Quand je ferme la fenêtre", closeHide: "Cacher dans la zone de notification", closeHideTaskbar: "Réduire dans la barre des tâches",
     closeQuit: "Quitter complètement", autostartLabel: "Lancer à la connexion",
@@ -127,7 +135,7 @@ const translations = {
     sessionTitle: "Session locale",
     sessionHint: "Efface les cookies et le cache de ChatGPT, puis vous déconnecte.",
     resetSession: "Réinitialiser la session…", closeButton: "Fermer", saveButton: "Enregistrer",
-    shortcutActive: "Actif", shortcutUnavailable: "Indisponible dans la session actuelle. Utilisez la commande de secours ci-dessous.",
+    shortcutActive: "Actif", shortcutUnavailable: "Indisponible dans la session actuelle. Utilisez la commande de secours ci-dessous dans un raccourci de votre bureau.",
     companionShortcutActive: "Raccourci de la Magic Bar actif", companionShortcutUnavailable: "Raccourci de la Magic Bar indisponible.",
     positionAvailable: "Intégration KWin disponible.", positionUnavailable: "Intégration KWin indisponible dans la session actuelle.",
     fallback: "Commande de secours", displayHint: "Wayland natif est utilisé pour la stabilité sous KDE Plasma.",
@@ -139,9 +147,16 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
+    tabGeneral: "General", tabTabs: "Tabs", tabShortcuts: "Shortcuts", tabWindow: "Window", tabExtensions: "Extensions", tabAbout: "About",
+    globalShortcutTitle: "Global", tabsShortcutsTitle: "Tabs",
+    extensionsHint: "Optional features. A disabled extension is not loaded at all. Changes apply after a restart.",
+    kdeOnly: "KDE Plasma only", extensionUnavailable: "Unavailable: this extension requires KDE Plasma.",
+    extensionsRestartPrompt: "Extensions changed. Restart the application now to apply the change?",
+    extensionsRestartLater: "Extensions saved. The change will be applied on the next restart.",
+    aboutUnofficial: "Unofficial application, not affiliated with OpenAI.", aboutLicense: "Free software under the MIT license.",
     updatesTitle: "Updates", updatesAuto: "Check for updates at startup", updatesCheck: "Check now",
     settingsTitle: "Settings", behaviorTitle: "Behavior", languageLabel: "Application and ChatGPT language",
-    languageHint: "Changing the language requires restarting the application.", shortcutLabel: "Global shortcut",
+    languageHint: "Changing the language requires restarting the application.", shortcutLabel: "Show or hide ChatGPT",
     shortcutHint: "Click the field, then press the new key combination.", closeLabel: "When I close the window",
     searchTitle: "Find in conversation", searchShortcutLabel: "Open search",
     searchNextShortcutLabel: "Next result", searchPreviousShortcutLabel: "Previous result",
@@ -152,18 +167,18 @@ const translations = {
     tabBarModeHint: "In automatic mode, the bar appears from two tabs.",
     restoreTabsLabel: "Restore tabs on startup", restoreTabsHint: "Only ChatGPT URLs and order are stored, never drafts.",
     lastTabBehaviorLabel: "Closing the last tab", lastTabHome: "Return to ChatGPT home", lastTabHide: "Hide the window", lastTabIgnore: "Ignore closing",
-    newTabTargetLabel: "New tab destination", newTabTargetHint: "Ctrl+T and + button: normal ChatGPT or a project synchronized below.", reloadShortcutLabel: "Reload", newTabShortcutLabel: "New tab", closeTabShortcutLabel: "Close tab",
+    newTabTargetLabel: "New tab destination", newTabTargetHint: "New tab shortcut and + button: regular ChatGPT or one of the projects below.", reloadShortcutLabel: "Reload", newTabShortcutLabel: "New tab", closeTabShortcutLabel: "Close tab",
     nextTabShortcutLabel: "Next tab", previousTabShortcutLabel: "Previous tab", reopenTabShortcutLabel: "Reopen last closed",
     fixedTabShortcutsHint: "Ctrl+1 through Ctrl+8 select a tab; Ctrl+9 selects the last one.",
-    companionTitle: "Companion", companionEnabledLabel: "Enable quick companion",
-    companionEnabledHint: "Opens a local popup to prepare text, files and screenshots before transferring them.",
-    companionShortcutLabel: "Companion shortcut", companionShortcutHint: "Default: Ctrl+Shift+Space.",
+    companionTitle: "Magic Bar", companionEnabledLabel: "Enable the Magic Bar",
+    companionEnabledHint: "A floating bar to prepare text, files and screenshots before sending them to ChatGPT. Includes the Dolphin and Kate integrations.",
+    companionShortcutLabel: "Magic Bar shortcut", companionShortcutHint: "Default: Ctrl+Shift+Space.",
     companionPromptLinesLabel: "Maximum message lines", companionPromptLinesHint: "The bar grows to this limit, then the message scrolls. Default: 3.",
     responseNotificationsLabel: "Notify when a response finishes",
     responseNotificationsHint: "Only when the ChatGPT window is hidden, minimized, or unfocused.",
-    themeModeLabel: "Global theme", themeSystem: "Automatic (system)", themeLight: "Light", themeDark: "Dark",
-    themeModeHint: "Applied to ChatGPT, the Magic Bar and Settings. Automatic mode follows KDE without restarting.",
-    companionFallback: "Companion fallback command",
+    themeModeLabel: "Theme", themeSystem: "Automatic (system)", themeLight: "Light", themeDark: "Dark",
+    themeModeHint: "Applied to ChatGPT and to the application windows. Automatic mode follows the system without restarting.",
+    companionFallback: "Magic Bar fallback command",
     closeHide: "Hide in the system tray", closeHideTaskbar: "Minimize to the taskbar", closeQuit: "Quit completely", autostartLabel: "Launch at login",
     closeHintTray: "The window is hidden and remains available from the system tray.",
     closeHintTaskbar: "Without a tray icon, closing with X minimizes the window to the taskbar.",
@@ -184,7 +199,7 @@ const translations = {
     sessionHint: "Clears ChatGPT cookies and cache, then signs you out.", resetSession: "Reset session…",
     closeButton: "Close", saveButton: "Save", shortcutActive: "Active",
     shortcutUnavailable: "Unavailable in the current session. Use the fallback command below.",
-    companionShortcutActive: "Companion shortcut active", companionShortcutUnavailable: "Companion shortcut unavailable.",
+    companionShortcutActive: "Magic Bar shortcut active", companionShortcutUnavailable: "Magic Bar shortcut unavailable.",
     positionAvailable: "KWin integration available.", positionUnavailable: "KWin integration unavailable in the current session.",
     fallback: "Fallback command", displayHint: "Native Wayland is used for stability on KDE Plasma.",
     pressCombination: "Press a key combination…", saving: "Saving…", saved: "Settings saved.",
@@ -195,9 +210,16 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
+    tabGeneral: "General", tabTabs: "Pestañas", tabShortcuts: "Atajos", tabWindow: "Ventana", tabExtensions: "Extensiones", tabAbout: "Acerca de",
+    globalShortcutTitle: "Global", tabsShortcutsTitle: "Pestañas",
+    extensionsHint: "Funciones opcionales. Una extensión desactivada no se carga en absoluto. Los cambios se aplican tras reiniciar.",
+    kdeOnly: "Solo KDE Plasma", extensionUnavailable: "No disponible: esta extensión requiere KDE Plasma.",
+    extensionsRestartPrompt: "Las extensiones han cambiado. ¿Reiniciar ahora para aplicar el cambio?",
+    extensionsRestartLater: "Extensiones guardadas. El cambio se aplicará en el próximo reinicio.",
+    aboutUnofficial: "Aplicación no oficial, sin relación con OpenAI.", aboutLicense: "Software libre bajo licencia MIT.",
     updatesTitle: "Actualizaciones", updatesAuto: "Buscar actualizaciones al iniciar", updatesCheck: "Buscar ahora",
     settingsTitle: "Ajustes", behaviorTitle: "Comportamiento", languageLabel: "Idioma de la aplicación y ChatGPT",
-    languageHint: "Cambiar el idioma requiere reiniciar la aplicación.", shortcutLabel: "Atajo global",
+    languageHint: "Cambiar el idioma requiere reiniciar la aplicación.", shortcutLabel: "Mostrar u ocultar ChatGPT",
     shortcutHint: "Haz clic en el campo y pulsa la nueva combinación.", closeLabel: "Al cerrar la ventana",
     searchTitle: "Buscar en la conversación", searchShortcutLabel: "Abrir la búsqueda",
     searchNextShortcutLabel: "Resultado siguiente", searchPreviousShortcutLabel: "Resultado anterior",
@@ -208,18 +230,18 @@ const translations = {
     tabBarModeHint: "En modo automático, la barra aparece a partir de dos pestañas.",
     restoreTabsLabel: "Restaurar pestañas al iniciar", restoreTabsHint: "Solo se guardan las URLs de ChatGPT y el orden, nunca los borradores.",
     lastTabBehaviorLabel: "Cerrar la última pestaña", lastTabHome: "Volver al inicio de ChatGPT", lastTabHide: "Ocultar la ventana", lastTabIgnore: "Ignorar el cierre",
-    newTabTargetLabel: "Destino de nuevas pestañas", newTabTargetHint: "Ctrl+T y botón +: ChatGPT normal o un proyecto sincronizado abajo.", reloadShortcutLabel: "Actualizar", newTabShortcutLabel: "Nueva pestaña", closeTabShortcutLabel: "Cerrar pestaña",
+    newTabTargetLabel: "Destino de nuevas pestañas", newTabTargetHint: "Atajo Nueva pestaña y botón +: ChatGPT normal o uno de los proyectos de abajo.", reloadShortcutLabel: "Actualizar", newTabShortcutLabel: "Nueva pestaña", closeTabShortcutLabel: "Cerrar pestaña",
     nextTabShortcutLabel: "Pestaña siguiente", previousTabShortcutLabel: "Pestaña anterior", reopenTabShortcutLabel: "Reabrir la última cerrada",
     fixedTabShortcutsHint: "Ctrl+1 a Ctrl+8 seleccionan una pestaña; Ctrl+9 selecciona la última.",
-    companionTitle: "Asistente", companionEnabledLabel: "Activar el asistente rápido",
-    companionEnabledHint: "Abre un popup local para preparar texto, archivos y capturas antes de transferirlos.",
-    companionShortcutLabel: "Atajo del asistente", companionShortcutHint: "Predeterminado: Ctrl+Shift+Space.",
+    companionTitle: "Magic Bar", companionEnabledLabel: "Activar Magic Bar",
+    companionEnabledHint: "Una barra flotante para preparar texto, archivos y capturas antes de enviarlos a ChatGPT. Incluye las integraciones con Dolphin y Kate.",
+    companionShortcutLabel: "Atajo de Magic Bar", companionShortcutHint: "Predeterminado: Ctrl+Shift+Space.",
     companionPromptLinesLabel: "Líneas máximas del mensaje", companionPromptLinesHint: "La barra crece hasta este límite y después el mensaje se desplaza. Predeterminado: 3.",
     responseNotificationsLabel: "Notificar al terminar una respuesta",
     responseNotificationsHint: "Solo cuando la ventana de ChatGPT está oculta, minimizada o sin foco.",
-    themeModeLabel: "Tema global", themeSystem: "Automático (sistema)", themeLight: "Claro", themeDark: "Oscuro",
-    themeModeHint: "Se aplica a ChatGPT, Magic Bar y Ajustes. El modo automático sigue KDE sin reiniciar.",
-    companionFallback: "Comando alternativo del asistente",
+    themeModeLabel: "Tema", themeSystem: "Automático (sistema)", themeLight: "Claro", themeDark: "Oscuro",
+    themeModeHint: "Se aplica a ChatGPT y a las ventanas de la aplicación. El modo automático sigue al sistema sin reiniciar.",
+    companionFallback: "Comando alternativo de Magic Bar",
     closeHide: "Ocultar en la bandeja del sistema", closeHideTaskbar: "Minimizar en la barra de tareas", closeQuit: "Salir completamente", autostartLabel: "Iniciar al entrar",
     closeHintTray: "La ventana se oculta y sigue accesible desde la bandeja del sistema.",
     closeHintTaskbar: "Sin icono de bandeja, cerrar con X minimiza la ventana en la barra de tareas.",
@@ -240,7 +262,7 @@ const translations = {
     sessionHint: "Borra las cookies y la caché de ChatGPT y cierra la sesión.", resetSession: "Restablecer sesión…",
     closeButton: "Cerrar", saveButton: "Guardar", shortcutActive: "Activo",
     shortcutUnavailable: "No disponible en la sesión actual. Usa el comando alternativo de abajo.",
-    companionShortcutActive: "Atajo del asistente activo", companionShortcutUnavailable: "Atajo del asistente no disponible.",
+    companionShortcutActive: "Atajo de Magic Bar activo", companionShortcutUnavailable: "Atajo de Magic Bar no disponible.",
     positionAvailable: "Integración con KWin disponible.", positionUnavailable: "Integración con KWin no disponible en la sesión actual.",
     fallback: "Comando alternativo", displayHint: "Wayland nativo se utiliza para la estabilidad en KDE Plasma.",
     pressCombination: "Pulsa una combinación…", saving: "Guardando…", saved: "Ajustes guardados.",
@@ -255,7 +277,7 @@ const translations = {
 const projectTranslations = {
   fr: {
     projectsTitle: "Projets ChatGPT", experimental: "Expérimental",
-    projectsHint: "Cache local utilisé par la Magic Bar, actualisé sur demande et automatiquement toutes les cinq minutes.",
+    projectsHint: "Liste locale de vos projets ChatGPT, actualisée sur demande et automatiquement toutes les cinq minutes.",
     syncProjects: "Synchroniser automatiquement depuis ChatGPT", projectsSynced: "Projets synchronisés.", projectsSyncedCount: "{count} projets synchronisés.",
     projectsInCache: "{count} projet(s) dans le cache local.", showProjects: "Afficher les projets ({count})", hideProjects: "Masquer les projets ({count})",
     defaultProject: "Projet par défaut dans la Magic Bar", noDefaultProject: "Aucun / ChatGPT normal",
@@ -274,7 +296,7 @@ const projectTranslations = {
   },
   en: {
     projectsTitle: "ChatGPT Projects", experimental: "Experimental",
-    projectsHint: "Local cache used by the Magic Bar, refreshed on request and automatically every five minutes.",
+    projectsHint: "Local list of your ChatGPT projects, refreshed on request and automatically every five minutes.",
     syncProjects: "Sync automatically from ChatGPT", projectsSynced: "Projects synchronized.", projectsSyncedCount: "{count} projects synchronized.",
     projectsInCache: "{count} project(s) in the local cache.", showProjects: "Show projects ({count})", hideProjects: "Hide projects ({count})",
     defaultProject: "Default project in the Magic Bar", noDefaultProject: "None / regular ChatGPT",
@@ -293,7 +315,7 @@ const projectTranslations = {
   },
   es: {
     projectsTitle: "Proyectos ChatGPT", experimental: "Experimental",
-    projectsHint: "Caché local usada por Magic Bar, actualizada bajo demanda y automáticamente cada cinco minutos.",
+    projectsHint: "Lista local de tus proyectos de ChatGPT, actualizada bajo demanda y automáticamente cada cinco minutos.",
     syncProjects: "Sincronizar automáticamente desde ChatGPT", projectsSynced: "Proyectos sincronizados.", projectsSyncedCount: "{count} proyectos sincronizados.",
     projectsInCache: "{count} proyecto(s) en la caché local.", showProjects: "Mostrar proyectos ({count})", hideProjects: "Ocultar proyectos ({count})",
     defaultProject: "Proyecto predeterminado en Magic Bar", noDefaultProject: "Ninguno / ChatGPT normal",
@@ -313,11 +335,11 @@ const projectTranslations = {
 };
 
 function tr(key) {
-  return translations[activeUiLanguage]?.[key] || projectTranslations[activeUiLanguage]?.[key] || translations.fr[key] || projectTranslations.fr[key] || key;
+  return translations[activeUiLanguage]?.[key] || projectTranslations[activeUiLanguage]?.[key] || translations.en[key] || projectTranslations.en[key] || key;
 }
 
 function applyTranslations(language) {
-  activeUiLanguage = translations[language] ? language : "fr";
+  activeUiLanguage = translations[language] ? language : "en";
   document.documentElement.lang = activeUiLanguage;
   document.querySelectorAll("[data-i18n]").forEach((element) => {
     element.textContent = tr(element.dataset.i18n);
@@ -488,6 +510,8 @@ function fillForm(payload) {
   companionShortcut = settings.companionShortcut;
   companionShortcutInput.value = companionShortcut;
   companionEnabledInput.checked = settings.companionEnabled;
+  storedCompanionEnabled = settings.companionEnabled;
+  updateExtensionSettingsVisibility();
   companionPromptMaxLinesInput.value = String(settings.companionPromptMaxLines || 3);
   themeModeInput.value = settings.themeMode || "system";
   responseNotificationsInput.checked = settings.responseNotificationsEnabled;
@@ -517,7 +541,7 @@ function fillForm(payload) {
       : tr("positionUnavailable");
     positionMemoryStatus.className =
       `runtime-status ${runtime.positionMemoryAvailable ? "success" : "error"}`;
-    fallbackCommand.textContent = `${tr("fallback")} : ${runtime.fallbackCommand}`;
+    fallbackCommand.textContent = runtime.fallbackCommand;
     companionFallbackCommand.textContent = runtime.companionFallbackCommand;
     logPath.textContent = runtime.logFilePath;
   }
@@ -530,6 +554,45 @@ function fillForm(payload) {
   updateDisplayModeHint();
   updateCloseBehaviorHint();
 }
+
+function updateExtensionSettingsVisibility() {
+  document.querySelector('[data-extension-settings="companion"]').hidden = !companionEnabledInput.checked;
+}
+
+function selectTab(name, focus = false) {
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  const target = tabs.find((tab) => tab.dataset.tab === name) || tabs[0];
+  for (const tab of tabs) {
+    const selected = tab === target;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.querySelector(`[data-panel="${tab.dataset.tab}"]`).hidden = !selected;
+  }
+  if (focus) target.focus();
+  document.querySelector("main").scrollTop = 0;
+  try { localStorage.setItem("settings-tab", target.dataset.tab); } catch {}
+}
+
+function initTabs() {
+  const tabs = [...document.querySelectorAll('[role="tab"]')];
+  for (const tab of tabs) {
+    tab.addEventListener("click", () => selectTab(tab.dataset.tab));
+    tab.addEventListener("keydown", (event) => {
+      const index = tabs.indexOf(tab);
+      const next = event.key === "ArrowDown" ? tabs[(index + 1) % tabs.length]
+        : event.key === "ArrowUp" ? tabs[(index - 1 + tabs.length) % tabs.length]
+          : event.key === "Home" ? tabs[0] : event.key === "End" ? tabs[tabs.length - 1] : null;
+      if (!next) return;
+      event.preventDefault();
+      selectTab(next.dataset.tab, true);
+    });
+  }
+  let saved = "general";
+  try { saved = localStorage.getItem("settings-tab") || saved; } catch {}
+  selectTab(saved);
+}
+
+initTabs();
 
 function updateDisplayModeHint() {
   displayModeHint.textContent =
@@ -648,6 +711,7 @@ form.addEventListener("submit", async (event) => {
   setStatus(tr("saving"));
 
   const languageChanged = languageInput.value !== storedLanguage;
+  const extensionsChanged = companionEnabledInput.checked !== storedCompanionEnabled;
 
   const result = await window.desktopApi.saveSettings({
     globalShortcut: shortcut,
@@ -690,6 +754,12 @@ form.addEventListener("submit", async (event) => {
         return;
       }
       setStatus(tr("restartLater"), "success");
+    } else if (extensionsChanged) {
+      if (window.confirm(tr("extensionsRestartPrompt"))) {
+        window.desktopApi.restartApplication();
+        return;
+      }
+      setStatus(tr("extensionsRestartLater"), "success");
     } else {
       setStatus(tr("saved"), "success");
     }
@@ -782,6 +852,7 @@ clearLogButton.addEventListener("click", async () => {
 cancelButton.addEventListener("click", () => window.desktopApi.closeSettings());
 displayServerModeInput.addEventListener("change", updateDisplayModeHint);
 closeBehaviorInput.addEventListener("change", updateCloseBehaviorHint);
+companionEnabledInput.addEventListener("change", updateExtensionSettingsVisibility);
 windowDisplayModeInput.addEventListener("change", updateCloseBehaviorHint);
 
 window.desktopApi

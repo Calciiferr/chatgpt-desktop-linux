@@ -3586,10 +3586,10 @@ function showSettingsWindow(): void {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 580,
-    height: 790,
-    minWidth: 500,
-    minHeight: 620,
+    width: 880,
+    height: 700,
+    minWidth: 680,
+    minHeight: 520,
     show: false,
     title:
       activeLanguage === "en"
