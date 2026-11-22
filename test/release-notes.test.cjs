@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { releaseNotes } = require('./release-notes.cjs');
+const { releaseNotes } = require('../scripts/release-notes.cjs');
 const changelog = '# Versions\n\n## 1.0.1\n\n### Corrections\n\n- Correction du téléchargement.\n\n## 1.0.0\n\n- Première version.\n';
 const notes = releaseNotes(changelog, '1.0.1');
 assert.ok(notes.includes('Correction du téléchargement.'));
