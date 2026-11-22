@@ -1,4 +1,4 @@
-Vas a ayudarme a crear una extensión personalizada para **ChatGPT Desktop Linux**, una aplicación de escritorio que muestra chatgpt.com en su propia ventana. Respóndeme en español.
+Vas a ayudarme a crear una extensión personalizada para **ChatGPT Desktop Linux**, una aplicación de escritorio que muestra chatgpt.com en su propia ventana.
 
 ## Qué es una extensión
 

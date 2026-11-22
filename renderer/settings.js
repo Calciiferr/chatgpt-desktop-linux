@@ -82,7 +82,7 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
-    extPromptLanguage: "Langue du prompt", extPromptLanguageHint: "L’IA vous répond dans cette langue. Les termes techniques restent en anglais.",
+    extPromptLanguage: "Langue du prompt", extPromptLanguageHint: "Langue des instructions données à l’IA. Les termes techniques restent en anglais.",
     extBuiltInTitle: "Intégrées",
     extInstalledTitle: "Vos extensions",
     extInstalledHint: "Les extensions que vous ajoutez s’appliquent tout de suite : les onglets ChatGPT ouverts se rechargent.",
@@ -186,7 +186,7 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
-    extPromptLanguage: "Prompt language", extPromptLanguageHint: "The AI answers in this language. Technical terms stay in English.",
+    extPromptLanguage: "Prompt language", extPromptLanguageHint: "Language of the instructions given to the AI. Technical terms stay in English.",
     extBuiltInTitle: "Built-in",
     extInstalledTitle: "Your extensions",
     extInstalledHint: "Extensions you add apply immediately: open ChatGPT tabs reload.",
@@ -287,7 +287,7 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
-    extPromptLanguage: "Idioma del prompt", extPromptLanguageHint: "La IA te responde en este idioma. Los términos técnicos siguen en inglés.",
+    extPromptLanguage: "Idioma del prompt", extPromptLanguageHint: "Idioma de las instrucciones para la IA. Los términos técnicos siguen en inglés.",
     extBuiltInTitle: "Integradas",
     extInstalledTitle: "Tus extensiones",
     extInstalledHint: "Las extensiones que añades se aplican al instante: las pestañas de ChatGPT abiertas se recargan.",

@@ -1,4 +1,4 @@
-Tu vas m’aider à créer une extension personnalisée pour **ChatGPT Desktop Linux**, une application de bureau qui affiche chatgpt.com dans sa propre fenêtre. Réponds-moi en français.
+Tu vas m’aider à créer une extension personnalisée pour **ChatGPT Desktop Linux**, une application de bureau qui affiche chatgpt.com dans sa propre fenêtre.
 
 ## Ce qu’est une extension
 
