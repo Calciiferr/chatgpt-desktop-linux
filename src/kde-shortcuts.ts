@@ -44,8 +44,8 @@ export interface KdeShortcutResult {
 
 export function kdeShortcutActionDetails(action: KdeShortcutAction): { id: string; name: string } {
   return action === "main"
-    ? { id: "Toggle", name: "Afficher/masquer ChatGPT" }
-    : { id: "Companion", name: "Ouvrir la Magic Bar" };
+    ? { id: "Toggle", name: "Show or hide ChatGPT" }
+    : { id: "Companion", name: "Open the Magic Bar" };
 }
 
 function actionIdentifier(details: { id: string; name: string }): string {
@@ -114,7 +114,7 @@ export function syncKdeShortcut(
   const details = kdeShortcutActionDetails(action);
   const qtKey = enabled ? acceleratorToQtKey(accelerator) : 0;
   if (enabled && qtKey === null) {
-    return { available: true, applied: false, error: "Raccourci non convertible pour KDE." };
+    return { available: true, applied: false, error: "Shortcut cannot be converted for KDE." };
   }
 
   const actionId = actionIdentifier(details);
@@ -167,7 +167,7 @@ export function syncKdeShortcut(
       applied: false,
       actionId: details.id,
       error:
-        setResult.error?.message || String(setResult.stderr).trim() || "KGlobalAccel indisponible.",
+        setResult.error?.message || String(setResult.stderr).trim() || "KGlobalAccel unavailable.",
     };
   }
 

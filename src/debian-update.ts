@@ -22,7 +22,7 @@ export function validateDebianMetadata(text: string, expected: string): void {
   }
 }
 export async function installDebianPackage(file: string, expected: string, output: (text: string) => void, run = runUpdateCommand): Promise<void> {
-  if (!path.isAbsolute(file) || !file.endsWith(".deb")) throw new Error("Chemin du paquet invalide.");
+  if (!path.isAbsolute(file) || !file.endsWith(".deb")) throw new Error(t("debianPackagePathInvalid"));
   const metadata = await run("/usr/bin/dpkg-deb", ["-f", file, "Package", "Version", "Architecture"]);
   if (metadata.code !== 0) throw new Error(t("debianPackageUnreadable"));
   validateDebianMetadata(metadata.output, expected);

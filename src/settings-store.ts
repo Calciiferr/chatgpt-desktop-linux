@@ -321,7 +321,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
 
   const shortcut = typeof input.globalShortcut === "string" ? input.globalShortcut.trim() : "";
   if (!shortcut || shortcut.length > 64) {
-    throw new Error("Le raccourci clavier est invalide.");
+    throw new Error(t("settingsShortcutInvalid"));
   }
   const searchShortcut =
     typeof input.searchShortcut === "string" ? input.searchShortcut.trim() : "";
@@ -355,7 +355,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
   if (
     localShortcuts.some((value) => !value || value.length > 64)
   ) {
-    throw new Error("Les raccourcis locaux sont invalides.");
+    throw new Error(t("settingsLocalShortcutsInvalid"));
   }
   const normalizedLocalShortcuts = localShortcuts.map(canonicalAccelerator);
   if (new Set(normalizedLocalShortcuts).size !== normalizedLocalShortcuts.length) {
@@ -374,7 +374,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
   const companionShortcut =
     typeof input.companionShortcut === "string" ? input.companionShortcut.trim() : "";
   if (!companionShortcut || companionShortcut.length > 64) {
-    throw new Error("Le raccourci de la Magic Bar est invalide.");
+    throw new Error(t("settingsCompanionShortcutInvalid"));
   }
   const companionPromptMaxLines = Number(input.companionPromptMaxLines);
   if (
@@ -411,7 +411,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     input.lastTabCloseBehavior !== "hide" &&
     input.lastTabCloseBehavior !== "ignore"
   ) {
-    throw new Error("Le comportement du dernier onglet est invalide.");
+    throw new Error(t("settingsLastTabInvalid"));
   }
   if (typeof input.responseNotificationsEnabled !== "boolean") {
     throw new Error(t("settingsNotificationsInvalid"));
@@ -424,7 +424,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     throw new Error(t("settingsDisplayModeInvalid"));
   }
   if (input.closeBehavior !== "hide" && input.closeBehavior !== "quit") {
-    throw new Error("Le comportement de fermeture est invalide.");
+    throw new Error(t("settingsCloseBehaviorInvalid"));
   }
   if (typeof input.launchAtLogin !== "boolean") {
     throw new Error(t("settingsAutostartInvalid"));

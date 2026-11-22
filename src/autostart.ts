@@ -38,7 +38,7 @@ export function syncAutostart(enabled: boolean): void {
     "[Desktop Entry]",
     "Type=Application",
     "Name=ChatGPT Desktop Linux",
-    "Comment=Lancer ChatGPT dans la zone de notification",
+    "Comment=Start ChatGPT in the system tray",
     `Exec=${launchCommand()}`,
     "Terminal=false",
     "Icon=chatgpt-desktop-linux",

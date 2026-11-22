@@ -3,6 +3,8 @@ import { log } from "./logger";
 
 const POLL_INTERVAL_MS = 1_000;
 const REQUIRED_IDLE_POLLS = 2;
+// A page check that never answers must not stop monitoring for the rest of the session.
+const POLL_TIMEOUT_MS = 5_000;
 
 export interface ChatTabThrottlingState {
   windowVisible: boolean;
@@ -20,6 +22,10 @@ export function shouldThrottleChatTab(state: ChatTabThrottlingState): boolean {
 // Keep every chatgpt.com-specific selector in this module. If the website changes,
 // response monitoring can be disabled without affecting the rest of the application.
 const GENERATION_STATE_SCRIPT = String.raw`(() => {
+  const visible = (element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
+  };
   const selectors = [
     '[data-testid="stop-button"]',
     'button[data-testid*="stop" i]',
@@ -28,12 +34,12 @@ const GENERATION_STATE_SCRIPT = String.raw`(() => {
     'button[aria-label*="arrêter" i]',
     'button[aria-label*="detener" i]'
   ];
-  return selectors.some((selector) => {
-    const element = document.querySelector(selector);
-    if (!element) return false;
-    const style = window.getComputedStyle(element);
-    return style.display !== 'none' && style.visibility !== 'hidden' && element.getClientRects().length > 0;
-  });
+  if (selectors.some((selector) => [...document.querySelectorAll(selector)].some(visible))) return true;
+  // The stop button replaces the send button in the composer; its label is only
+  // "Stop" in English, "Arrêter" in French and "Detener" in Spanish.
+  const stopLabel = /^(stop|arr[êe]ter|detener)\b/i;
+  return [...document.querySelectorAll('form button[aria-label], #composer-background button[aria-label]')]
+    .some((button) => stopLabel.test((button.getAttribute('aria-label') || '').trim()) && visible(button));
 })()`;
 
 export class ChatResponseMonitor {
@@ -89,10 +95,12 @@ export class ChatResponseMonitor {
 
     this.pollInProgress = true;
     try {
-      const generating = (await this.webContents.executeJavaScript(
-        GENERATION_STATE_SCRIPT,
-        true,
-      )) as boolean;
+      const generating = (await Promise.race([
+        this.webContents.executeJavaScript(GENERATION_STATE_SCRIPT, true),
+        new Promise((_resolve, reject) => {
+          setTimeout(() => reject(new Error("page check timed out")), POLL_TIMEOUT_MS).unref();
+        }),
+      ])) as boolean;
       this.failureLogged = false;
       if (generating) {
         if (!this.generationObserved) {
@@ -116,7 +124,7 @@ export class ChatResponseMonitor {
     } catch (error) {
       if (!this.failureLogged) {
         this.failureLogged = true;
-        log.warn("[response-monitor] Lecture DOM temporairement indisponible :", error);
+        log.warn("[response-monitor] Page temporarily unreadable:", error);
       }
     } finally {
       this.pollInProgress = false;

@@ -1459,7 +1459,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       removeMissing,
     );
     log.info(
-      `[projects:${scanId}] Fusion cache avant=${currentSettings.chatGptProjects.length}, ` +
+      `[projects:${scanId}] Merge: cache before=${currentSettings.chatGptProjects.length}, ` +
         `incoming=${result.projects.length}, after=${mergedProjects.length}, duplicates ignored=${result.duplicatesSkipped}.`,
     );
     if (!isBackground) {
@@ -1495,7 +1495,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     const verified = settingsStore?.load();
     const verifiedIds = new Set(verified?.chatGptProjects.map((project) => project.id) ?? []);
     const missingIds = mergedProjects.filter((project) => !verifiedIds.has(project.id));
-    log.info(`[projects:${scanId}] Cache relu sur disque=${verified?.chatGptProjects.length ?? 0}.`);
+    log.info(`[projects:${scanId}] Cache read back from disk=${verified?.chatGptProjects.length ?? 0}.`);
     if (!verified || missingIds.length > 0) {
       const message = t("cacheVerificationFailed", { count: missingIds.length });
       const rollback: AppSettings = {
@@ -1627,7 +1627,7 @@ function scheduleCompanionTestCapture(): void {
         app.quit();
       });
       child.once("error", (error) => {
-        log.error("[companion:test] Capture Spectacle impossible :", error);
+        log.error("[companion:test] Spectacle capture failed:", error);
         app.quit();
       });
     }, 900);
@@ -1677,7 +1677,7 @@ async function fileVisuals(filePath: string, image: boolean): Promise<{
       }
     }
   } catch (error) {
-    log.warn(`[magic-bar] Miniature impossible (${filePath}) :`, error);
+    log.warn(`[magic-bar] Unable to create the thumbnail (${filePath}):`, error);
   }
 
   try {
@@ -2263,7 +2263,7 @@ async function captureWithSpectacle(mode: unknown): Promise<{ ok: boolean; cance
     );
     child.once("error", (error) => {
       failedToStart = true;
-      log.error("[companion] Spectacle indisponible :", error);
+      log.error("[companion] Spectacle unavailable:", error);
       restoreCompanionAfterCapture();
       showCompanionError("captureError");
       resolve({ ok: false });
@@ -2321,7 +2321,7 @@ async function importClipboardToCompanion(): Promise<{
       return { ok: added === 1, kind: "image", added };
     } catch (error) {
       fs.rmSync(outputPath, { force: true });
-      log.error("[companion] Image du presse-papiers indisponible :", error);
+      log.error("[companion] Clipboard image unavailable:", error);
       showCompanionError("clipboardEmpty");
       return { ok: false };
     }
@@ -2479,7 +2479,7 @@ async function pasteImageFilesIntoChatComposer(filePaths: readonly string[]): Pr
   const files = filePaths.map((filePath) => {
     const stat = fs.statSync(filePath);
     if (stat.size > maxPasteBytes) {
-      throw new Error(`Image trop volumineuse pour le collage rapide : ${filePath}`);
+      throw new Error(`Image too large for quick paste: ${filePath}`);
     }
     return {
       name: path.basename(filePath),
@@ -2606,7 +2606,7 @@ async function uploadFilesIntoChat(
         files: [...attachPaths],
       });
       if (await waitForVisibleAttachments(attachPaths, 4_000, baseline)) {
-        log.info(`[magic-bar] ${attachPaths.length} fichier(s) remis au champ fichier ChatGPT.`);
+        log.info(`[magic-bar] ${attachPaths.length} file(s) passed to the ChatGPT file input.`);
         return true;
       }
       log.warn("[magic-bar] File input found, but ChatGPT did not show the attachments.");
@@ -2667,7 +2667,7 @@ async function uploadFilesIntoChat(
     }
     return fallbackDropped;
   } catch (error) {
-    log.warn("[magic-bar] Ajout automatique des fichiers impossible :", error);
+    log.warn("[magic-bar] Unable to attach the files automatically:", error);
     return false;
   } finally {
     if (chooserListener) {
@@ -2700,7 +2700,7 @@ async function attachFilesToChat(
       isImageFile,
       async (imagePaths) => {
         const pasted = await pasteImageFilesIntoChatComposer(imagePaths).catch((error: unknown) => {
-          log.warn("[magic-bar] Collage des images impossible, fallback upload :", error);
+          log.warn("[magic-bar] Unable to paste the images, falling back to upload:", error);
           return false;
         });
         if (pasted) {
@@ -2714,7 +2714,7 @@ async function attachFilesToChat(
     );
     if (!result.ok) {
       log.warn(
-        `[magic-bar] Transfert incomplet : ${result.imagePaths.length} image(s), ` +
+        `[magic-bar] Incomplete transfer: ${result.imagePaths.length} image(s), ` +
           `${result.filePaths.length} file(s); draft kept.`,
       );
     }
@@ -2841,7 +2841,7 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
       !transferOptions.securityAudit &&
       !transferOptions.qualityAudit)
   ) {
-    return { ok: false, error: "Choisissez un chat et ajoutez une demande ou un contexte." };
+    return { ok: false, error: t("companionNothingToSend") };
   }
 
   const finalPrompt = preparedPrompt(prompt, selectedItems, transferOptions);
@@ -2853,7 +2853,7 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
     return { ok: true, fallback: true, error: message };
   }
   if (requestedNewProjectName === "") {
-    return { ok: false, error: "Le nom du nouveau projet est vide." };
+    return { ok: false, error: t("projectNameEmpty") };
   }
 
   let targetUrl = selectedProject?.url ??
@@ -3317,7 +3317,7 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
       registeredShortcut = accelerator;
       log.info(
         `[shortcut] ${accelerator} applied through KGlobalAccel ` +
-          `(action=${result.actionId ?? "?"}, migration _launch=${result.legacyMigrated ? "oui" : "non"}).`,
+          `(action=${result.actionId ?? "?"}, legacy _launch migrated=${result.legacyMigrated ? "yes" : "no"}).`,
       );
       return true;
     }
@@ -3341,7 +3341,7 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
       toggleWindow();
     });
   } catch (error) {
-    log.error(`[shortcut] Raccourci invalide (${accelerator}) :`, error);
+    log.error(`[shortcut] Invalid shortcut (${accelerator}):`, error);
   }
 
   if (registered) {
@@ -3422,7 +3422,7 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
       toggleCompanionWindow();
     });
   } catch (error) {
-    log.error(`[shortcut] Raccourci Magic Bar invalide (${accelerator}) :`, error);
+    log.error(`[shortcut] Invalid Magic Bar shortcut (${accelerator}):`, error);
   }
   if (registered) {
     registeredCompanionShortcut = accelerator;
@@ -3862,7 +3862,7 @@ async function checkUpdatesOnStartup(): Promise<void> {
       }
     }
   } catch (error) {
-    log.warn("[updates] " + (error instanceof Error ? error.message : "Recherche impossible"));
+    log.warn("[updates] " + (error instanceof Error ? error.message : "check failed"));
   }
 }
 
@@ -3888,12 +3888,12 @@ function registerIpcHandlers(): void {
       const device = await updateAuth.start();
       await shell.openExternal(device.url);
       return { ok: true, ...device };
-    } catch (error) { updateAuth.cancel(); return { ok: false, error: error instanceof Error ? error.message : "Connexion impossible." }; }
+    } catch (error) { updateAuth.cancel(); return { ok: false, error: error instanceof Error ? error.message : t("updateSignInFailed") }; }
   });
   ipcMain.handle("updates:complete-login", async (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try { await updateAuth.complete(); return { ok: true }; }
-    catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Connexion interrompue." }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : t("updateSignInInterrupted") }; }
   });
   ipcMain.handle("updates:cancel-login", (event) => {
     if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) updateAuth.cancel();
@@ -3917,7 +3917,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle("updates:check", async (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try { const release = await updater().check(app.getVersion()); return { ok: true, release, comparison: updater().comparison }; }
-    catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Recherche impossible." }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : t("updateCheckFailed") }; }
   });
   ipcMain.handle("updates:install", async (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
@@ -3986,7 +3986,7 @@ function registerIpcHandlers(): void {
     }
     const name = typeof nameValue === "string" ? nameValue.replace(/\s+/g, " ").trim().slice(0, 120) : "";
     const project = projectById(id);
-    if (!project || !name) return { ok: false, error: "Projet ou nom invalide." };
+    if (!project || !name) return { ok: false, error: t("projectOrNameInvalid") };
     saveProjectSettings({
       ...currentSettings,
       chatGptProjects: currentSettings.chatGptProjects.map((candidate) =>
@@ -4001,7 +4001,7 @@ function registerIpcHandlers(): void {
       return { ok: false, error: t("unauthorizedSource") };
     }
     const project = projectById(id);
-    if (!project) return { ok: false, error: "Projet introuvable." };
+    if (!project) return { ok: false, error: t("projectNotFound") };
     saveProjectSettings({
       ...currentSettings,
       chatGptProjects: currentSettings.chatGptProjects.filter((candidate) => candidate.id !== project.id),
@@ -4020,7 +4020,7 @@ function registerIpcHandlers(): void {
       return { ok: false, error: t("unauthorizedSource") };
     }
     if (projectSyncInProgress) {
-      return { ok: false, error: "Attendez la fin de la synchronisation en cours." };
+      return { ok: false, error: t("syncWaitForCurrent") };
     }
     saveProjectSettings({
       ...currentSettings,
@@ -4173,7 +4173,7 @@ function registerIpcHandlers(): void {
     }
     try {
       if (!logFilePath || !fs.existsSync(logFilePath)) {
-        return { ok: false, error: "Fichier journal introuvable." };
+        return { ok: false, error: t("logFileMissing") };
       }
       const fileUri = `${pathToFileURL(logFilePath).href}\r\n`;
       clipboard.writeBuffer("text/uri-list", Buffer.from(fileUri, "utf8"), "clipboard");
@@ -4181,7 +4181,7 @@ function registerIpcHandlers(): void {
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : "Copie du journal impossible.",
+        error: error instanceof Error ? error.message : t("logCopyFailed"),
       };
     }
   });
@@ -4446,7 +4446,7 @@ if (isWaylandSession) {
 }
 
 log.info(
-  `[startup] ChatGPT Desktop Linux ${app.getVersion()} — mode ${activeDisplayServerMode} natif.`,
+  `[startup] ChatGPT Desktop Linux ${app.getVersion()} — native ${activeDisplayServerMode} mode.`,
 );
 
 const startupRequest = parseCliRequest(process.argv);
@@ -4620,7 +4620,7 @@ if (!hasSingleInstanceLock) {
       try {
         syncAutostart(currentSettings.launchAtLogin);
       } catch (error) {
-        log.error("[autostart] Synchronisation impossible :", error);
+        log.error("[autostart] Synchronization failed:", error);
       }
 
       syncMagicBarIntegrations(integrationExecutablePath(), companionActive, activeLanguage);

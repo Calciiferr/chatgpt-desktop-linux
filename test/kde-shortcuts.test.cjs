@@ -11,11 +11,11 @@ assert.equal(acceleratorToQtKey("Ctrl+F12"), 83886139);
 assert.equal(acceleratorToQtKey("Ctrl+NoSuchKey"), null);
 assert.deepEqual(kdeShortcutActionDetails("main"), {
   id: "Toggle",
-  name: "Afficher/masquer ChatGPT",
+  name: "Show or hide ChatGPT",
 });
 assert.deepEqual(kdeShortcutActionDetails("companion"), {
   id: "Companion",
-  name: "Ouvrir la Magic Bar",
+  name: "Open the Magic Bar",
 });
 assert.notEqual(kdeShortcutActionDetails("main").id, kdeShortcutActionDetails("companion").id);
 

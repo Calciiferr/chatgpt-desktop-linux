@@ -228,7 +228,7 @@ export function startKWinCompanionController(): KWinCompanionControllerResult {
 
     const load = qdbus("loadScript", [SCRIPT_FILE, PLUGIN_NAME]);
     if (load.error || load.status !== 0) {
-      throw load.error ?? new Error(load.stderr?.trim() || "Chargement du script KWin impossible.");
+      throw load.error ?? new Error(load.stderr?.trim() || "Unable to load the KWin script.");
     }
 
     const start = qdbus("start");

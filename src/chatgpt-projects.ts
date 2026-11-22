@@ -712,7 +712,7 @@ async function ensureProjectsSectionExpanded(
   }
   if (!probe?.found) {
     if (allowEmpty) return;
-    throw new Error("Section Projets introuvable.");
+    throw new Error(t("projectsSectionMissing"));
   }
   if (probe.visibleRows > 0) return;
 
@@ -730,7 +730,7 @@ async function ensureProjectsSectionExpanded(
   await delay(300);
   probe = await probeProjectsSection(webContents, false);
   if (probe.visibleRows > 0) return;
-  if (!probe.found) throw new Error("Section Projets introuvable.");
+  if (!probe.found) throw new Error(t("projectsSectionMissing"));
 
   probe = await probeProjectsSection(webContents, true);
   if (probe.clicked) {
@@ -1251,7 +1251,7 @@ export async function createChatGptProject(
     throw new Error(t("projectAutomationDisabled"));
   }
   const name = cleanName(nameValue);
-  if (!name) throw new Error("Le nom du projet est vide.");
+  if (!name) throw new Error(t("projectNameEmpty"));
   await prepareProjectsSidebar(webContents, true);
   const previousUrl = webContents.getURL();
   const opened = (await webContents.executeJavaScript(`(() => {
@@ -1264,7 +1264,7 @@ export async function createChatGptProject(
     button.click();
     return true;
   })()`, true)) as boolean;
-  if (!opened) throw new Error("Le bouton Nouveau projet est introuvable.");
+  if (!opened) throw new Error(t("newProjectButtonMissing"));
 
   const deadline = Date.now() + Math.min(30_000, Math.max(5_000, timeoutMs));
   let filled = false;
