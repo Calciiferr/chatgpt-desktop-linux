@@ -25,6 +25,7 @@ const closeBehaviorInput = document.querySelector("#close-behavior");
 const closeBehaviorHint = document.querySelector("#close-behavior-hint");
 const launchAtLoginInput = document.querySelector("#launch-at-login");
 const languageInput = document.querySelector("#language");
+const displayNameInput = document.querySelector("#display-name");
 const windowDisplayModeInput = document.querySelector("#window-display-mode");
 const displayServerModeInput = document.querySelector("#display-server-mode");
 const rememberWindowPositionInput = document.querySelector("#remember-window-position");
@@ -81,6 +82,7 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
+    displayNameLabel: "Nom de l’application", displayNameHint: "Affiché dans le menu des applications, la recherche, la barre des tâches et les fenêtres de l’application. La commande du terminal reste chatgpt-desktop-linux.", displayNameUnavailable: "Le renommage n’est disponible que pour les installations .deb et .rpm.",
     trayUnavailable: "Aucune zone de notification n’a été trouvée : la fenêtre est réduite dans la barre des tâches à la place. Sous GNOME, installez l’extension AppIndicator pour avoir l’icône.",
     updInstalledVersion: "Version installée : {version}",
     updConnectedAs: "✓ Connecté à GitHub : {login}.",
@@ -172,6 +174,7 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
+    displayNameLabel: "Application name", displayNameHint: "Shown in your applications menu, search and taskbar, and in the application's windows. The terminal command stays chatgpt-desktop-linux.", displayNameUnavailable: "Renaming is only available for .deb and .rpm installations.",
     trayUnavailable: "No system tray was found, so the window is minimized to the taskbar instead. On GNOME, install the AppIndicator extension to get the tray icon.",
     updatesHint: "Versions are downloaded from the project's GitHub releases. Installation goes through the system installer and requires your confirmation.",
     updatesLoginHint: "Sign in with GitHub using the temporary code shown here. Authorization happens on the official GitHub page; there is no token to copy. The sign-in is encrypted in the system keyring.",
@@ -260,6 +263,7 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
+    displayNameLabel: "Nombre de la aplicación", displayNameHint: "Se muestra en el menú de aplicaciones, la búsqueda, la barra de tareas y las ventanas de la aplicación. El comando de terminal sigue siendo chatgpt-desktop-linux.", displayNameUnavailable: "El cambio de nombre solo está disponible en instalaciones .deb y .rpm.",
     trayUnavailable: "No se encontró ninguna bandeja del sistema, así que la ventana se minimiza en la barra de tareas. En GNOME, instala la extensión AppIndicator para tener el icono.",
     updatesHint: "Las versiones se descargan desde las publicaciones de GitHub del proyecto. La instalación pasa por el instalador del sistema y requiere tu confirmación.",
     updatesLoginHint: "Inicia sesión en GitHub con el código temporal que se muestra aquí. La autorización se hace en la página oficial de GitHub; no hay ningún token que copiar. La sesión se cifra en el llavero del sistema.",
@@ -603,6 +607,7 @@ function fillForm(payload) {
   windowDisplayModeInput.value = settings.windowDisplayMode;
   launchAtLoginInput.checked = settings.launchAtLogin;
   languageInput.value = settings.language;
+  displayNameInput.value = settings.displayName || "ChatGPT";
   storedLanguage = settings.language;
   displayServerModeInput.value = settings.displayServerMode;
   rememberWindowPositionInput.checked = settings.rememberWindowPosition;
@@ -624,6 +629,9 @@ function fillForm(payload) {
       ? tr("positionAvailable")
       : tr("positionUnavailable");
     document.querySelector("#tray-unavailable").hidden = runtime.trayAvailable !== false;
+    displayNameInput.disabled = runtime.renameSupported === false;
+    document.querySelector("#display-name-unavailable").hidden = runtime.renameSupported !== false;
+    document.title = `${tr("settingsTitle")} — ${settings.displayName || "ChatGPT"}`;
     document.querySelector("#remember-window-position-row").hidden = runtime.kdeSession === false;
     positionMemoryStatus.className =
       `runtime-status ${runtime.positionMemoryAvailable ? "success" : "error"}`;
@@ -820,6 +828,7 @@ form.addEventListener("submit", async (event) => {
     lastTabCloseBehavior: lastTabCloseBehaviorInput.value,
     companionEnabled: companionEnabledInput.checked,
     nestFoldersEnabled: nestFoldersEnabledInput.checked,
+    displayName: displayNameInput.value,
     companionShortcut,
     companionPromptMaxLines: Number(companionPromptMaxLinesInput.value),
     themeMode: themeModeInput.value,

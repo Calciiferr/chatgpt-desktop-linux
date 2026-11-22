@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self'; style-src 'self'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome</title>
+    <link rel="stylesheet" href="welcome.css" />
+  </head>
+  <body>
+    <form id="welcome-form">
+      <img src="../assets/icon.png" alt="" width="56" height="56" />
+      <h1 data-i18n="heading">Welcome</h1>
+      <label for="display-name" data-i18n="label">Application name</label>
+      <input id="display-name" type="text" maxlength="40" spellcheck="false" autocomplete="off" required />
+      <p data-i18n="hint">This is the name shown in your applications menu, search and taskbar. The terminal command stays chatgpt-desktop-linux.</p>
+      <p class="later" data-i18n="later">You can change it at any time in Settings → General.</p>
+      <p id="error" role="alert" hidden></p>
+      <button id="continue" type="submit" data-i18n="continue">Continue</button>
+    </form>
+    <script src="welcome.js"></script>
+  </body>
+</html>

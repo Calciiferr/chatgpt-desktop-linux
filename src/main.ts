@@ -2,6 +2,7 @@ import { installDebianPackage } from "./debian-update";
 import { loadNestFoldersExtension } from "./nestfolders-extension";
 import { resolveUserDataDirectory } from "./data-migration";
 import { setLanguage, t } from "./i18n";
+import { cleanDisplayName, SYSTEM_LAUNCHER_PATH, syncLauncherName } from "./display-name";
 import { installContextMenu } from "./context-menu";
 import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
 import { GitHubUpdater } from "./github-updater";
@@ -158,6 +159,7 @@ interface ChatTab {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let welcomeWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let companionWindow: BrowserWindow | null = null;
 let companionMenuWindow: BrowserWindow | null = null;
@@ -217,6 +219,22 @@ function companionSupported(): boolean {
   return process.platform === "linux" && isKdeSession();
 }
 
+function appDisplayName(): string {
+  return currentSettings?.displayName || APP_TITLE;
+}
+
+/** Renaming rewrites the installed launcher, which only exists for .deb and .rpm installs. */
+function renameSupported(): boolean {
+  return process.platform === "linux" && app.isPackaged && !process.env.APPIMAGE && fs.existsSync(SYSTEM_LAUNCHER_PATH);
+}
+
+function applyDisplayName(): void {
+  if (renameSupported()) syncLauncherName(appDisplayName());
+  tray?.setToolTip(appDisplayName());
+  mainWindow?.setTitle(appDisplayName());
+  sendTabState();
+}
+
 let debInstall: boolean | null = null;
 /** Built-in updates install .deb packages, so they are only offered when the app came from one. */
 function isDebInstall(): boolean {
@@ -252,7 +270,7 @@ const MAIN_TEXT = {
     companion: "Ouvrir la Magic Bar…",
     reset: "Réinitialiser la session…",
     quit: "Quitter",
-    hiddenTitle: "ChatGPT reste actif",
+    hiddenTitle: "{name} reste actif",
     hiddenBody: "Cliquez ici pour le rouvrir. L’icône peut être rangée parmi les éléments masqués de la zone de notification.",
     responseFinishedTitle: "Réponse terminée",
     responseFinishedBody: "ChatGPT a terminé de répondre.",
@@ -275,7 +293,7 @@ const MAIN_TEXT = {
     companion: "Open Magic Bar…",
     reset: "Reset session…",
     quit: "Quit",
-    hiddenTitle: "ChatGPT is still running",
+    hiddenTitle: "{name} is still running",
     hiddenBody: "Click here to reopen it. The icon may be among the hidden items of the system tray.",
     responseFinishedTitle: "Response complete",
     responseFinishedBody: "ChatGPT has finished responding.",
@@ -298,7 +316,7 @@ const MAIN_TEXT = {
     companion: "Abrir Magic Bar…",
     reset: "Restablecer la sesión…",
     quit: "Salir",
-    hiddenTitle: "ChatGPT sigue activo",
+    hiddenTitle: "{name} sigue activo",
     hiddenBody: "Haz clic aquí para volver a abrirlo. El icono puede estar entre los elementos ocultos de la bandeja del sistema.",
     responseFinishedTitle: "Respuesta terminada",
     responseFinishedBody: "ChatGPT ha terminado de responder.",
@@ -539,7 +557,7 @@ function showHiddenNotification(): void {
   hasShownHideNotification = true;
   const text = mainText();
   hideNotification = new Notification({
-    title: text.hiddenTitle,
+    title: text.hiddenTitle.replace("{name}", appDisplayName()),
     body: text.hiddenBody,
     icon: assetPath("icon.png"),
     silent: true,
@@ -745,7 +763,7 @@ function sendTabState(): void {
   mainWindow.webContents.send("tabs:state", {
     tabs: chatTabs.map((tab) => ({
       id: tab.id,
-      title: tab.title || APP_TITLE,
+      title: tab.title || appDisplayName(),
       loading: tab.loading,
       active: tab.id === activeChatTabId,
     })),
@@ -853,7 +871,7 @@ function moveChatTab(id: string, toIndex: number): void {
 
 function normalizeTabTitle(title: string): string {
   const clean = title.replace(/\s*[|—-]\s*ChatGPT\s*$/i, "").trim();
-  return (clean || APP_TITLE).slice(0, 120);
+  return (clean || appDisplayName()).slice(0, 120);
 }
 
 function handleChatInput(event: Electron.Event, input: Input): void {
@@ -918,7 +936,7 @@ function createChatTab(url = CHATGPT_URL, activate = true): ChatTab | null {
   const tab: ChatTab = {
     id,
     view,
-    title: APP_TITLE,
+    title: appDisplayName(),
     loading: true,
     monitor,
     backgroundThrottling: false,
@@ -3114,7 +3132,7 @@ function createMainWindow(startHidden: boolean): void {
     minWidth: 420,
     minHeight: 560,
     show: false,
-    title: APP_TITLE,
+    title: appDisplayName(),
     icon: assetPath("icon.png"),
     backgroundColor: resolvedThemeBackground(),
     autoHideMenuBar: true,
@@ -3190,7 +3208,7 @@ function createMainWindow(startHidden: boolean): void {
 
   mainWindow.on("page-title-updated", (event) => {
     event.preventDefault();
-    mainWindow?.setTitle(APP_TITLE);
+    mainWindow?.setTitle(appDisplayName());
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
@@ -3244,7 +3262,7 @@ function createTray(): void {
     const icon = currentTrayIcon();
 
     tray = new Tray(icon);
-    tray.setToolTip(APP_TITLE);
+    tray.setToolTip(appDisplayName());
     tray.on("click", toggleWindow);
     updateTrayMenu();
     log.info("[tray] StatusNotifierItem icon created.");
@@ -3462,6 +3480,7 @@ function settingsPayload(): {
     projectScanProgress: ProjectScanProgress | null;
     darkMode: boolean;
     trayAvailable: boolean;
+    renameSupported: boolean;
     kdeSession: boolean;
     extensions: {
       companion: { active: boolean; supported: boolean };
@@ -3487,6 +3506,7 @@ function settingsPayload(): {
       projectScanProgress: currentProjectScanProgress,
       darkMode: nativeTheme.shouldUseDarkColors,
       trayAvailable: trayHostAvailable,
+      renameSupported: renameSupported(),
       kdeSession: isKdeSession(),
       extensions: {
         companion: { active: companionActive, supported: companionSupported() },
@@ -3619,12 +3639,7 @@ function showSettingsWindow(): void {
     minWidth: 680,
     minHeight: 520,
     show: false,
-    title:
-      activeLanguage === "en"
-        ? "Settings — ChatGPT"
-        : activeLanguage === "es"
-          ? "Ajustes — ChatGPT"
-          : "Paramètres — ChatGPT",
+    title: `${activeLanguage === "fr" ? "Paramètres" : activeLanguage === "es" ? "Ajustes" : "Settings"} — ${appDisplayName()}`,
     icon: assetPath("icon.png"),
     backgroundColor: resolvedSettingsBackground(),
     autoHideMenuBar: true,
@@ -3803,7 +3818,7 @@ async function installAvailableUpdate(): Promise<void> {
     if (!version) throw new Error(t("updateCheckAgain"));
     updateProgressWindow?.destroy();
     const window = new BrowserWindow({ width: 580, height: 470, minWidth: 480, minHeight: 380,
-      title: t("updateWindowTitle"), icon: assetPath("icon.png"), autoHideMenuBar: true,
+      title: t("updateWindowTitle", { name: appDisplayName() }), icon: assetPath("icon.png"), autoHideMenuBar: true,
       webPreferences: { preload: path.join(__dirname, "update-progress-preload.js"), sandbox: true, contextIsolation: true, nodeIntegration: false } });
     updateProgressWindow = window;
     updateProgressState.logs = "";
@@ -3817,7 +3832,7 @@ async function installAvailableUpdate(): Promise<void> {
       if (["download", "verify"].includes(updateProgressState.phase)) { cancelled = true; githubUpdater?.cancel(); }
     });
     window.on("closed", () => { if (updateProgressWindow === window) updateProgressWindow = null; });
-    await window.loadFile(rendererPath("update-progress.html"), { query: { lang: activeLanguage } });
+    await window.loadFile(rendererPath("update-progress.html"), { query: { lang: activeLanguage, name: appDisplayName() } });
     window.show(); window.focus();
     let lastProgress = 0;
     const file = await updater().download((received, total, phase) => {
@@ -3866,7 +3881,74 @@ async function checkUpdatesOnStartup(): Promise<void> {
   }
 }
 
+function showWelcomeWindow(): void {
+  if (welcomeWindow && !welcomeWindow.isDestroyed()) {
+    welcomeWindow.focus();
+    return;
+  }
+  const window = new BrowserWindow({
+    width: 460,
+    height: 470,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    alwaysOnTop: true,
+    show: false,
+    title: appDisplayName(),
+    icon: assetPath("icon.png"),
+    backgroundColor: resolvedSettingsBackground(),
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "welcome-preload.js"),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+  welcomeWindow = window;
+  window.removeMenu();
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  window.webContents.on("will-navigate", (event) => event.preventDefault());
+  window.once("ready-to-show", () => { window.show(); window.focus(); });
+  window.on("closed", () => {
+    if (welcomeWindow === window) welcomeWindow = null;
+    // Closing the window keeps the default name; it is only offered once.
+    if (!fs.existsSync(settingsPath)) {
+      try { settingsStore?.save(currentSettings); } catch (error) { log.warn("[welcome] Unable to save the settings:", error); }
+    }
+  });
+  void window.loadFile(rendererPath("welcome.html")).catch((error: unknown) => {
+    log.error("[welcome] Unable to load the welcome window:", error);
+  });
+}
+
+function isTrustedWelcomeSender(url: string): boolean {
+  return url === pathToFileURL(rendererPath("welcome.html")).href;
+}
+
 function registerIpcHandlers(): void {
+  ipcMain.handle("welcome:state", (event) => {
+    if (!event.senderFrame || !isTrustedWelcomeSender(event.senderFrame.url)) throw new Error(t("unauthorizedSource"));
+    return { name: appDisplayName(), language: activeLanguage };
+  });
+
+  ipcMain.handle("welcome:submit", (event, input: unknown) => {
+    if (!event.senderFrame || !isTrustedWelcomeSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
+    const name = cleanDisplayName(input);
+    if (name === null) return { ok: false, error: t("settingsDisplayNameInvalid") };
+    try {
+      const nextSettings = { ...currentSettings, displayName: name };
+      settingsStore?.save(nextSettings);
+      currentSettings = nextSettings;
+    } catch (error) {
+      log.error("[welcome] Unable to save the application name:", error);
+      return { ok: false, error: t("settingsSaveFailed") };
+    }
+    applyDisplayName();
+    welcomeWindow?.close();
+    return { ok: true };
+  });
+
   ipcMain.on("update-progress:ready", event => {
     if (event.sender === updateProgressWindow?.webContents) event.sender.send("update-progress:state", updateProgressState);
   });
@@ -4113,6 +4195,7 @@ function registerIpcHandlers(): void {
     try {
       settingsStore?.save(proposedSettings);
       currentSettings = proposedSettings;
+      if (previousSettings.displayName !== currentSettings.displayName) applyDisplayName();
       applyThemeMode(currentSettings.themeMode);
       applyWindowDisplayMode();
       syncResponseMonitor();
@@ -4416,7 +4499,9 @@ app.setName(APP_TITLE);
 app.setPath("userData", resolveUserDataDirectory(app.getPath("appData")));
 logFilePath = path.join(app.getPath("userData"), "app.log");
 initializeLogger(logFilePath);
-settingsStore = new SettingsStore(path.join(app.getPath("userData"), "settings.json"));
+const settingsPath = path.join(app.getPath("userData"), "settings.json");
+const isFirstRun = !fs.existsSync(settingsPath);
+settingsStore = new SettingsStore(settingsPath);
 currentSettings = settingsStore.load();
 activeLanguage = currentSettings.language;
 setLanguage(activeLanguage);
@@ -4624,6 +4709,7 @@ if (!hasSingleInstanceLock) {
       }
 
       syncMagicBarIntegrations(integrationExecutablePath(), companionActive, activeLanguage);
+      if (renameSupported()) syncLauncherName(appDisplayName());
 
       createMainWindow(
         startupCommand === "hide" ||
@@ -4641,6 +4727,9 @@ if (!hasSingleInstanceLock) {
 
       if (startupCommand === "settings") {
         showSettingsWindow();
+      }
+      if (isFirstRun && renameSupported()) {
+        showWelcomeWindow();
       }
       if (startupCommand === "companion") {
         showCompanionWindow(startupRequest?.files ?? [], startupRequest?.text, {

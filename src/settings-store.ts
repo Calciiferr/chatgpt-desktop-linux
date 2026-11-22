@@ -7,6 +7,7 @@ import {
   normalizeStoredProjects,
 } from "./chatgpt-projects";
 import { t } from "./i18n";
+import { cleanDisplayName, DEFAULT_DISPLAY_NAME } from "./display-name";
 
 export type CloseBehavior = "hide" | "quit";
 export type DisplayServerMode = "wayland" | "x11";
@@ -41,6 +42,7 @@ export interface AppSettings {
   lastTabCloseBehavior: LastTabCloseBehavior;
   companionEnabled: boolean;
   nestFoldersEnabled: boolean;
+  displayName: string;
   companionShortcut: string;
   companionPromptMaxLines: number;
   themeMode: ThemeMode;
@@ -86,6 +88,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   lastTabCloseBehavior: "home",
   companionEnabled: false,
   nestFoldersEnabled: true,
+  displayName: DEFAULT_DISPLAY_NAME,
   companionShortcut: "Ctrl+Shift+Space",
   companionPromptMaxLines: 3,
   themeMode: "system",
@@ -249,6 +252,7 @@ function normalizeStoredSettings(value: unknown): AppSettings {
     companionEnabled:
       typeof value.companionEnabled === "boolean" ? value.companionEnabled : DEFAULT_SETTINGS.companionEnabled,
     nestFoldersEnabled: value.nestFoldersEnabled !== false,
+    displayName: cleanDisplayName(value.displayName) ?? DEFAULT_DISPLAY_NAME,
     companionShortcut:
       typeof value.companionShortcut === "string" && value.companionShortcut.trim()
         ? value.companionShortcut.trim()
@@ -371,6 +375,10 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
   if (typeof input.nestFoldersEnabled !== "boolean") {
     throw new Error(t("settingsNestFoldersInvalid"));
   }
+  const displayName = input.displayName === undefined ? DEFAULT_DISPLAY_NAME : cleanDisplayName(input.displayName);
+  if (displayName === null) {
+    throw new Error(t("settingsDisplayNameInvalid"));
+  }
   const companionShortcut =
     typeof input.companionShortcut === "string" ? input.companionShortcut.trim() : "";
   if (!companionShortcut || companionShortcut.length > 64) {
@@ -471,6 +479,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     lastTabCloseBehavior: input.lastTabCloseBehavior,
     companionEnabled: input.companionEnabled,
     nestFoldersEnabled: input.nestFoldersEnabled,
+    displayName,
     companionShortcut,
     companionPromptMaxLines,
     themeMode: input.themeMode,

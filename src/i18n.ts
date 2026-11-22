@@ -2,6 +2,7 @@ export type Language = "en" | "fr" | "es";
 
 const en = {
   // Generic
+  settingsDisplayNameInvalid: "The application name must be 1 to 40 characters, without [, ] or =.",
   projectsSectionMissing: "The Projects section could not be found.",
   projectNameEmpty: "The project name is empty.",
   newProjectButtonMissing: "The New project button could not be found.",
@@ -83,7 +84,7 @@ const en = {
   updateAlreadyRunning: "An update is already in progress.",
   updateRequiresPackage: "Built-in installation requires the .deb version of the application.",
   updateCheckAgain: "Check for the update again.",
-  updateWindowTitle: "Update — ChatGPT",
+  updateWindowTitle: "Update — {name}",
   updateDownloading: "Downloading version {version}",
   updatePreparing: "Preparing the download…",
   updateVerifying: "Verifying the package",
@@ -155,6 +156,7 @@ Answer in English with:
 export type MessageKey = keyof typeof en;
 
 const fr: Record<MessageKey, string> = {
+  settingsDisplayNameInvalid: "Le nom de l’application doit faire de 1 à 40 caractères, sans [, ] ni =.",
   projectsSectionMissing: "Section Projets introuvable.",
   projectNameEmpty: "Le nom du projet est vide.",
   newProjectButtonMissing: "Le bouton Nouveau projet est introuvable.",
@@ -233,7 +235,7 @@ const fr: Record<MessageKey, string> = {
   updateAlreadyRunning: "Une mise à jour est déjà en cours.",
   updateRequiresPackage: "L’installation intégrée nécessite la version .deb de l’application.",
   updateCheckAgain: "Recherchez à nouveau la mise à jour.",
-  updateWindowTitle: "Mise à jour — ChatGPT",
+  updateWindowTitle: "Mise à jour — {name}",
   updateDownloading: "Téléchargement de la version {version}",
   updatePreparing: "Préparation du téléchargement…",
   updateVerifying: "Vérification du paquet",
@@ -302,6 +304,7 @@ Réponds en français avec :
 };
 
 const es: Record<MessageKey, string> = {
+  settingsDisplayNameInvalid: "El nombre de la aplicación debe tener de 1 a 40 caracteres, sin [, ] ni =.",
   projectsSectionMissing: "No se encontró la sección Proyectos.",
   projectNameEmpty: "El nombre del proyecto está vacío.",
   newProjectButtonMissing: "No se encontró el botón Nuevo proyecto.",
@@ -380,7 +383,7 @@ const es: Record<MessageKey, string> = {
   updateAlreadyRunning: "Ya hay una actualización en curso.",
   updateRequiresPackage: "La instalación integrada requiere la versión .deb de la aplicación.",
   updateCheckAgain: "Vuelve a buscar la actualización.",
-  updateWindowTitle: "Actualización — ChatGPT",
+  updateWindowTitle: "Actualización — {name}",
   updateDownloading: "Descargando la versión {version}",
   updatePreparing: "Preparando la descarga…",
   updateVerifying: "Verificando el paquete",

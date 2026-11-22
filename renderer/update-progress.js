@@ -5,6 +5,7 @@ const strings = {
 };
 const uiLanguage = strings[new URLSearchParams(window.location.search).get('lang')] ? new URLSearchParams(window.location.search).get('lang') : 'en';
 document.documentElement.lang = uiLanguage;
+document.title = `${{ en: 'Update', fr: 'Mise à jour', es: 'Actualización' }[uiLanguage]} — ${new URLSearchParams(window.location.search).get('name') || 'ChatGPT'}`;
 document.querySelectorAll('[data-i18n]').forEach((element) => { element.textContent = strings[uiLanguage][element.dataset.i18n]; });
 document.querySelectorAll('[data-i18n-aria]').forEach((element) => { element.setAttribute('aria-label', strings[uiLanguage][element.dataset.i18nAria]); });
 const phase = document.querySelector('#phase');

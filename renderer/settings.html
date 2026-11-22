@@ -35,6 +35,14 @@
         <section class="panel" id="panel-general" role="tabpanel" aria-labelledby="tab-general" data-panel="general">
           <h2 class="panel-title" data-i18n="tabGeneral">General</h2>
           <div class="card">
+            <label class="field" for="display-name">
+              <span data-i18n="displayNameLabel">Application name</span>
+              <input id="display-name" type="text" maxlength="40" spellcheck="false" autocomplete="off" />
+              <small data-i18n="displayNameHint">Shown in your applications menu, search and taskbar, and in the application's windows. The terminal command stays chatgpt-desktop-linux.</small>
+              <small id="display-name-unavailable" class="extension-unavailable" data-i18n="displayNameUnavailable" hidden>Renaming is only available for .deb and .rpm installations.</small>
+            </label>
+          </div>
+          <div class="card">
             <label class="field" for="language">
               <span data-i18n="languageLabel">Application and ChatGPT language</span>
               <select id="language">
