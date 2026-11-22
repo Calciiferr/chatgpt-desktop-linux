@@ -62,7 +62,7 @@ const projectPicker = document.querySelector("#project-picker");
 const projectSelect = document.querySelector("#project-select");
 const newProjectNameInput = document.querySelector("#new-project-name");
 
-let language = "fr";
+let language = "en";
 let selectedMode = "new";
 let currentItems = [];
 let lastDraftVersion = -1;
@@ -81,7 +81,7 @@ let lastProjectSelection = "";
 let statusTimer = 0;
 let promptMaxLines = 3;
 
-function tr(key) { return translations[language]?.[key] || translations.fr[key] || key; }
+function tr(key) { return translations[language]?.[key] || translations.en[key] || key; }
 
 function applyTranslations() {
   document.documentElement.lang = language;
@@ -360,7 +360,7 @@ function closeTools(notifyMain = true) {
 
 function applyState(state) {
   if (!state || typeof state !== "object") return;
-  language = translations[state.language] ? state.language : "fr";
+  language = translations[state.language] ? state.language : "en";
   document.documentElement.classList.toggle("light", state.darkMode === false);
   currentItems = Array.isArray(state.items) ? state.items : [];
   knownProjects = Array.isArray(state.projects) ? state.projects : [];
@@ -436,7 +436,7 @@ projectEnabledInput.addEventListener("change", () => {
   if (projectEnabledInput.checked) {
     const availableIds = new Set(knownProjects.map((project) => project.id));
     if (projectSelect.value === "__create__") {
-      // Conserver une création de projet préparée pendant que le toggle était désactivé.
+      // Keep a prepared project creation while the toggle was off.
     } else if (availableIds.has(lastProjectSelection)) projectSelect.value = lastProjectSelection;
     else if (!availableIds.has(projectSelect.value)) projectSelect.value = knownProjects[0]?.id || "__empty__";
   } else if (knownProjects.some((project) => project.id === projectSelect.value)) {

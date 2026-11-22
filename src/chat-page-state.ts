@@ -17,8 +17,8 @@ export async function inspectChatPageState(contents: WebContents): Promise<ChatP
       const composerRoot = composer?.closest('form')?.parentElement || composer?.parentElement || null;
       const fileInput = composerRoot?.querySelector('input[type="file"]') || document.querySelector('form input[type="file"]');
       const fileCount = fileInput instanceof HTMLInputElement ? (fileInput.files?.length || 0) : 0;
-      const attachment = composerRoot?.querySelector('[data-testid*="attachment"], [aria-label*="Remove file" i], [aria-label*="Supprimer le fichier" i], [class*="file-pill"]');
-      const stop = document.querySelector('[data-testid="stop-button"], button[aria-label*="Stop" i], button[aria-label*="Arrêter" i]');
+      const attachment = composerRoot?.querySelector('[data-testid*="attachment"], [aria-label*="Remove file" i], [aria-label*="Supprimer le fichier" i], [aria-label*="Eliminar archivo" i], [class*="file-pill"]');
+      const stop = document.querySelector('[data-testid="stop-button"], button[aria-label*="Stop" i], button[aria-label*="Arrêter" i], button[aria-label*="Detener" i]');
       return {
         pendingText: Boolean(text.trim()),
         pendingFiles: fileCount > 0 || Boolean(attachment),

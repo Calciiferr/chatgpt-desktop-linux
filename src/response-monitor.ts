@@ -96,7 +96,7 @@ export class ChatResponseMonitor {
       this.failureLogged = false;
       if (generating) {
         if (!this.generationObserved) {
-          log.info("[response-monitor] Génération détectée.");
+          log.info("[response-monitor] Generation detected.");
           this.generationObserved = true;
           this.onGenerationStateChanged?.(true);
         }
@@ -110,7 +110,7 @@ export class ChatResponseMonitor {
       this.idlePolls += 1;
       if (this.idlePolls >= REQUIRED_IDLE_POLLS) {
         this.reset();
-        log.info("[response-monitor] Fin de génération détectée.");
+        log.info("[response-monitor] Generation finished.");
         this.onResponseFinished();
       }
     } catch (error) {

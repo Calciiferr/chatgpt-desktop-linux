@@ -1,9 +1,10 @@
 import type { WebContents } from "electron";
+import { t } from "./i18n";
 
 /**
  * All DOM-dependent ChatGPT Projects integration lives in this file.
  *
- * The selectors below are intentionally narrow, bilingual and bounded. ChatGPT's
+ * The selectors below are intentionally narrow, multilingual (EN/FR/ES) and bounded. ChatGPT's
  * DOM is not a public API: callers must surface failures without deleting the
  * existing cache. No function in this module sends a chat message.
  */
@@ -103,10 +104,10 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     return rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
   };
   const exactProjectText = (element) =>
-    ['Projets', 'Projects'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
+    ['Projets', 'Projects', 'Proyectos'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
   const exactPinnedText = (element) =>
-    ['Épinglés', 'Epinglés', 'Pinned'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
-  const projectHomeLabels = ['ouvrir l’accueil du projet', 'open project home', 'open project homepage'];
+    ['Épinglés', 'Epinglés', 'Pinned', 'Fijados', 'Anclados'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
+  const projectHomeLabels = ['ouvrir l’accueil du projet', 'open project home', 'open project homepage', 'abrir el inicio del proyecto', 'abrir la página de inicio del proyecto'];
   const isProjectHomeButton = (button) =>
     button instanceof HTMLButtonElement && projectHomeLabels.includes(
       (button.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -125,9 +126,9 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     ];
     const option = labelledButtons
       .map((button) => button.getAttribute('aria-label') || '')
-      .find((label) => /^(Ouvrir les options du projet pour|Open options for project)\s+/i.test(label));
+      .find((label) => /^(Ouvrir les options du projet pour|Open options for project|Abrir (?:las )?opciones del proyecto)\s+/i.test(label));
     if (option) {
-      return option.replace(/^(Ouvrir les options du projet pour|Open options for project)\s+/i, '').trim();
+      return option.replace(/^(Ouvrir les options du projet pour|Open options for project|Abrir (?:las )?opciones del proyecto)\s+/i, '').trim();
     }
     return (container?.innerText || container?.textContent || button?.innerText || button?.textContent || '')
       .split('\n').map((part) => part.trim()).find(Boolean) || '';
@@ -173,7 +174,7 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     })).filter((entry) => entry.name);
   };
   const findActiveSidebar = () => {
-    const markers = ['nouveau chat', 'new chat', 'bibliothèque', 'library', 'planification', 'scheduling', 'applications'];
+    const markers = ['nouveau chat', 'new chat', 'nuevo chat', 'bibliothèque', 'library', 'biblioteca', 'planification', 'scheduling', 'programación', 'applications', 'aplicaciones'];
     const candidates = [...document.querySelectorAll('nav, aside, [class*="sidebar"]')]
       .filter(intersectsViewport)
       .map((element) => {
@@ -184,7 +185,7 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
         const projectHeader = [...element.querySelectorAll('[class*="sidebar-expando-section-header"], button')]
           .some(exactProjectText);
         let score = markerCount * 30 + (projectHeader ? 80 : 0);
-        if (/historique de chat|chat history|sidebar|barre latérale/.test(label)) score += 60;
+        if (/historique de chat|chat history|historial de chats?|sidebar|barre latérale|barra lateral/.test(label)) score += 60;
         if (rect.left < Math.max(120, innerWidth * 0.25)) score += 35;
         if (rect.width >= 170 && rect.width <= Math.max(520, innerWidth * 0.55)) score += 30;
         if (rect.height >= innerHeight * 0.45) score += 35;
@@ -302,7 +303,7 @@ export function createProjectRecord(
   at = new Date().toISOString(),
 ): ChatGptProject {
   const url = normalizeProjectUrl(urlValue);
-  if (!url) throw new Error("L’URL ne correspond pas à une page de projet ChatGPT.");
+  if (!url) throw new Error(t("notProjectUrl"));
   const parts = projectUrlParts(url)!;
   const name = cleanName(nameValue) || projectNameFromUrl(url);
   return {
@@ -509,7 +510,7 @@ function delay(ms: number): Promise<void> {
 
 function throwIfProjectScanAborted(signal?: AbortSignal): void {
   if (signal?.aborted) {
-    throw new Error("La synchronisation des projets a été interrompue.");
+    throw new Error(t("syncInterrupted"));
   }
 }
 
@@ -548,13 +549,13 @@ async function probeSidebar(webContents: WebContents, clickToggle: boolean): Pro
         rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
     };
     const normalize = (value) => (value || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const markers = ['nouveau chat', 'new chat', 'bibliothèque', 'library', 'planification', 'scheduling', 'applications'];
+    const markers = ['nouveau chat', 'new chat', 'nuevo chat', 'bibliothèque', 'library', 'biblioteca', 'planification', 'scheduling', 'programación', 'applications', 'aplicaciones'];
     const candidates = [...document.querySelectorAll('nav, aside, [class*="sidebar"]')].filter(visible);
     const open = candidates.some((candidate) => {
       const rect = candidate.getBoundingClientRect();
       const label = normalize(candidate.getAttribute('aria-label'));
       const text = normalize(candidate.textContent);
-      const knownNav = /historique de chat|chat history|sidebar|barre latérale/.test(label);
+      const knownNav = /historique de chat|chat history|historial de chats?|sidebar|barre latérale|barra lateral/.test(label);
       const markerCount = markers.filter((marker) => text.includes(marker)).length;
       const containsProjects = /(^|\s)(projets|projects)(\s|$)/.test(text);
       return rect.left < Math.max(80, innerWidth * 0.22) && rect.width >= 170 &&
@@ -570,13 +571,13 @@ async function probeSidebar(webContents: WebContents, clickToggle: boolean): Pro
       const text = normalize(button.textContent);
       const hint = aria + ' ' + title;
       let score = 0;
-      if (/sidebar|side bar|barre latérale/.test(hint)) score += 90;
+      if (/sidebar|side bar|barre latérale|barra lateral/.test(hint)) score += 90;
       if (/ouvrir|open|afficher|show|menu|navigation/.test(hint)) score += 24;
       if (button.matches('[data-testid*="sidebar"], [data-testid*="menu"]')) score += 70;
       if (rect.left >= 0 && rect.left < 120 && rect.top >= 0 && rect.top < 120) score += 25;
       if (button.querySelector('svg')) score += 12;
       if (text.length <= 2) score += 8;
-      if (/nouveau chat|new chat|recherche|search|fermer|close|retour|back|paramètres|settings/.test(hint + ' ' + text)) score -= 160;
+      if (/nouveau chat|new chat|nuevo chat|recherche|search|buscar|fermer|close|cerrar|retour|back|volver|paramètres|settings|configuración/.test(hint + ' ' + text)) score -= 160;
       return { button, score, left: rect.left, top: rect.top };
     }).sort((left, right) => right.score - left.score || left.top - right.top || left.left - right.left);
     const toggle = scored[0];
@@ -589,13 +590,13 @@ async function probeSidebar(webContents: WebContents, clickToggle: boolean): Pro
 async function ensureSidebarOpen(webContents: WebContents): Promise<void> {
   const initial = await probeSidebar(webContents, true);
   if (initial.open) return;
-  if (!initial.clicked) throw new Error("Impossible d’ouvrir la sidebar ChatGPT.");
+  if (!initial.clicked) throw new Error(t("openSidebarFailed"));
   const deadline = Date.now() + 3_000;
   while (Date.now() < deadline) {
     await delay(200);
     if ((await probeSidebar(webContents, false)).open) return;
   }
-  throw new Error("Impossible d’ouvrir la sidebar ChatGPT.");
+  throw new Error(t("openSidebarFailed"));
 }
 
 interface PinnedProjectSnapshot {
@@ -723,7 +724,7 @@ async function ensureProjectsSectionExpanded(
       if (probe.visibleRows > 0) return;
     }
     if (allowEmpty) return;
-    throw new Error("Aucun projet visible dans la section Projets.");
+    throw new Error(t("noVisibleProjects"));
   }
 
   await delay(300);
@@ -742,7 +743,7 @@ async function ensureProjectsSectionExpanded(
     }
   }
   if (allowEmpty && probe.found) return;
-  throw new Error("Aucun projet visible : section Projets repliée, vide ou inaccessible.");
+  throw new Error(t("noVisibleProjectsCollapsed"));
 }
 
 async function prepareProjectsSidebar(webContents: WebContents, allowEmpty = false): Promise<void> {
@@ -877,7 +878,7 @@ export async function snapshotChatGptProjectOrder(
     previousSignature = signature;
   }
   if (stablePasses < 5 && descriptors.length > 0) {
-    throw new Error("La liste des projets ne s’est pas stabilisée.");
+    throw new Error(t("projectListUnstable"));
   }
   const coverage = (await webContents.executeJavaScript(`(() => {
     ${ACTIVE_PROJECT_SCOPE_HELPERS}
@@ -1047,7 +1048,7 @@ function isChatGptConversationUrl(value: string): boolean {
 
 export async function captureCurrentProject(webContents: WebContents): Promise<ChatGptProject> {
   const url = normalizeProjectUrl(webContents.getURL());
-  if (!url) throw new Error("La page actuelle n’est pas l’accueil d’un projet ChatGPT.");
+  if (!url) throw new Error(t("notProjectHome"));
   if (!CHATGPT_PROJECTS_DOM_AUTOMATION_ENABLED) {
     return createProjectRecord(projectNameFromUrl(url), url, "current");
   }
@@ -1072,7 +1073,7 @@ export async function scanChatGptProjects(
   options: ProjectScanOptions = {},
 ): Promise<ProjectScanResult> {
   if (!CHATGPT_PROJECTS_DOM_AUTOMATION_ENABLED) {
-    throw new Error("L’automatisation DOM des projets est désactivée.");
+    throw new Error(t("projectAutomationDisabled"));
   }
   throwIfProjectScanAborted(options.signal);
   const maxShowMoreClicks = Math.min(20, Math.max(0, options.maxShowMoreClicks ?? 20));
@@ -1111,7 +1112,7 @@ export async function scanChatGptProjects(
       durationsMs: [],
       sidebarNames: [],
       sidebarComplete: snapshot.complete && pinnedSnapshot.complete,
-      message: "Aucun projet visible dans la sidebar ChatGPT.",
+      message: t("noVisibleProjectsSidebar"),
     };
   }
 
@@ -1141,7 +1142,7 @@ export async function scanChatGptProjects(
     let resolvedProject: ChatGptProject | null = null;
     let sawDuplicateUrl = false;
     let ignoredConversation = false;
-    let lastError = "bouton d’accueil introuvable";
+    let lastError = "project home button not found";
     try {
       const directUrl = /^g-p-[a-z0-9]+$/i.test(descriptor.projectId ?? '')
         ? normalizeProjectUrl(CHATGPT_ORIGIN + '/g/' + descriptor.projectId + '/project')
@@ -1156,7 +1157,7 @@ export async function scanChatGptProjects(
             options.signal,
           );
       if (!opened.clicked) {
-        lastError = `bouton d’accueil introuvable après 3 tentatives (index ${overallIndex + 1})`;
+        lastError = `project home button not found after 3 attempts (index ${overallIndex + 1})`;
       } else {
         let url = directUrl || await waitForProjectUrl(
           webContents,
@@ -1169,12 +1170,12 @@ export async function scanChatGptProjects(
           ignoredConversation = true;
           pinnedConversationsIgnored += 1;
         } else if (!url) {
-          lastError = `navigation expirée (index ${overallIndex + 1})`;
+          lastError = `navigation timed out (index ${overallIndex + 1})`;
         } else if (resolvedUrls.has(url)) {
           // A repeated URL is a duplicate DOM entry, not an invitation to
           // click another row sharing the same display name.
           sawDuplicateUrl = true;
-          lastError = `URL déjà résolue (index ${overallIndex + 1})`;
+          lastError = `URL already resolved (index ${overallIndex + 1})`;
         } else {
           const project = createProjectRecord(descriptor.name, url, "scan");
           // Only clear an existing pinned flag when the pinned section was
@@ -1190,7 +1191,7 @@ export async function scanChatGptProjects(
       }
     } catch (error) {
       throwIfProjectScanAborted(options.signal);
-      lastError = error instanceof Error ? error.message : "échec inconnu";
+      lastError = error instanceof Error ? error.message : "unknown failure";
     }
     const durationMs = Date.now() - startedAt;
     durationsMs.push(durationMs);
@@ -1224,9 +1225,9 @@ export async function scanChatGptProjects(
   }
   const status = projects.length === 0 ? "error" : failures.length > 0 ? "partial" : "ok";
   const message =
-    `${discovered} projet(s) trouvé(s) · ${projects.length} réussi(s) · ${failures.length} échoué(s)` +
-    (duplicatesSkipped > 0 ? ` · ${duplicatesSkipped} répétition(s) DOM ignorée(s)` : "") +
-    (pinnedConversationsIgnored > 0 ? ` · ${pinnedConversationsIgnored} conversation(s) épinglée(s) ignorée(s)` : "");
+    t("syncSummary", { discovered, succeeded: projects.length, failed: failures.length }) +
+    (duplicatesSkipped > 0 ? t("syncSummaryDuplicates", { count: duplicatesSkipped }) : "") +
+    (pinnedConversationsIgnored > 0 ? t("syncSummaryPinnedChats", { count: pinnedConversationsIgnored }) : "");
   return {
     status,
     projects: mergeProjects([], projects),
@@ -1247,7 +1248,7 @@ export async function createChatGptProject(
   timeoutMs = 20_000,
 ): Promise<ChatGptProject> {
   if (!CHATGPT_PROJECTS_DOM_AUTOMATION_ENABLED) {
-    throw new Error("L’automatisation DOM des projets est désactivée.");
+    throw new Error(t("projectAutomationDisabled"));
   }
   const name = cleanName(nameValue);
   if (!name) throw new Error("Le nom du projet est vide.");
@@ -1271,11 +1272,11 @@ export async function createChatGptProject(
     filled = (await webContents.executeJavaScript(`(() => {
       const projectName = ${JSON.stringify(name)};
       const dialogs = [...document.querySelectorAll('[role="dialog"], dialog')];
-      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project/i.test(candidate.textContent || ''));
+      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project|Crear (?:un )?proyecto/i.test(candidate.textContent || ''));
       if (!dialog) return false;
       const input = [...dialog.querySelectorAll('input')].find((candidate) => {
         const label = (candidate.getAttribute('aria-label') || candidate.getAttribute('placeholder') || '').trim();
-        return /Nom du projet|Project name/i.test(label);
+        return /Nom du projet|Project name|Nombre del proyecto/i.test(label);
       }) || dialog.querySelector('input');
       if (!(input instanceof HTMLInputElement)) return false;
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -1287,15 +1288,15 @@ export async function createChatGptProject(
     })()`, true)) as boolean;
     if (!filled) await delay(200);
   }
-  if (!filled) throw new Error("Le champ de création du projet est introuvable.");
+  if (!filled) throw new Error(t("projectCreateFieldMissing"));
   await delay(250);
   const submitted = (await webContents.executeJavaScript(`(() => {
       const dialogs = [...document.querySelectorAll('[role="dialog"], dialog')];
-      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project/i.test(candidate.textContent || ''));
+      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project|Crear (?:un )?proyecto/i.test(candidate.textContent || ''));
       if (!dialog) return false;
       const input = dialog.querySelector('input');
       const submit = [...dialog.querySelectorAll('button')].find((candidate) =>
-        /^(Créer un projet|Create project)$/i.test((candidate.textContent || '').trim()) && !candidate.disabled
+        /^(Créer un projet|Create project|Crear proyecto)$/i.test((candidate.textContent || '').trim()) && !candidate.disabled
       );
       if (submit instanceof HTMLElement) submit.click();
       else if (input instanceof HTMLInputElement) {
@@ -1304,8 +1305,8 @@ export async function createChatGptProject(
       } else return false;
       return true;
   })()`, true)) as boolean;
-  if (!submitted) throw new Error("La modale de création n’est plus disponible.");
+  if (!submitted) throw new Error(t("projectCreateDialogGone"));
   const url = await waitForProjectUrl(webContents, Math.max(2_000, deadline - Date.now()), previousUrl);
-  if (!url) throw new Error("La création n’a pas abouti à une page de projet valide.");
+  if (!url) throw new Error(t("projectCreateFailed"));
   return createProjectRecord(name, url, "created");
 }

@@ -11,7 +11,7 @@ export function parseClipboardFileUris(uriList: string, limit = 50): string[] {
       const filePath = fileURLToPath(url);
       if (!paths.includes(filePath)) paths.push(filePath);
     } catch {
-      // Seules les URI de fichiers locaux valides sont acceptées.
+      // Only valid local file URIs are accepted.
     }
     if (paths.length >= limit) break;
   }

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -13,7 +13,7 @@
   <body>
     <section id="bar" class="chat-bar">
       <div class="drag-handle" aria-hidden="true"></div>
-      <button id="close" class="close-button" type="button" data-i18n-aria="close" aria-label="Fermer">×</button>
+      <button id="close" class="close-button" type="button" data-i18n-aria="close" aria-label="Close">×</button>
 
       <div id="items" class="context-strip" aria-live="polite"></div>
 
@@ -29,21 +29,21 @@
 
       <div class="toolbar">
         <div class="toolbar-left">
-          <button id="toggle-tools" class="round-button" type="button" data-i18n-aria="addContext" aria-label="Ajouter du contexte">＋</button>
+          <button id="toggle-tools" class="round-button" type="button" data-i18n-aria="addContext" aria-label="Add context">＋</button>
           <label class="audit-toggle" for="audit-security">
             <input id="audit-security" type="checkbox" />
-            <span data-i18n="securityAudit">Audit sécurité</span>
+            <span data-i18n="securityAudit">Security review</span>
           </label>
           <label class="audit-toggle" for="audit-quality">
             <input id="audit-quality" type="checkbox" />
-            <span data-i18n="qualityAudit">Audit qualité</span>
+            <span data-i18n="qualityAudit">Quality review</span>
           </label>
           <label class="audit-toggle project-toggle" for="project-enabled">
             <input id="project-enabled" type="checkbox" />
-            <span data-i18n="projectLabel">Projet</span>
+            <span data-i18n="projectLabel">Project</span>
           </label>
           <div id="project-picker" class="project-picker" hidden>
-            <select id="project-select" aria-label="Projet ChatGPT"></select>
+            <select id="project-select" aria-label="ChatGPT project"></select>
             <input id="new-project-name" type="text" maxlength="120" autocomplete="off" data-i18n-placeholder="newProjectPlaceholder" placeholder="Nom du nouveau projet" hidden />
           </div>
           <span id="source-indicator" class="source-indicator" hidden></span>
@@ -51,10 +51,10 @@
 
         <div class="toolbar-right">
           <div class="chat-mode" role="group" data-i18n-aria="chatDestination" aria-label="Conversation cible">
-            <button id="new-chat" class="mode-button selected" type="button" data-mode="new" data-i18n="newChat">Nouveau</button>
-            <button id="resume-chat" class="mode-button" type="button" data-mode="resume" data-i18n="resumeChat">Dernier</button>
+            <button id="new-chat" class="mode-button selected" type="button" data-mode="new" data-i18n="newChat">New</button>
+            <button id="resume-chat" class="mode-button" type="button" data-mode="resume" data-i18n="resumeChat">Last</button>
           </div>
-          <button id="prepare" class="send-button" type="button" data-i18n-aria="prepare" aria-label="Préparer dans ChatGPT">↑</button>
+          <button id="prepare" class="send-button" type="button" data-i18n-aria="prepare" aria-label="Prepare in ChatGPT">↑</button>
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta
@@ -7,16 +7,16 @@
       content="default-src 'self'; style-src 'self'; script-src 'self'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Rechercher</title>
+    <title>Search</title>
     <link rel="stylesheet" href="search.css" />
   </head>
   <body>
     <form id="search-form" role="search">
-      <input id="query" type="search" autocomplete="off" spellcheck="false" placeholder="Rechercher…" aria-label="Rechercher dans la conversation" />
+      <input id="query" type="search" autocomplete="off" spellcheck="false" placeholder="Search…" aria-label="Search in conversation" />
       <output id="matches" aria-live="polite">0/0</output>
-      <button id="previous" type="button" aria-label="Résultat précédent">↑</button>
-      <button id="next" type="button" aria-label="Résultat suivant">↓</button>
-      <button id="close" type="button" aria-label="Fermer">×</button>
+      <button id="previous" type="button" aria-label="Previous result">↑</button>
+      <button id="next" type="button" aria-label="Next result">↓</button>
+      <button id="close" type="button" aria-label="Close">×</button>
     </form>
     <script src="search.js"></script>
   </body>

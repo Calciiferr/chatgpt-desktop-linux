@@ -30,7 +30,7 @@ assert.match(mainSource, /const MAGIC_PREVIEW_MIN_HEIGHT = 280/);
 assert.match(mainSource, /const MAGIC_PREVIEW_MAX_RATIO = 0\.85/);
 assert.match(mainSource, /const MAGIC_PREVIEW_MAX_SOURCE_EDGE = 1600/);
 assert.match(createPreviewFunction, /new BrowserWindow\(\{/);
-assert.match(createPreviewFunction, /title: "ChatGPT Magic Bar Aperçu"/);
+assert.match(createPreviewFunction, /title: MAGIC_BAR_PREVIEW_WINDOW_TITLE/);
 assert.match(createPreviewFunction, /frame: false/);
 assert.match(createPreviewFunction, /alwaysOnTop: true/);
 assert.match(createPreviewFunction, /skipTaskbar: true/);
@@ -71,7 +71,7 @@ assert.match(preloadSource, /companion:preview-close/);
 assert.match(preloadSource, /onPreviewData/);
 assert.match(preloadSource, /closePreview/);
 
-assert.match(previewHtml, /<title>ChatGPT Magic Bar Aperçu<\/title>/);
+assert.match(previewHtml, /<title>ChatGPT Magic Bar Preview<\/title>/);
 assert.match(previewHtml, /default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'/);
 assert.match(previewCss, /background: var\(--background\)/);
 assert.match(previewCss, /object-fit: contain/);
@@ -88,7 +88,7 @@ const removedStateField = ["preview", "DataUrl"].join("");
 assert.equal(mainSource.includes(removedStateField), false);
 assert.equal(companionSource.includes(removedStateField), false);
 
-assert.match(kwinSource, /const previewTitle = "ChatGPT Magic Bar Aperçu"/);
+assert.match(kwinSource, /const previewTitle = "ChatGPT Magic Bar Preview"/);
 assert.match(kwinSource, /function placePreview\(\)/);
 assert.match(kwinSource, /function placeMenu\(\)/);
 assert.match(kwinSource, /const menuTitle = "ChatGPT Magic Bar Menu"/);
@@ -136,7 +136,7 @@ vm.runInNewContext(companionKWinControllerScriptForTests(), {
 const bar = mockWindow("ChatGPT Magic Bar", { x: 2_100, y: 1_100, width: 680, height: 116 }, outputGeometry);
 windows.push(bar);
 windowAdded.emit(bar);
-const preview = mockWindow("ChatGPT Magic Bar Aperçu", { x: 0, y: 0, width: 800, height: 600 }, outputGeometry);
+const preview = mockWindow("ChatGPT Magic Bar Preview", { x: 0, y: 0, width: 800, height: 600 }, outputGeometry);
 windows.push(preview);
 windowAdded.emit(preview);
 assert.deepEqual(preview.frameGeometry, { x: 2_800, y: 420, width: 800, height: 600 });

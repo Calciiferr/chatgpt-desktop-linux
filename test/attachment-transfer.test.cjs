@@ -91,8 +91,8 @@ async function main() {
   const transferFunction = mainSource.match(
     /async function performCompanionTransfer[\s\S]*?\n}\n\nasync function transferCompanionToChat/,
   )?.[0] || "";
-  assert.match(mainSource, /Collage image sans pièce jointe visible, fallback upload fichier/);
-  assert.match(mainSource, /brouillon conservé/);
+  assert.match(mainSource, /Image paste without a visible attachment, falling back to file upload/);
+  assert.match(mainSource, /draft kept/);
   assert.match(transferFunction, /if \(ok\) \{[\s\S]*?rmSync[\s\S]*?completeCompanionDraftTransfer/);
   assert.doesNotMatch(transferFunction, /completeCompanionDraftTransfer\([^)]*\);\s*if \(!ok\)/);
 

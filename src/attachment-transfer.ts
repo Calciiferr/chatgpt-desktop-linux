@@ -35,6 +35,7 @@ export function composerAttachmentProbeScript(fileNames: readonly string[]): str
       'img[src^="data:"]',
       '[aria-label*="remove file" i]',
       '[aria-label*="supprimer le fichier" i]',
+      '[aria-label*="eliminar archivo" i]',
       '[aria-label*="quitar archivo" i]'
     ].join(',');
     const cards = [...new Set([...root.querySelectorAll(markerSelector)].map((element) =>

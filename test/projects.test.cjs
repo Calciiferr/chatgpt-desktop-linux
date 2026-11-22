@@ -319,7 +319,7 @@ async function testInjectedScriptSyntax() {
   }), { maxShowMoreClicks: 1, maxProjects: 3, navigationTimeoutMs: 2_000 });
   assert.equal(conversationButtonScan.projects.length, 1);
   assert.equal(conversationButtonScan.failures.length, 0);
-  assert.match(conversationButtonScan.message, /1 conversation\(s\) épinglée\(s\) ignorée\(s\)/);
+  assert.match(conversationButtonScan.message, /1 pinned conversation\(s\) ignored/);
 
   const failedPinnedCache = {
     ...createProjectRecord("Projet épinglé indisponible", pinnedProjectUrl, "scan"),
@@ -469,11 +469,11 @@ async function testInjectedScriptSyntax() {
   };
   await assert.rejects(
     scanChatGptProjects(inaccessibleSidebar, { maxShowMoreClicks: 1, maxProjects: 2 }),
-    /Impossible d’ouvrir la sidebar ChatGPT/,
+    /Unable to open the ChatGPT sidebar/,
   );
   await assert.rejects(
     scanChatGptProjects(inaccessibleSidebar, { signal: AbortSignal.abort() }),
-    /interrompue/,
+    /interrupted/,
   );
 
   const captureContents = {
@@ -506,10 +506,10 @@ assert.doesNotMatch(mainSource, /reorderProjectsFromSidebar\(/);
 assert.match(mainSource, /maxShowMoreClicks:\s*20,\s*maxProjects:\s*200,\s*maxResolvedProjects:\s*10/);
 assert.match(synchronizeFunction, /runProjectSyncWithTimeout\(/);
 assert.match(synchronizeFunction, /destroyProjectScanWindow\(\);[\s\S]*projectSyncInProgress = false/);
-assert.match(synchronizeFunction, /previousProjects[\s\S]*cache conservé/);
+assert.match(synchronizeFunction, /previousProjects[\s\S]*cache kept/);
 assert.match(synchronizeFunction, /const removeMissing = result\.sidebarComplete/);
 assert.match(synchronizeFunction, /lastSelectedChatGptProjectId:[\s\S]*mergedIds\.has/);
-assert.match(synchronizeFunction, /message: `\$\{mergedProjects\.length\} projet\(s\) dans le cache local\.`/);
+assert.match(synchronizeFunction, /message: t\("projectsInLocalList", \{ count: mergedProjects\.length \}\)/);
 assert.match(backgroundFunction, /powerMonitor\.getSystemIdleTime\(\)/);
 assert.match(backgroundFunction, /projectSyncSkipReason\("background"/);
 assert.match(mainSource, /nativeTheme\.themeSource\s*=\s*mode/);

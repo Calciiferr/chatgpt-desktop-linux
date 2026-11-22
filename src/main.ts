@@ -1,6 +1,7 @@
 import { installDebianPackage } from "./debian-update";
 import { loadNestFoldersExtension } from "./nestfolders-extension";
 import { resolveUserDataDirectory } from "./data-migration";
+import { setLanguage, t } from "./i18n";
 import { installContextMenu } from "./context-menu";
 import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
 import { GitHubUpdater } from "./github-updater";
@@ -113,7 +114,6 @@ const SEARCH_VIEW_HEIGHT = 46;
 const SEARCH_VIEW_MARGIN = 12;
 const PROJECT_SYNC_INTERVAL_MS = 5 * 60 * 1000;
 const TAB_BAR_HEIGHT = 38;
-const UPDATE_TEST_BANNER_HEIGHT = app.getVersion() === "0.7.0-beta.33" ? 32 : 0;
 const MAX_CHAT_TABS = 8;
 const REFRESH_VIEW_WIDTH = 176;
 const REFRESH_VIEW_HEIGHT = 36;
@@ -221,7 +221,8 @@ function integrationExecutablePath(): string | null {
   if (!app.isPackaged) return null;
   return fs.existsSync("/usr/bin/chatgpt-desktop-linux") ? "/usr/bin/chatgpt-desktop-linux" : process.execPath;
 }
-let activeLanguage: AppLanguage = "fr";
+let activeLanguage: AppLanguage = "en";
+const MAGIC_BAR_PREVIEW_WINDOW_TITLE = "ChatGPT Magic Bar Preview";
 const companionTestCapturePath = app.isPackaged ? "" : process.env.CHATGPT_MAGIC_BAR_TEST_CAPTURE || "";
 
 const LANGUAGE_LOCALES: Record<AppLanguage, string> = {
@@ -241,7 +242,7 @@ const MAIN_TEXT = {
     reset: "Réinitialiser la session…",
     quit: "Quitter",
     hiddenTitle: "ChatGPT reste actif",
-    hiddenBody: "Cliquez ici pour le rouvrir. L’icône peut être rangée parmi les éléments masqués de Plasma.",
+    hiddenBody: "Cliquez ici pour le rouvrir. L’icône peut être rangée parmi les éléments masqués de la zone de notification.",
     responseFinishedTitle: "Réponse terminée",
     responseFinishedBody: "ChatGPT a terminé de répondre.",
     resetTitle: "Réinitialiser la session",
@@ -264,7 +265,7 @@ const MAIN_TEXT = {
     reset: "Reset session…",
     quit: "Quit",
     hiddenTitle: "ChatGPT is still running",
-    hiddenBody: "Click here to reopen it. Plasma may place the icon among hidden items.",
+    hiddenBody: "Click here to reopen it. The icon may be among the hidden items of the system tray.",
     responseFinishedTitle: "Response complete",
     responseFinishedBody: "ChatGPT has finished responding.",
     resetTitle: "Reset session",
@@ -287,7 +288,7 @@ const MAIN_TEXT = {
     reset: "Restablecer la sesión…",
     quit: "Salir",
     hiddenTitle: "ChatGPT sigue activo",
-    hiddenBody: "Haz clic aquí para volver a abrirlo. Plasma puede ocultar el icono.",
+    hiddenBody: "Haz clic aquí para volver a abrirlo. El icono puede estar entre los elementos ocultos de la bandeja del sistema.",
     responseFinishedTitle: "Respuesta terminada",
     responseFinishedBody: "ChatGPT ha terminado de responder.",
     resetTitle: "Restablecer la sesión",
@@ -327,9 +328,9 @@ function parseCliRequest(argv: readonly string[]): CliRequest | null {
 
   if (requested.length > 1) {
     log.warn(
-      `[cli] Plusieurs commandes reçues (${requested
+      `[cli] Several commands received (${requested
         .map(([argument]) => argument)
-        .join(", ")}). La dernière est utilisée.`,
+        .join(", ")}). The last one is used.`,
     );
   }
 
@@ -394,7 +395,7 @@ function isCliCommand(value: unknown): value is CliCommand {
 
 function openExternal(url: string): void {
   void shell.openExternal(url).catch((error: unknown) => {
-    log.error(`[external] Impossible d’ouvrir ${url} :`, error);
+    log.error(`[external] Unable to open ${url}:`, error);
   });
 }
 
@@ -488,7 +489,7 @@ function showWindow(): void {
   syncChatTabThrottling();
   updateTrayMenu();
   if (!wasVisible) {
-    log.info(`[window] Fenêtre affichée (shell prêt : ${shellReady ? "oui" : "non"}).`);
+    log.info(`[window] Window shown (shell ready: ${shellReady ? "yes" : "no"}).`);
   }
 }
 
@@ -563,11 +564,11 @@ function hideWindow(notify = false): void {
     if (currentSettings.windowDisplayMode === "taskbar") {
       mainWindow.setSkipTaskbar(false);
       mainWindow.minimize();
-      log.info("[window] Fenêtre réduite dans la barre des tâches.");
+      log.info("[window] Window minimized to the taskbar.");
     } else {
       mainWindow.setSkipTaskbar(true);
       mainWindow.hide();
-      log.info("[window] Fenêtre cachée dans la zone de notification.");
+      log.info("[window] Window hidden in the system tray.");
     }
   }
   syncChatTabThrottling();
@@ -660,7 +661,7 @@ function persistWindowBounds(): void {
 
   const bounds = mainWindow.getNormalBounds();
   log.info(
-    `[window] Géométrie détectée : ${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}.`,
+    `[window] Detected geometry: ${bounds.x},${bounds.y} ${bounds.width}x${bounds.height}.`,
   );
   const previousBounds = currentSettings.windowBounds;
   currentSettings = {
@@ -676,7 +677,7 @@ function persistWindowBounds(): void {
   try {
     settingsStore.save(currentSettings);
   } catch (error) {
-    log.error("[settings] Impossible de mémoriser la fenêtre :", error);
+    log.error("[settings] Unable to save the window state:", error);
   }
 }
 
@@ -715,9 +716,9 @@ function sendTabState(): void {
       active: tab.id === activeChatTabId,
     })),
     barVisible: tabBarIsVisible(),
-    updateTest: UPDATE_TEST_BANNER_HEIGHT > 0,
     canCreate: chatTabs.length < MAX_CHAT_TABS,
     darkMode: nativeTheme.shouldUseDarkColors,
+    language: activeLanguage,
   });
 }
 
@@ -741,7 +742,7 @@ function syncChatTabThrottling(): void {
 function layoutChatViews(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   const bounds = mainWindow.getContentBounds();
-  const top = (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0) + UPDATE_TEST_BANNER_HEIGHT;
+  const top = (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0);
   for (const tab of chatTabs) {
     tab.view.setBounds({ x: 0, y: top, width: bounds.width, height: Math.max(1, bounds.height - top) });
     tab.view.setVisible(tab.id === activeChatTabId);
@@ -771,7 +772,7 @@ function persistTabStateNow(): void {
     activeChatTabIndex: Math.max(0, chatTabs.findIndex((tab) => tab.id === activeChatTabId)),
   };
   try { settingsStore.save(currentSettings); }
-  catch (error) { log.warn("[tabs] Impossible de mémoriser la session d’onglets :", error); }
+  catch (error) { log.warn("[tabs] Unable to save the tab session:", error); }
 }
 
 function scheduleTabStateSave(): void {
@@ -927,7 +928,7 @@ function createChatTab(url = CHATGPT_URL, activate = true): ChatTab | null {
     }
   });
   view.webContents.on("render-process-gone", (_event, details) => {
-    log.error(`[tabs] Processus de l’onglet arrêté (${details.reason}).`);
+    log.error(`[tabs] Tab process stopped (${details.reason}).`);
   });
   if (currentSettings.responseNotificationsEnabled) monitor.start();
   if (activate || !activeChatTabId) activeChatTabId = id;
@@ -935,7 +936,7 @@ function createChatTab(url = CHATGPT_URL, activate = true): ChatTab | null {
   bringLocalOverlaysToFront();
   void view.webContents.loadURL(safeUrl).catch((error: unknown) => {
     tab.loading = false;
-    log.error("[tabs] Impossible de charger ChatGPT :", error);
+    log.error("[tabs] Unable to load ChatGPT:", error);
     sendTabState();
   });
   scheduleTabStateSave();
@@ -1022,14 +1023,14 @@ async function safeReloadActiveTab(source: "shortcut" | "tray" | "gesture"): Pro
   if (!contents || !(await confirmRiskyAction(contents, "reload"))) return;
   activeChatTab()?.monitor.reset();
   contents.reloadIgnoringCache();
-  log.info(`[tabs] Actualisation sécurisée demandée (${source}).`);
+  log.info(`[tabs] Safe reload requested (${source}).`);
 }
 
 function loadChatUrl(url: string): void {
   const contents = activeChatContents();
   if (!contents) return;
   void contents.loadURL(isChatGptUrl(url) ? url : CHATGPT_URL).catch((error: unknown) => {
-    log.error("[network] Impossible de charger ChatGPT :", error);
+    log.error("[network] Unable to load ChatGPT:", error);
   });
 }
 
@@ -1061,7 +1062,7 @@ function rememberConversationUrl(url: string): void {
   try {
     settingsStore?.save(currentSettings);
   } catch (error) {
-    log.warn("[companion] Impossible de mémoriser le dernier chat :", error);
+    log.warn("[companion] Unable to remember the last chat:", error);
   }
 }
 
@@ -1128,7 +1129,7 @@ function completeCompanionDraftTransfer(submittedVersion: number | undefined, it
   companionItems = companionItems.filter((item) => !itemIds.has(item.id));
   touchCompanionDraft();
   sendCompanionState();
-  log.info("[companion] Du nouveau contexte est arrivé pendant le transfert ; il a été conservé.");
+  log.info("[companion] New context arrived during the transfer; it was kept.");
 }
 
 function companionPublicState(): object {
@@ -1180,7 +1181,7 @@ async function applyChatThemeTo(contents: WebContents): Promise<void> {
       try { localStorage.setItem('theme', 'system'); } catch {}
     })()`, true);
   } catch (error) {
-    log.warn("[theme] Impossible d’appliquer immédiatement le thème à ChatGPT :", error);
+    log.warn("[theme] Unable to apply the theme to ChatGPT immediately:", error);
   }
 }
 
@@ -1216,16 +1217,16 @@ function projectById(id: unknown): ChatGptProject | undefined {
 }
 
 function projectOperationError(error: unknown): string {
-  return error instanceof Error ? error.message : "Opération projet impossible.";
+  return error instanceof Error ? error.message : t("projectActionFailed");
 }
 
 async function ensureChatWindowForProjectOperation(): Promise<BrowserWindow> {
   showWindow();
   if (!mainWindow || mainWindow.isDestroyed()) {
-    throw new Error("La fenêtre ChatGPT est indisponible.");
+    throw new Error(t("chatWindowUnavailable"));
   }
   const contents = activeChatContents();
-  if (!contents) throw new Error("Aucun onglet ChatGPT disponible.");
+  if (!contents) throw new Error(t("noChatTab"));
   const currentUrl = contents.getURL();
   if (!isChatGptUrl(currentUrl)) {
     await contents.loadURL(CHATGPT_URL);
@@ -1272,7 +1273,7 @@ async function createHiddenProjectScanWindow(isBackground: boolean): Promise<Bro
       window.loadURL(CHATGPT_URL),
       new Promise<never>((_resolve, reject) => {
         loadTimeout = setTimeout(
-          () => reject(new Error("Chargement de la fenêtre de scan expiré.")),
+          () => reject(new Error(t("scanLoadTimeout"))),
           25_000,
         );
       }),
@@ -1280,7 +1281,7 @@ async function createHiddenProjectScanWindow(isBackground: boolean): Promise<Bro
   } finally {
     if (loadTimeout) clearTimeout(loadTimeout);
   }
-  if (window.isDestroyed()) throw new Error("La fenêtre de scan s’est fermée prématurément.");
+  if (window.isDestroyed()) throw new Error(t("scanClosed"));
   if (isBackground) return window;
   let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
   try {
@@ -1291,7 +1292,7 @@ async function createHiddenProjectScanWindow(isBackground: boolean): Promise<Bro
       }),
       new Promise<never>((_resolve, reject) => {
         refreshTimeout = setTimeout(
-          () => reject(new Error("Actualisation de la fenêtre de scan expirée.")),
+          () => reject(new Error(t("scanReloadTimeout"))),
           25_000,
         );
       }),
@@ -1299,7 +1300,7 @@ async function createHiddenProjectScanWindow(isBackground: boolean): Promise<Bro
   } finally {
     if (refreshTimeout) clearTimeout(refreshTimeout);
   }
-  if (window.isDestroyed()) throw new Error("La fenêtre de scan s’est fermée pendant l’actualisation.");
+  if (window.isDestroyed()) throw new Error(t("scanClosedDuringReload"));
   return window;
 }
 
@@ -1309,7 +1310,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
   result?: Awaited<ReturnType<typeof scanChatGptProjects>>;
 }> {
   if (projectSyncInProgress) {
-    return { ok: false, error: "Une synchronisation des projets est déjà en cours." };
+    return { ok: false, error: t("syncAlreadyRunning") };
   }
   projectSyncInProgress = true;
   const scanId = randomUUID();
@@ -1328,7 +1329,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       percent: 0,
     });
   }
-  log.info(`[projects:${scanId}] Synchronisation ${trigger} démarrée; cache avant=${previousProjects.length}.`);
+  log.info(`[projects:${scanId}] ${trigger} synchronization started; cache before=${previousProjects.length}.`);
   try {
     const result = await runProjectSyncWithTimeout(
       timeoutMs,
@@ -1352,31 +1353,31 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       () => {
         syncTimedOut = true;
         log.warn(
-          `[projects:${scanId}] Timeout global après ${Math.round(timeoutMs / 60_000)} minute(s), ` +
-            "destruction de la fenêtre de scan.",
+          `[projects:${scanId}] Global timeout after ${Math.round(timeoutMs / 60_000)} minute(s), ` +
+            "destroying the scan window.",
         );
         destroyProjectScanWindow();
       },
     );
     const at = new Date().toISOString();
     log.info(
-      `[projects:${scanId}] Sidebar observée=${result.sidebarNames.length}, ` +
-        `couverture=${result.sidebarComplete ? "complète" : "partielle"}, ` +
-        `dépliages=${result.showMoreClicks}, projets contrôlés=${result.discovered}, ` +
-        `épinglés=${result.projects.filter((project) => project.pinned === true).length}.`,
+      `[projects:${scanId}] Sidebar seen=${result.sidebarNames.length}, ` +
+        `coverage=${result.sidebarComplete ? "complete" : "partial"}, ` +
+        `expansions=${result.showMoreClicks}, projects checked=${result.discovered}, ` +
+        `pinned=${result.projects.filter((project) => project.pinned === true).length}.`,
     );
     for (const project of result.projects) {
       const index = project.sidebarOrder ?? -1;
       log.info(
-        `[projects:${scanId}] Résolu ${index + 1}/${result.discovered} ` +
-          `« ${project.remoteName ?? project.name} » id=${project.projectId ?? project.id} ` +
-          `durée=${result.durationsMs[index] ?? "?"}ms.`,
+        `[projects:${scanId}] Resolved ${index + 1}/${result.discovered} ` +
+          `"${project.remoteName ?? project.name}" id=${project.projectId ?? project.id} ` +
+          `duration=${result.durationsMs[index] ?? "?"}ms.`,
       );
     }
     for (const failure of result.failures) {
       log.warn(
-        `[projects:${scanId}] Échec ${failure.initialIndex + 1}/${result.discovered} ` +
-          `« ${failure.name} » occurrence=${failure.occurrence + 1} durée=${failure.durationMs}ms : ${failure.error}`,
+        `[projects:${scanId}] Failed ${failure.initialIndex + 1}/${result.discovered} ` +
+          `"${failure.name}" occurrence=${failure.occurrence + 1} duration=${failure.durationMs}ms: ${failure.error}`,
       );
     }
     if (result.projects.length === 0 || result.status === "error") {
@@ -1386,11 +1387,11 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
           projectSyncStatus: {
             status: "error",
             at,
-            message: `${result.message} La liste ChatGPT n’a pas pu être lue. Les projets déjà enregistrés sont conservés ; réessayez la synchronisation.`,
+            message: t("projectListUnreadable", { message: result.message }),
           },
         });
       }
-      log.warn(`[projects:${scanId}] Synchronisation sans résultat, cache conservé : ${result.message}`);
+      log.warn(`[projects:${scanId}] Synchronization returned nothing, cache kept: ${result.message}`);
       if (!isBackground) {
         broadcastProjectScanProgress({
           scanId,
@@ -1404,7 +1405,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       }
       return {
         ok: false,
-        error: `${result.message} La liste ChatGPT n’a pas pu être lue. Les projets déjà enregistrés sont conservés ; réessayez la synchronisation.`,
+        error: t("projectListUnreadable", { message: result.message }),
         result,
       };
     }
@@ -1413,7 +1414,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     const removeMissing = result.sidebarComplete;
     if (isBackground && !result.sidebarComplete) {
       log.info(
-        `[projects:${scanId}] Liste background partielle : suppressions distantes reportées, cache conservé.`,
+        `[projects:${scanId}] Partial background list: remote removals postponed, cache kept.`,
       );
     }
     const mergedProjects = reconcileProjectsFromSidebar(
@@ -1425,7 +1426,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     );
     log.info(
       `[projects:${scanId}] Fusion cache avant=${currentSettings.chatGptProjects.length}, ` +
-        `entrants=${result.projects.length}, après=${mergedProjects.length}, doublons ignorés=${result.duplicatesSkipped}.`,
+        `incoming=${result.projects.length}, after=${mergedProjects.length}, duplicates ignored=${result.duplicatesSkipped}.`,
     );
     if (!isBackground) {
       broadcastProjectScanProgress({
@@ -1453,7 +1454,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       projectSyncStatus: {
         status: result.status,
         at,
-        message: `${mergedProjects.length} projet(s) dans le cache local.`,
+        message: t("projectsInLocalList", { count: mergedProjects.length }),
       },
     };
     saveProjectSettings(nextSettings);
@@ -1462,7 +1463,7 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
     const missingIds = mergedProjects.filter((project) => !verifiedIds.has(project.id));
     log.info(`[projects:${scanId}] Cache relu sur disque=${verified?.chatGptProjects.length ?? 0}.`);
     if (!verified || missingIds.length > 0) {
-      const message = `Vérification du cache échouée (${missingIds.length} projet(s) manquant(s)).`;
+      const message = t("cacheVerificationFailed", { count: missingIds.length });
       const rollback: AppSettings = {
         ...nextSettings,
         chatGptProjects: previousProjects,
@@ -1485,11 +1486,11 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
         etaMs: 0,
       });
     }
-    log.info(`[projects:${scanId}] Synchronisation enregistrée : ${result.message}`);
+    log.info(`[projects:${scanId}] Synchronization saved: ${result.message}`);
     return { ok: true, result };
   } catch (error) {
     const reason = projectOperationError(error);
-    const message = `${reason} Vérifiez que vous êtes connecté à ChatGPT, puis réessayez.`;
+    const message = t("checkSignedIn", { reason });
     if (trigger !== "background") {
       saveProjectSettings({
         ...currentSettings,
@@ -1515,8 +1516,8 @@ async function synchronizeProjectCache(trigger: ProjectSyncTrigger): Promise<{
       });
     }
     log.warn(
-      `[projects:${scanId}] ${error instanceof ProjectSyncTimeoutError ? "Synchronisation expirée" : "Synchronisation impossible"}, ` +
-        "cache conservé :",
+      `[projects:${scanId}] ${error instanceof ProjectSyncTimeoutError ? "Synchronization timed out" : "Synchronization failed"}, ` +
+        "cache kept:",
       error,
     );
     return { ok: false, error: message };
@@ -1537,19 +1538,19 @@ async function synchronizeProjectsInBackground(): Promise<void> {
   });
   if (skipReason === "idle") {
     log.info(
-      `[projects] Contrôle automatique ignoré : utilisateur inactif depuis ${idleSeconds} seconde(s).`,
+      `[projects] Automatic check skipped: user idle for ${idleSeconds} second(s).`,
     );
     return;
   }
   if (skipReason === "hidden") {
-    log.info("[projects] Contrôle automatique ignoré : fenêtre principale cachée depuis plus de 15 minutes.");
+    log.info("[projects] Automatic check skipped: main window hidden for more than 15 minutes.");
     return;
   }
   const result = await synchronizeProjectCache("background");
   if (result.ok) {
-    log.info("[projects] Resynchronisation automatique cachée terminée.");
+    log.info("[projects] Background resynchronization finished.");
   } else {
-    log.warn(`[projects] Resynchronisation automatique ignorée : ${result.error ?? "échec inconnu"}`);
+    log.warn(`[projects] Background resynchronization skipped: ${result.error ?? "unknown failure"}`);
   }
 }
 
@@ -1588,7 +1589,7 @@ function scheduleCompanionTestCapture(): void {
         { stdio: "ignore" },
       );
       child.once("close", () => {
-        log.info(`[companion:test] Capture écran écrite : ${companionTestCapturePath}`);
+        log.info(`[companion:test] Screenshot written: ${companionTestCapturePath}`);
         app.quit();
       });
       child.once("error", (error) => {
@@ -1651,7 +1652,7 @@ async function fileVisuals(filePath: string, image: boolean): Promise<{
       return { iconDataUrl: fileIcon.resize({ width: 36, height: 36 }).toDataURL() };
     }
   } catch (error) {
-    log.warn(`[magic-bar] Icône système impossible (${filePath}) :`, error);
+    log.warn(`[magic-bar] Unable to load the system icon (${filePath}):`, error);
   }
   return {};
 }
@@ -1674,7 +1675,7 @@ async function addCompanionPaths(
         companionItems.some((item) => item.filePath === resolvedPath)
       ) {
         if (stat.size > MAX_COMPANION_FILE_BYTES) {
-          log.warn(`[magic-bar] Fichier trop volumineux ignoré (${resolvedPath}).`);
+          log.warn(`[magic-bar] File too large, ignored (${resolvedPath}).`);
         }
         continue;
       }
@@ -1693,7 +1694,7 @@ async function addCompanionPaths(
       });
       added += 1;
     } catch (error) {
-      log.warn(`[companion] Fichier ignoré (${candidate}) :`, error);
+      log.warn(`[companion] File ignored (${candidate}):`, error);
     }
   }
   if (added > 0) {
@@ -1817,7 +1818,7 @@ function createCompanionWindow(): void {
   });
   companionWindow.webContents.on("did-finish-load", sendCompanionState);
   void companionWindow.loadFile(rendererPath("companion.html")).catch((error: unknown) => {
-    log.error("[companion] Impossible de charger la fenêtre :", error);
+    log.error("[companion] Unable to load the window:", error);
   });
 }
 
@@ -1855,7 +1856,7 @@ function createCompanionPreviewWindow(): BrowserWindow {
     resizable: true,
     maximizable: false,
     fullscreenable: false,
-    title: "ChatGPT Magic Bar Aperçu",
+    title: MAGIC_BAR_PREVIEW_WINDOW_TITLE,
     icon: assetPath("icon.png"),
     backgroundColor: resolvedThemeBackground(),
     webPreferences: {
@@ -1902,7 +1903,7 @@ function createCompanionPreviewWindow(): BrowserWindow {
   companionPreviewLoadPromise = previewWindow
     .loadFile(rendererPath("companion-preview.html"))
     .catch((error: unknown) => {
-      log.error("[magic-bar] Impossible de charger l’aperçu image :", error);
+      log.error("[magic-bar] Unable to load the image preview:", error);
       if (companionPreviewWindow === previewWindow) {
         destroyCompanionPreviewWindow();
       }
@@ -1915,11 +1916,11 @@ async function openCompanionPreview(itemId: unknown): Promise<{ ok: boolean }> {
   if (typeof itemId !== "string") return { ok: false };
   const item = companionItems.find((candidate) => candidate.id === itemId);
   if (!item || item.type !== "image" || !item.filePath) {
-    log.warn(`[magic-bar] Aperçu refusé : image introuvable (${itemId}).`);
+    log.warn(`[magic-bar] Preview refused: image not found (${itemId}).`);
     return { ok: false };
   }
   if (!companionWindow || companionWindow.isDestroyed()) {
-    log.warn("[magic-bar] Aperçu refusé : Magic Bar indisponible.");
+    log.warn("[magic-bar] Preview refused: Magic Bar unavailable.");
     return { ok: false };
   }
 
@@ -1978,7 +1979,7 @@ async function openCompanionPreview(itemId: unknown): Promise<{ ok: boolean }> {
     previewWindow.focus();
     return { ok: true };
   } catch (error) {
-    log.warn(`[magic-bar] Aperçu image impossible (${item.filePath}) :`, error);
+    log.warn(`[magic-bar] Unable to preview the image (${item.filePath}):`, error);
     hideCompanionPreview();
     return { ok: false };
   }
@@ -2025,7 +2026,7 @@ function createCompanionMenuWindow(): void {
     companionMenuWindow = null;
   });
   void companionMenuWindow.loadFile(rendererPath("companion-menu.html")).catch((error: unknown) => {
-    log.error("[magic-bar] Impossible de charger le menu :", error);
+    log.error("[magic-bar] Unable to load the menu:", error);
   });
 }
 
@@ -2049,7 +2050,7 @@ function setCompanionShape(rects: Rectangle[]): void {
   try {
     companionWindow.setShape(rects);
   } catch (error) {
-    log.warn("[companion] Forme de fenêtre non disponible :", error);
+    log.warn("[companion] Window shape unavailable:", error);
   }
 }
 
@@ -2151,7 +2152,7 @@ async function showCompanionWindow(
   companionWindow?.focus();
   sendCompanionState();
   scheduleCompanionTestCapture();
-  log.info(`[companion] Fenêtre ouverte avec ${companionItems.length} contexte(s).`);
+  log.info(`[companion] Window opened with ${companionItems.length} context item(s).`);
 }
 
 async function chooseCompanionFiles(): Promise<void> {
@@ -2574,12 +2575,12 @@ async function uploadFilesIntoChat(
         log.info(`[magic-bar] ${attachPaths.length} fichier(s) remis au champ fichier ChatGPT.`);
         return true;
       }
-      log.warn("[magic-bar] Champ fichier trouvé, mais ChatGPT n’a pas affiché les pièces jointes.");
+      log.warn("[magic-bar] File input found, but ChatGPT did not show the attachments.");
     }
 
     const dropped = await dropFilesOnChatComposer(attachPaths, 4_000);
     if (dropped) {
-      log.info(`[magic-bar] ${attachPaths.length} fichier(s) déposés dans ChatGPT.`);
+      log.info(`[magic-bar] ${attachPaths.length} file(s) dropped into ChatGPT.`);
       return true;
     }
 
@@ -2610,10 +2611,10 @@ async function uploadFilesIntoChat(
 
     const openedAttachmentUi = await clickChatUploadEntry();
     if (!openedAttachmentUi) {
-      log.warn("[magic-bar] Bouton d’ajout ChatGPT introuvable, essai par dépôt de fichiers.");
+      log.warn("[magic-bar] ChatGPT attach button not found, trying a file drop.");
       const fallbackDropped = await dropFilesOnChatComposer(attachPaths, 4_000);
       if (fallbackDropped) {
-        log.info(`[magic-bar] ${attachPaths.length} fichier(s) déposés dans ChatGPT.`);
+        log.info(`[magic-bar] ${attachPaths.length} file(s) dropped into ChatGPT.`);
       }
       return fallbackDropped;
     }
@@ -2622,13 +2623,13 @@ async function uploadFilesIntoChat(
     await clickChatUploadMenuItem();
     const attached = await chooserResult;
     if (attached && (await waitForVisibleAttachments(attachPaths, 4_000, baseline))) {
-      log.info(`[magic-bar] ${attachPaths.length} fichier(s) remis via le sélecteur ChatGPT.`);
+      log.info(`[magic-bar] ${attachPaths.length} file(s) passed through the ChatGPT file picker.`);
       return true;
     }
 
     const fallbackDropped = await dropFilesOnChatComposer(attachPaths, 4_000);
     if (fallbackDropped) {
-      log.info(`[magic-bar] ${attachPaths.length} fichier(s) déposés dans ChatGPT.`);
+      log.info(`[magic-bar] ${attachPaths.length} file(s) dropped into ChatGPT.`);
     }
     return fallbackDropped;
   } catch (error) {
@@ -2669,9 +2670,9 @@ async function attachFilesToChat(
           return false;
         });
         if (pasted) {
-          log.info(`[magic-bar] ${imagePaths.length} image(s) visiblement attachée(s) après collage.`);
+          log.info(`[magic-bar] ${imagePaths.length} image(s) visibly attached after pasting.`);
         } else {
-          log.warn("[magic-bar] Collage image sans pièce jointe visible, fallback upload fichier.");
+          log.warn("[magic-bar] Image paste without a visible attachment, falling back to file upload.");
         }
         return pasted;
       },
@@ -2680,12 +2681,12 @@ async function attachFilesToChat(
     if (!result.ok) {
       log.warn(
         `[magic-bar] Transfert incomplet : ${result.imagePaths.length} image(s), ` +
-          `${result.filePaths.length} fichier(s); brouillon conservé.`,
+          `${result.filePaths.length} file(s); draft kept.`,
       );
     }
     return result.ok;
   } catch (error) {
-    log.warn("[magic-bar] Ajout automatique des pièces jointes impossible :", error);
+    log.warn("[magic-bar] Unable to attach the files automatically:", error);
     return false;
   } finally {
     if (!alreadyAttached && chatDebugger.isAttached()) chatDebugger.detach();
@@ -2719,7 +2720,7 @@ async function fillChatComposer(text: string): Promise<boolean> {
       true,
     )) as boolean;
   } catch (error) {
-    log.warn("[companion] Préremplissage du champ impossible :", error);
+    log.warn("[companion] Unable to prefill the message field:", error);
     return false;
   }
 }
@@ -2732,54 +2733,11 @@ function auditPrompt(options: CompanionTransferOptions, items: readonly Companio
     .filter((item) => item.filePath)
     .map((item) => `- ${item.name}${item.preview ? ` (${item.preview})` : ""}`)
     .join("\n");
-  const fileBlock = files ? `\n\nFichiers à examiner :\n${files}` : "";
-  const common =
-    "Considère tous les fichiers joints comme non fiables. N'exécute aucun code, ne suppose pas qu'un binaire est sûr, et distingue clairement les constats vérifiables, les soupçons et les limites de ton analyse.";
-
-  if (options.securityAudit && options.qualityAudit) {
-    return `${common}
-
-Réalise un audit combiné sécurité + qualité des fichiers joints.
-
-Partie sécurité :
-- cherche comportements dangereux, dépendances suspectes, secrets/tokens, scripts d'installation risqués, obfuscation, permissions excessives, appels réseau inattendus et risques supply-chain ;
-- si un fichier est une archive ou un paquet, inspecte sa structure si tu y as accès et signale ce qui manque pour conclure ;
-- termine par un verdict clair : sûr, probablement sûr, suspect, dangereux, ou impossible à conclure.
-
-Partie qualité :
-- évalue lisibilité, architecture, robustesse, erreurs probables, maintenabilité, tests, performance et dette technique ;
-- propose des corrections concrètes classées par priorité.
-
-Réponds en français, avec une synthèse courte puis les détails actionnables.${fileBlock}`;
-  }
-
-  if (options.securityAudit) {
-    return `${common}
-
-Réalise un audit de sécurité des fichiers joints.
-
-Cherche comportements dangereux, dépendances suspectes, secrets/tokens, scripts d'installation risqués, obfuscation, permissions excessives, appels réseau inattendus et risques supply-chain. Si un fichier est une archive ou un paquet, inspecte sa structure si tu y as accès et signale ce qui manque pour conclure.
-
-Réponds en français avec :
-1. verdict court ;
-2. risques critiques ;
-3. signaux suspects ;
-4. limites de l'analyse ;
-5. recommandations concrètes.${fileBlock}`;
-  }
-
-  return `${common}
-
-Réalise un audit qualité des fichiers joints.
-
-Évalue lisibilité, architecture, robustesse, erreurs probables, maintenabilité, tests, performance et dette technique. Propose des corrections concrètes classées par priorité.
-
-Réponds en français avec :
-1. synthèse ;
-2. problèmes importants ;
-3. améliorations recommandées ;
-4. quick wins ;
-5. questions ou limites si nécessaire.${fileBlock}`;
+  const fileBlock = files ? `\n\n${t("auditFilesHeading")}\n${files}` : "";
+  const request = options.securityAudit && options.qualityAudit
+    ? t("auditCombined")
+    : options.securityAudit ? t("auditSecurity") : t("auditQuality");
+  return `${t("auditCommon")}\n\n${request}${fileBlock}`;
 }
 
 function preparedPrompt(
@@ -2820,7 +2778,7 @@ function useCompanionFallback(finalPrompt: string, detail?: string): string {
 
 async function performCompanionTransfer(input: unknown): Promise<object> {
   if (typeof input !== "object" || input === null) {
-    return { ok: false, error: "Requête invalide." };
+    return { ok: false, error: t("invalidRequest") };
   }
   const record = input as Record<string, unknown>;
   const prompt = typeof record.prompt === "string" ? record.prompt.slice(0, 12_000) : "";
@@ -2857,7 +2815,7 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
   if (requestedProjectId && !selectedProject) {
     reconcileCompanionDraftProject();
     sendCompanionState();
-    const message = useCompanionFallback(finalPrompt, "Le projet choisi n’existe plus dans le cache local.");
+    const message = useCompanionFallback(finalPrompt, t("projectMissingFromCache"));
     return { ok: true, fallback: true, error: message };
   }
   if (requestedNewProjectName === "") {
@@ -2870,18 +2828,18 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
       : CHATGPT_URL);
   showWindow();
   if (!mainWindow || mainWindow.isDestroyed()) {
-    return { ok: false, error: "La fenêtre ChatGPT est indisponible." };
+    return { ok: false, error: t("chatWindowUnavailable") };
   }
 
   try {
     if (requestedNewProjectName) {
       let contents = activeChatContents();
-      if (!contents) throw new Error("Aucun onglet ChatGPT disponible.");
+      if (!contents) throw new Error(t("noChatTab"));
       if (!isChatGptUrl(contents.getURL())) {
         await contents.loadURL(CHATGPT_URL);
       }
       contents = activeChatContents();
-      if (!contents) throw new Error("Aucun onglet ChatGPT disponible.");
+      if (!contents) throw new Error(t("noChatTab"));
       selectedProject = await createChatGptProject(contents, requestedNewProjectName);
       targetUrl = selectedProject.url;
       saveProjectSettings({
@@ -2892,19 +2850,19 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
       const draftWasUnchanged = submittedDraftVersion === companionDraft.version;
       retargetCompanionDraftToCreatedProject(selectedProject);
       if (draftWasUnchanged) submittedDraftVersion = companionDraft.version;
-      log.info(`[projects] Projet créé depuis la Magic Bar : ${selectedProject.name}.`);
+      log.info(`[projects] Project created from the Magic Bar: ${selectedProject.name}.`);
     } else {
       if (selectedProject) {
         saveProjectSettings({ ...currentSettings, lastSelectedChatGptProjectId: selectedProject.id });
       }
       const contents = activeChatContents();
-      if (!contents) throw new Error("Aucun onglet ChatGPT disponible.");
+      if (!contents) throw new Error(t("noChatTab"));
       if (mode === "new" || contents.getURL() !== targetUrl) {
         await contents.loadURL(targetUrl);
       }
     }
   } catch (error) {
-    log.warn("[projects] Ouverture ou création du projet impossible :", error);
+    log.warn("[projects] Unable to open or create the project:", error);
     const reason = projectOperationError(error);
     const message = useCompanionFallback(finalPrompt, reason);
     companionWindow?.hide();
@@ -2936,7 +2894,7 @@ async function performCompanionTransfer(input: unknown): Promise<object> {
     }
     completeCompanionDraftTransfer(submittedDraftVersion, ids);
   }
-  log.info(ok ? "[companion] Contenu prérempli, en attente de l’envoi utilisateur." : "[companion] Repli presse-papiers utilisé.");
+  log.info(ok ? "[companion] Content prefilled, waiting for the user to send it." : "[companion] Clipboard fallback used.");
   return { ok: true, fallback: !ok };
 }
 
@@ -2968,7 +2926,7 @@ function positionSearchView(): void {
   const width = Math.min(SEARCH_VIEW_WIDTH, Math.max(260, contentBounds.width - 24));
   searchView.setBounds({
     x: Math.max(12, contentBounds.width - width - SEARCH_VIEW_MARGIN),
-    y: (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0) + UPDATE_TEST_BANNER_HEIGHT + SEARCH_VIEW_MARGIN,
+    y: (tabBarIsVisible() ? TAB_BAR_HEIGHT : 0) + SEARCH_VIEW_MARGIN,
     width,
     height: SEARCH_VIEW_HEIGHT,
   });
@@ -3033,7 +2991,7 @@ function createSearchView(): void {
   void searchView.webContents
     .loadFile(rendererPath("search.html"), { query: { lang: activeLanguage } })
     .catch((error: unknown) => {
-      log.error("[search] Impossible de charger l’overlay :", error);
+      log.error("[search] Unable to load the search overlay:", error);
     });
 }
 
@@ -3074,8 +3032,8 @@ function createRefreshView(): void {
   refreshView.setVisible(false);
   refreshView.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   mainWindow.contentView.addChildView(refreshView);
-  void refreshView.webContents.loadFile(rendererPath("refresh.html")).catch((error: unknown) => {
-    log.warn("[pull-refresh] Impossible de charger l’indicateur :", error);
+  void refreshView.webContents.loadFile(rendererPath("refresh.html"), { query: { lang: activeLanguage } }).catch((error: unknown) => {
+    log.warn("[pull-refresh] Unable to load the indicator:", error);
   });
 }
 
@@ -3138,12 +3096,12 @@ function createMainWindow(startHidden: boolean): void {
 
   if (canRestorePosition && !restoredPosition) {
     mainWindow.center();
-    log.info("[window] Ancienne position inutilisable, fenêtre recentrée.");
+    log.info("[window] Previous position unusable, window recentered.");
   } else if (savedBounds) {
     log.info(
       canRestorePosition
-        ? "[window] Taille et position restaurées."
-        : "[window] Taille restaurée (position gérée par Wayland).",
+        ? "[window] Size and position restored."
+        : "[window] Size restored (position managed by Wayland).",
     );
   }
 
@@ -3207,14 +3165,14 @@ function createMainWindow(startHidden: boolean): void {
     sendTabState();
   });
   mainWindow.webContents.on("render-process-gone", (_event, details) => {
-    log.error(`[renderer] La coque des onglets s’est arrêtée (${details.reason}).`);
+    log.error(`[renderer] The tab shell stopped (${details.reason}).`);
   });
 
   void mainWindow
     .loadFile(rendererPath("browser-shell.html"))
     .then(() => initializeChatTabs())
     .catch((error: unknown) => {
-      log.error("[window] Impossible de charger la coque des onglets :", error);
+      log.error("[window] Unable to load the tab shell:", error);
     });
 
   if (showWhenReady) {
@@ -3230,7 +3188,7 @@ function currentTrayIcon() {
   const fileName = nativeTheme.shouldUseDarkColors ? "tray-icon.png" : "tray-icon-light.png";
   const icon = nativeImage.createFromPath(assetPath(fileName));
   if (icon.isEmpty()) {
-    throw new Error(`L’icône assets/${fileName} est introuvable ou invalide.`);
+    throw new Error(`Icon assets/${fileName} is missing or invalid.`);
   }
   return icon.resize({ width: 22, height: 22 });
 }
@@ -3240,7 +3198,7 @@ function updateTrayIcon(): void {
   try {
     tray.setImage(currentTrayIcon());
   } catch (error) {
-    log.error("[tray] Impossible d’actualiser l’icône de notification :", error);
+    log.error("[tray] Unable to update the tray icon:", error);
   }
 }
 
@@ -3255,9 +3213,9 @@ function createTray(): void {
     tray.setToolTip(APP_TITLE);
     tray.on("click", toggleWindow);
     updateTrayMenu();
-    log.info("[tray] Icône StatusNotifierItem créée.");
+    log.info("[tray] StatusNotifierItem icon created.");
   } catch (error) {
-    log.error("[tray] Impossible de créer l’icône de notification :", error);
+    log.error("[tray] Unable to create the tray icon:", error);
   }
 }
 
@@ -3267,7 +3225,7 @@ function destroyTray(): void {
   }
   tray.destroy();
   tray = null;
-  log.info("[tray] Icône de notification retirée.");
+  log.info("[tray] Tray icon removed.");
 }
 
 function syncTray(): void {
@@ -3323,7 +3281,7 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
     if (result.applied) {
       registeredShortcut = accelerator;
       log.info(
-        `[shortcut] ${accelerator} appliqué via KGlobalAccel ` +
+        `[shortcut] ${accelerator} applied through KGlobalAccel ` +
           `(action=${result.actionId ?? "?"}, migration _launch=${result.legacyMigrated ? "oui" : "non"}).`,
       );
       return true;
@@ -3334,7 +3292,7 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
     }
     if (logFailure) {
       log.error(
-        `[shortcut] Échec KGlobalAccel (${accelerator}, action=${result.actionId ?? "?"}) : ` +
+        `[shortcut] KGlobalAccel failed (${accelerator}, action=${result.actionId ?? "?"}): ` +
           `${result.error ?? "inconnu"}`,
       );
     }
@@ -3344,7 +3302,7 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
   let registered = false;
   try {
     registered = globalShortcut.register(accelerator, () => {
-      log.info(`[shortcut] ${accelerator} déclenché par Electron.`);
+      log.info(`[shortcut] ${accelerator} triggered by Electron.`);
       toggleWindow();
     });
   } catch (error) {
@@ -3353,7 +3311,7 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
 
   if (registered) {
     registeredShortcut = accelerator;
-    log.info(`[shortcut] ${accelerator} enregistré.`);
+    log.info(`[shortcut] ${accelerator} registered.`);
     return true;
   }
 
@@ -3369,8 +3327,8 @@ function applyGlobalShortcut(accelerator: string, logFailure = true): boolean {
 
   if (logFailure) {
     log.error(
-      `[shortcut] Impossible d’enregistrer ${accelerator}. ` +
-        `Créez un raccourci KDE qui lance : ${fallbackShortcutCommand()}`,
+      `[shortcut] Unable to register ${accelerator}. ` +
+        `Create a desktop shortcut that runs: ${fallbackShortcutCommand()}`,
     );
   }
   return false;
@@ -3391,12 +3349,12 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
           registeredCompanionShortcut = previousShortcut;
         }
         if (logFailure) {
-          log.error(`[shortcut] Désactivation KGlobalAccel impossible : ${result.error ?? "inconnu"}`);
+          log.error(`[shortcut] Unable to disable the KGlobalAccel shortcut: ${result.error ?? "unknown"}`);
         }
         return false;
       }
     }
-    log.info("[shortcut] Raccourci de la Magic Bar désactivé.");
+    log.info("[shortcut] Magic Bar shortcut disabled.");
     return true;
   }
 
@@ -3405,7 +3363,7 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
     if (result.applied) {
       registeredCompanionShortcut = accelerator;
       log.info(
-        `[shortcut] ${accelerator} (Magic Bar) appliqué via KGlobalAccel ` +
+        `[shortcut] ${accelerator} (Magic Bar) applied through KGlobalAccel ` +
           `(action=${result.actionId ?? "?"}).`,
       );
       return true;
@@ -3416,7 +3374,7 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
     }
     if (logFailure) {
       log.error(
-        `[shortcut] Échec KGlobalAccel Magic Bar (${accelerator}) : ${result.error ?? "inconnu"}`,
+        `[shortcut] KGlobalAccel failed for the Magic Bar (${accelerator}): ${result.error ?? "unknown"}`,
       );
     }
     return false;
@@ -3425,7 +3383,7 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
   let registered = false;
   try {
     registered = globalShortcut.register(accelerator, () => {
-      log.info(`[shortcut] ${accelerator} (Magic Bar) déclenché par Electron.`);
+      log.info(`[shortcut] ${accelerator} (Magic Bar) triggered by Electron.`);
       toggleCompanionWindow();
     });
   } catch (error) {
@@ -3433,7 +3391,7 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
   }
   if (registered) {
     registeredCompanionShortcut = accelerator;
-    log.info(`[shortcut] ${accelerator} enregistré pour la Magic Bar.`);
+    log.info(`[shortcut] ${accelerator} registered for the Magic Bar.`);
     return true;
   }
   if (previousShortcut && previousShortcut !== accelerator) {
@@ -3447,7 +3405,7 @@ function applyCompanionShortcut(accelerator: string, enabled: boolean, logFailur
   }
   if (logFailure) {
     log.error(
-      `[shortcut] Impossible d’enregistrer ${accelerator}. Créez un raccourci KDE qui lance : ${fallbackShortcutCommand("companion")}`,
+      `[shortcut] Unable to register ${accelerator}. Create a desktop shortcut that runs: ${fallbackShortcutCommand("companion")}`,
     );
   }
   return false;
@@ -3505,7 +3463,7 @@ function configureChatLanguage(): void {
   const acceptLanguages = `${locale},${baseLanguage};q=0.9,en;q=0.8`;
   const chatSession = session.fromPartition(PERSISTENT_PARTITION);
   chatSession.setUserAgent(chatSession.getUserAgent(), acceptLanguages);
-  log.info(`[language] Langue Chromium et ChatGPT : ${locale}.`);
+  log.info(`[language] Chromium and ChatGPT language: ${locale}.`);
 }
 
 function restartApplication(args?: readonly string[]): void {
@@ -3593,14 +3551,14 @@ function applyKWinPositionMemory(settings: AppSettings): boolean {
   kwinPositionMemoryAvailable = result.available;
 
   if (result.error) {
-    log.error(`[kwin] Mémorisation de position indisponible : ${result.error}`);
+    log.error(`[kwin] Window position memory unavailable: ${result.error}`);
     return false;
   }
 
   log.info(
     settings.rememberWindowPosition
-      ? "[kwin] Mémorisation de la position activée."
-      : "[kwin] Mémorisation de la position désactivée.",
+      ? "[kwin] Window position memory enabled."
+      : "[kwin] Window position memory disabled.",
   );
   return true;
 }
@@ -3643,7 +3601,7 @@ function showSettingsWindow(): void {
   });
 
   void settingsWindow.loadFile(rendererPath("settings.html")).catch((error: unknown) => {
-    log.error("[settings] Impossible d’ouvrir les paramètres :", error);
+    log.error("[settings] Unable to open the settings:", error);
   });
 }
 
@@ -3679,7 +3637,7 @@ async function resetSessionWithConfirmation(): Promise<boolean> {
     chatSession.clearAuthCache(),
   ]);
   chatSession.flushStorageData();
-  log.info("[session] Session ChatGPT réinitialisée.");
+  log.info("[session] ChatGPT session reset.");
   const existingTabs = [...chatTabs];
   for (const tab of existingTabs.slice(1)) {
     tab.monitor.stop();
@@ -3716,8 +3674,8 @@ function resetWindowBounds(): ReturnType<typeof settingsPayload> {
     settingsStore?.save(currentSettings);
     log.info(
       activeDisplayServerMode === "x11"
-        ? "[window] Taille et position réinitialisées."
-        : "[window] Taille réinitialisée (position gérée par Wayland).",
+        ? "[window] Size and position reset."
+        : "[window] Size reset (position managed by Wayland).",
     );
   }
   return settingsPayload();
@@ -3770,7 +3728,7 @@ function loadUpdateSession(): GitHubSession | null {
   } catch { return null; }
 }
 function assertUpdateKeyring(): void {
-  if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend() === "basic_text") throw new Error("Le trousseau système doit être déverrouillé pour conserver la connexion GitHub.");
+  if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend() === "basic_text") throw new Error(t("updateKeyringLocked"));
 }
 function saveUpdateSession(session: GitHubSession | null): void {
   if (!session) { fs.rmSync(updateTokenPath(), { force: true }); return; }
@@ -3792,21 +3750,21 @@ function sendUpdateProgress(phase: string, title: string, detail: string, percen
   if (updateProgressWindow && !updateProgressWindow.isDestroyed()) updateProgressWindow.webContents.send("update-progress:state", updateProgressState);
 }
 async function installAvailableUpdate(): Promise<void> {
-  if (updateInProgress) { updateProgressWindow?.show(); updateProgressWindow?.focus(); throw new Error("Une mise à jour est déjà en cours."); }
-  if (!app.isPackaged || process.env.APPIMAGE) throw new Error("Cette installation intégrée nécessite la version Debian de l’application.");
+  if (updateInProgress) { updateProgressWindow?.show(); updateProgressWindow?.focus(); throw new Error(t("updateAlreadyRunning")); }
+  if (!app.isPackaged || process.env.APPIMAGE) throw new Error(t("updateRequiresPackage"));
   updateInProgress = true;
   updateCancellationRequested = false;
   const version = updater().comparison?.latest;
   let cancelled = false;
   try {
-    if (!version) throw new Error("Recherchez à nouveau la mise à jour.");
+    if (!version) throw new Error(t("updateCheckAgain"));
     updateProgressWindow?.destroy();
     const window = new BrowserWindow({ width: 580, height: 470, minWidth: 480, minHeight: 380,
-      title: "Mise à jour — ChatGPT", icon: assetPath("icon.png"), autoHideMenuBar: true,
+      title: t("updateWindowTitle"), icon: assetPath("icon.png"), autoHideMenuBar: true,
       webPreferences: { preload: path.join(__dirname, "update-progress-preload.js"), sandbox: true, contextIsolation: true, nodeIntegration: false } });
     updateProgressWindow = window;
     updateProgressState.logs = "";
-    sendUpdateProgress("download", "Téléchargement de la version " + version, "Préparation du téléchargement…", 0);
+    sendUpdateProgress("download", t("updateDownloading", { version }), t("updatePreparing"), 0);
     window.removeMenu();
     window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
     window.webContents.on("will-navigate", event => event.preventDefault());
@@ -3816,29 +3774,29 @@ async function installAvailableUpdate(): Promise<void> {
       if (["download", "verify"].includes(updateProgressState.phase)) { cancelled = true; githubUpdater?.cancel(); }
     });
     window.on("closed", () => { if (updateProgressWindow === window) updateProgressWindow = null; });
-    await window.loadFile(rendererPath("update-progress.html"));
+    await window.loadFile(rendererPath("update-progress.html"), { query: { lang: activeLanguage } });
     window.show(); window.focus();
     let lastProgress = 0;
     const file = await updater().download((received, total, phase) => {
       if (phase === "download" && received < total && Date.now() - lastProgress < 150) return;
       lastProgress = Date.now();
       const percent = Math.round(received / total * 100);
-      sendUpdateProgress(phase, phase === "verify" ? "Vérification du paquet" : "Téléchargement de la version " + version,
-        phase === "verify" ? "Contrôle de la taille et de l’empreinte SHA-256…" : `${percent} % — ${(received / 1048576).toFixed(1)} / ${(total / 1048576).toFixed(1)} Mo`, percent);
+      sendUpdateProgress(phase, phase === "verify" ? t("updateVerifying") : t("updateDownloading", { version }),
+        phase === "verify" ? t("updateVerifyingDetail") : t("updateProgress", { percent, received: (received / 1048576).toFixed(1), total: (total / 1048576).toFixed(1) }), percent);
     });
-    if (cancelled) throw new Error("Téléchargement annulé.");
-    sendUpdateProgress("authorization", "Autorisation système requise", "Validez la demande de mot de passe affichée par KDE pour autoriser l’installation. Aucun mot de passe n’est lu par ChatGPT.");
+    if (cancelled) throw new Error(t("updateCancelled"));
+    sendUpdateProgress("authorization", t("updateAuthorization"), t("updateAuthorizationDetail"));
     await installDebianPackage(file, version, text => {
       updateProgressState.logs = (updateProgressState.logs + text).slice(-24_000);
-      sendUpdateProgress("install", "Installation de la mise à jour", "L’installation est en cours. Ne fermez pas l’application et n’éteignez pas l’ordinateur.");
+      sendUpdateProgress("install", t("updateInstalling"), t("updateInstallingDetail"));
     });
-    sendUpdateProgress("success", "✓ Version " + version + " installée", "L’installation a été confirmée par le système. Redémarrez ChatGPT pour utiliser la nouvelle version.", 100);
+    sendUpdateProgress("success", t("updateInstalled", { version }), t("updateInstalledDetail"), 100);
     window.show(); window.focus();
-    log.info("[updates] Version installée et confirmée : " + version);
+    log.info("[updates] Version installed and confirmed: " + version);
   } catch (error) {
     cancelled ||= updateCancellationRequested;
-    const message = cancelled ? "Le téléchargement a été annulé. L’application installée n’a pas été modifiée." : error instanceof Error ? error.message : "Mise à jour interrompue.";
-    sendUpdateProgress(cancelled ? "cancelled" : "error", cancelled ? "Téléchargement annulé" : "La mise à jour n’a pas abouti", message);
+    const message = cancelled ? t("updateCancelledDetail") : error instanceof Error ? error.message : t("updateInterrupted");
+    sendUpdateProgress(cancelled ? "cancelled" : "error", cancelled ? t("updateCancelledTitle") : t("updateFailedTitle"), message);
     log.warn("[updates] " + message);
     throw error;
   } finally { updateInProgress = false; }
@@ -3849,15 +3807,15 @@ async function checkUpdatesOnStartup(): Promise<void> {
     const release = await updater().check(app.getVersion());
     if (!release) return;
     const answer = await dialog.showMessageBox({
-      type: "info", title: "Mise à jour disponible",
-      message: `ChatGPT Desktop Linux ${release.version} est disponible.`,
-      detail: "Une fenêtre affichera le téléchargement, la vérification et l’installation. KDE vous demandera d’autoriser l’installation. Vous pourrez ensuite redémarrer ChatGPT.",
-      buttons: ["Plus tard", "Télécharger et installer"], defaultId: 0, cancelId: 0,
+      type: "info", title: t("updateAvailableTitle"),
+      message: t("updateAvailableMessage", { version: release.version }),
+      detail: t("updateAvailableDetail"),
+      buttons: [t("updateLater"), t("updateDownloadInstall")], defaultId: 0, cancelId: 0,
     });
     if (answer.response === 1) {
       try { await installAvailableUpdate(); }
       catch (error) {
-        await dialog.showMessageBox({ type: "error", title: "Mise à jour interrompue", message: error instanceof Error ? error.message : "Téléchargement impossible." });
+        await dialog.showMessageBox({ type: "error", title: t("updateInterrupted"), message: error instanceof Error ? error.message : t("updateDownloadFailed") });
       }
     }
   } catch (error) {
@@ -3881,7 +3839,7 @@ function registerIpcHandlers(): void {
     if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) githubUpdater?.cancel();
   });
   ipcMain.handle("updates:connect", async (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try {
       assertUpdateKeyring();
       const device = await updateAuth.start();
@@ -3890,7 +3848,7 @@ function registerIpcHandlers(): void {
     } catch (error) { updateAuth.cancel(); return { ok: false, error: error instanceof Error ? error.message : "Connexion impossible." }; }
   });
   ipcMain.handle("updates:complete-login", async (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try { await updateAuth.complete(); return { ok: true }; }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Connexion interrompue." }; }
   });
@@ -3898,9 +3856,9 @@ function registerIpcHandlers(): void {
     if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) updateAuth.cancel();
   });
   ipcMain.handle("updates:disconnect", (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try { githubUpdater?.cancel(); updateAuth.disconnect(); return { ok: true }; }
-    catch { return { ok: false, error: "Déconnexion impossible." }; }
+    catch { return { ok: false, error: t("updateDisconnectFailed") }; }
   });
   ipcMain.handle("updates:status", async (event, verify: unknown) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return null;
@@ -3910,21 +3868,21 @@ function registerIpcHandlers(): void {
     try { return { ...base, configured: true, verified: true, login: await updateAuth.verify() }; }
     catch (error) {
       if (error instanceof GitHubLoginExpiredError) updateAuth.disconnect();
-      return { ...base, configured: Boolean(loadUpdateSession()), error: error instanceof Error ? error.message : "Vérification impossible." };
+      return { ...base, configured: Boolean(loadUpdateSession()), error: error instanceof Error ? error.message : t("updateCheckFailed") };
     }
   });
   ipcMain.handle("updates:check", async (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try { const release = await updater().check(app.getVersion()); return { ok: true, release, comparison: updater().comparison }; }
     catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Recherche impossible." }; }
   });
   ipcMain.handle("updates:install", async (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: "Source non autorisée." };
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try {
-      if (!app.isPackaged || process.env.APPIMAGE) throw new Error("Installez la version Debian pour utiliser l’installation intégrée.");
+      if (!app.isPackaged || process.env.APPIMAGE) throw new Error(t("updateRequiresPackage"));
       await installAvailableUpdate();
       return { ok: true };
-    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Téléchargement impossible." }; }
+    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : t("updateDownloadFailed") }; }
   });
 
   ipcMain.on("tabs:activate", (event, id: unknown) => {
@@ -3967,21 +3925,21 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("settings:get", (event) => {
     if (!event.senderFrame || !isTrustedLocalSender(event.senderFrame.url)) {
-      throw new Error("Source IPC non autorisée.");
+      throw new Error(t("unauthorizedSource"));
     }
     return settingsPayload();
   });
 
   ipcMain.handle("projects:scan", async (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     return { ...(await synchronizeProjectCache("settings")), ...settingsPayload() };
   });
 
   ipcMain.handle("projects:rename", (event, id: unknown, nameValue: unknown) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     const name = typeof nameValue === "string" ? nameValue.replace(/\s+/g, " ").trim().slice(0, 120) : "";
     const project = projectById(id);
@@ -3997,7 +3955,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("projects:remove", (event, id: unknown) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     const project = projectById(id);
     if (!project) return { ok: false, error: "Projet introuvable." };
@@ -4016,7 +3974,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("projects:reset-all", (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     if (projectSyncInProgress) {
       return { ok: false, error: "Attendez la fin de la synchronisation en cours." };
@@ -4030,13 +3988,13 @@ function registerIpcHandlers(): void {
     });
     currentProjectScanProgress = null;
     sendCompanionState();
-    log.info("[projects] Cache local réinitialisé par l’utilisateur.");
+    log.info("[projects] Local cache reset by the user.");
     return { ok: true, ...settingsPayload() };
   });
 
   ipcMain.handle("projects:set-default", (event, id: unknown) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     const projectId = typeof id === "string" && projectById(id) ? id : undefined;
     saveProjectSettings({ ...currentSettings, defaultChatGptProjectId: projectId });
@@ -4045,14 +4003,14 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("settings:save", (event, input: unknown) => {
     if (!event.senderFrame || !isTrustedLocalSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
 
     let proposedSettings: AppSettings;
     try {
       proposedSettings = validateSettingsInput(input, currentSettings);
     } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "Paramètres invalides." };
+      return { ok: false, error: error instanceof Error ? error.message : t("settingsInvalid") };
     }
 
     if (
@@ -4061,7 +4019,7 @@ function registerIpcHandlers(): void {
     ) {
       return {
         ok: false,
-        error: "Impossible de modifier la règle de position KWin.",
+        error: t("settingsPositionRuleFailed"),
       };
     }
 
@@ -4069,8 +4027,8 @@ function registerIpcHandlers(): void {
     try {
       syncAutostart(proposedSettings.launchAtLogin);
     } catch (error) {
-      log.error("[autostart] Impossible de modifier le démarrage automatique :", error);
-      return { ok: false, error: "Impossible de modifier le démarrage automatique." };
+      log.error("[autostart] Unable to change launch at login:", error);
+      return { ok: false, error: t("settingsAutostartFailed") };
     }
 
     const shouldRegisterShortcut =
@@ -4080,11 +4038,11 @@ function registerIpcHandlers(): void {
       try {
         syncAutostart(previousSettings.launchAtLogin);
       } catch {
-        // La restauration sera retentée au prochain lancement.
+        // Restoring is retried on the next launch.
       }
       return {
         ok: false,
-        error: "Ce raccourci est invalide ou déjà utilisé. L’ancien raccourci reste actif.",
+        error: t("settingsShortcutTaken"),
       };
     }
     const shouldRegisterCompanionShortcut =
@@ -4105,7 +4063,7 @@ function registerIpcHandlers(): void {
       applyCompanionShortcut(previousSettings.companionShortcut, companionActive, false);
       return {
         ok: false,
-        error: "Le raccourci de la Magic Bar est invalide ou déjà utilisé.",
+        error: t("settingsCompanionShortcutTaken"),
       };
     }
 
@@ -4123,11 +4081,11 @@ function registerIpcHandlers(): void {
       layoutChatViews();
       scheduleTabStateSave();
     } catch (error) {
-      log.error("[settings] Impossible d’enregistrer les paramètres :", error);
+      log.error("[settings] Unable to save the settings:", error);
       try {
         syncAutostart(previousSettings.launchAtLogin);
       } catch {
-        // La restauration sera retentée au prochain lancement.
+        // Restoring is retried on the next launch.
       }
       if (proposedSettings.globalShortcut !== previousSettings.globalShortcut) {
         applyGlobalShortcut(previousSettings.globalShortcut, false);
@@ -4135,7 +4093,7 @@ function registerIpcHandlers(): void {
       if (proposedSettings.companionShortcut !== previousSettings.companionShortcut) {
         applyCompanionShortcut(previousSettings.companionShortcut, companionActive, false);
       }
-      return { ok: false, error: "Impossible d’enregistrer les paramètres sur le disque." };
+      return { ok: false, error: t("settingsSaveFailed") };
     }
 
     if (
@@ -4153,8 +4111,8 @@ function registerIpcHandlers(): void {
     const restartRequired = languageRestartRequired || extensionsRestartRequired;
     log.info(
       restartRequired
-        ? "[settings] Paramètres enregistrés, redémarrage requis pour appliquer la langue."
-        : "[settings] Paramètres enregistrés.",
+        ? "[settings] Settings saved, restart required to apply them."
+        : "[settings] Settings saved.",
     );
     return { ok: true, ...settingsPayload(), restartRequired, languageRestartRequired, extensionsRestartRequired };
   });
@@ -4168,7 +4126,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("diagnostics:copy-log-file", (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     try {
       if (!logFilePath || !fs.existsSync(logFilePath)) {
@@ -4187,7 +4145,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("diagnostics:copy-log-tail", (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     clipboard.writeText(readLogTail(100), "clipboard");
     return { ok: true };
@@ -4195,16 +4153,16 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("diagnostics:clear-log", (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     return clearLogFile()
       ? { ok: true }
-      : { ok: false, error: "Réinitialisation du journal impossible." };
+      : { ok: false, error: t("logResetFailed") };
   });
 
   ipcMain.handle("window:reset-bounds", (event) => {
     if (!event.senderFrame || !isTrustedLocalSender(event.senderFrame.url)) {
-      throw new Error("Source IPC non autorisée.");
+      throw new Error(t("unauthorizedSource"));
     }
     return resetWindowBounds();
   });
@@ -4223,7 +4181,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("companion:get-state", (event) => {
     if (!event.senderFrame || !isTrustedCompanionSender(event.senderFrame.url)) {
-      throw new Error("Source IPC non autorisée.");
+      throw new Error(t("unauthorizedSource"));
     }
     return companionPublicState();
   });
@@ -4243,7 +4201,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("companion:sync-projects", async (event) => {
     if (!event.senderFrame || !isTrustedCompanionSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     const result = await synchronizeProjectCache("magic-bar");
     return { ...result, state: companionPublicState() };
@@ -4405,7 +4363,7 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("companion:transfer", (event, input: unknown) => {
     if (!event.senderFrame || !isTrustedCompanionSender(event.senderFrame.url)) {
-      return { ok: false, error: "Source IPC non autorisée." };
+      return { ok: false, error: t("unauthorizedSource") };
     }
     return transferCompanionToChat(input);
   });
@@ -4418,6 +4376,7 @@ initializeLogger(logFilePath);
 settingsStore = new SettingsStore(path.join(app.getPath("userData"), "settings.json"));
 currentSettings = settingsStore.load();
 activeLanguage = currentSettings.language;
+setLanguage(activeLanguage);
 companionActive = currentSettings.companionEnabled && companionSupported();
 nestFoldersActive = currentSettings.nestFoldersEnabled;
 app.commandLine.appendSwitch("lang", LANGUAGE_LOCALES[activeLanguage]);
@@ -4432,9 +4391,9 @@ if (isWaylandSession) {
     currentSettings = { ...currentSettings, displayServerMode: "wayland" };
     try {
       settingsStore.save(currentSettings);
-      log.info("[settings] Mode Wayland natif restauré.");
+      log.info("[settings] Native Wayland mode restored.");
     } catch (error) {
-      log.warn("[settings] Migration vers Wayland non enregistrée :", error);
+      log.warn("[settings] Wayland migration not saved:", error);
     }
   }
   app.commandLine.appendSwitch("ozone-platform", "wayland");
@@ -4503,22 +4462,22 @@ if (!hasSingleInstanceLock) {
     const currentVersion = app.getVersion();
     if (incomingVersion && incomingVersion !== currentVersion && !hasPromptedUpgradeRestart) {
       hasPromptedUpgradeRestart = true;
-      log.info(`[upgrade] Version différente détectée : active=${currentVersion}, lancée=${incomingVersion}.`);
+      log.info(`[upgrade] Different version detected: running=${currentVersion}, launched=${incomingVersion}.`);
       let shouldRestart = false;
       try {
         shouldRestart = await confirmUpgradeRestart(currentVersion, incomingVersion);
       } catch (error) {
-        log.error("[upgrade] Impossible d’afficher la proposition de redémarrage :", error);
+        log.error("[upgrade] Unable to show the restart prompt:", error);
       }
       if (shouldRestart) {
-        log.info("[upgrade] Redémarrage accepté pour charger la version installée.");
+        log.info("[upgrade] Restart accepted to load the installed version.");
         restartApplication(relaunchArgsForRequest(request));
         return;
       }
-      log.info("[upgrade] Redémarrage refusé ; la requête est exécutée par la version active.");
+      log.info("[upgrade] Restart declined; the request is handled by the running version.");
     }
 
-    log.info(`[cli] Commande ${request.command} reçue d’une seconde instance.`);
+    log.info(`[cli] Command ${request.command} received from a second instance.`);
 
     if (mainWindow) {
       executeRequest(request);
@@ -4559,7 +4518,7 @@ if (!hasSingleInstanceLock) {
 
   app.on("child-process-gone", (_event, details) => {
     log.error(
-      `[process] Sous-processus arrêté : type=${details.type}, raison=${details.reason}, code=${details.exitCode}.`,
+      `[process] Child process stopped: type=${details.type}, reason=${details.reason}, code=${details.exitCode}.`,
     );
   });
 
@@ -4575,7 +4534,7 @@ if (!hasSingleInstanceLock) {
 
   app.on("window-all-closed", () => {
     if (!isQuitting) {
-      log.info("[window] Toutes les fenêtres sont fermées, maintien en arrière-plan.");
+      log.info("[window] All windows closed, staying in the background.");
     }
   });
 
@@ -4591,10 +4550,10 @@ if (!hasSingleInstanceLock) {
       if (companionActive && activeDisplayServerMode === "wayland") {
         const companionController = startKWinCompanionController();
         if (companionController.available) {
-          log.info("[kwin] Contrôleur de session Magic Bar chargé.");
+          log.info("[kwin] Magic Bar session controller loaded.");
         } else {
           log.warn(
-            `[kwin] Contrôleur de session Magic Bar indisponible : ${companionController.error ?? "KWin indisponible."}`,
+            `[kwin] Magic Bar session controller unavailable: ${companionController.error ?? "KWin unavailable."}`,
           );
         }
       }

@@ -22,10 +22,10 @@ const translations = {
   },
 };
 
-let language = "fr";
+let language = "en";
 
 function tr(key) {
-  return translations[language]?.[key] || translations.fr[key] || key;
+  return translations[language]?.[key] || translations.en[key] || key;
 }
 
 function applyTranslations() {
@@ -41,7 +41,7 @@ function closeMenu() {
 
 function applyState(state) {
   if (state && typeof state === "object") {
-    language = translations[state.language] ? state.language : "fr";
+    language = translations[state.language] ? state.language : "en";
     document.documentElement.classList.toggle("light", state.darkMode === false);
   }
   applyTranslations();

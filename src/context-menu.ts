@@ -62,7 +62,7 @@ export function contextMenuTemplate(
   ops: ContextMenuOperations,
   language: AppLanguage,
 ): MenuItemConstructorOptions[] {
-  const t = LABELS[language] ?? LABELS.fr;
+  const t = LABELS[language] ?? LABELS.en;
   const groups: MenuItemConstructorOptions[][] = [];
   const flags = params.editFlags;
 

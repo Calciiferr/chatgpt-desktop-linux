@@ -36,7 +36,7 @@ function controllerScript(): string {
   return `
 const barTitle = "ChatGPT Magic Bar";
 const menuTitle = "ChatGPT Magic Bar Menu";
-const previewTitle = "ChatGPT Magic Bar Aperçu";
+const previewTitle = "ChatGPT Magic Bar Preview";
 const gap = 2;
 let lastBarPosition = null;
 let barWindow = null;
@@ -234,7 +234,7 @@ export function startKWinCompanionController(): KWinCompanionControllerResult {
     const start = qdbus("start");
     if (start.error || start.status !== 0) {
       qdbus("unloadScript", [PLUGIN_NAME]);
-      throw start.error ?? new Error(start.stderr?.trim() || "Démarrage du script KWin impossible.");
+      throw start.error ?? new Error(start.stderr?.trim() || "Unable to start the KWin script.");
     }
 
     return { available: true };
@@ -242,7 +242,7 @@ export function startKWinCompanionController(): KWinCompanionControllerResult {
     fs.rmSync(SCRIPT_FILE, { force: true });
     return {
       available: false,
-      error: error instanceof Error ? error.message : "Contrôleur KWin indisponible.",
+      error: error instanceof Error ? error.message : "KWin controller unavailable.",
     };
   }
 }

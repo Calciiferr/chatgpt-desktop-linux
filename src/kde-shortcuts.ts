@@ -139,7 +139,7 @@ export function syncKdeShortcut(
         error:
           clearLegacyResult.error?.message ||
           String(clearLegacyResult.stderr).trim() ||
-          "Migration de l’ancienne action KGlobalAccel impossible.",
+          "Unable to migrate the previous KGlobalAccel action.",
       };
     }
     legacyMigrated = true;
@@ -154,7 +154,7 @@ export function syncKdeShortcut(
       error:
         registerResult.error?.message ||
         String(registerResult.stderr).trim() ||
-        "Enregistrement de l’action KGlobalAccel impossible.",
+        "Unable to register the KGlobalAccel action.",
     };
   }
   const setResult = action === "main"
@@ -179,7 +179,7 @@ export function syncKdeShortcut(
       applied: false,
       actionId: details.id,
       error:
-        readResult.error?.message || String(readResult.stderr).trim() || "Vérification KDE impossible.",
+        readResult.error?.message || String(readResult.stderr).trim() || "Unable to verify the KDE shortcut.",
     };
   }
   const registeredKeys = keysFromResult(readResult);
@@ -197,7 +197,7 @@ export function syncKdeShortcut(
         error:
           defaultReadResult.error?.message ||
           String(defaultReadResult.stderr).trim() ||
-          "Vérification du raccourci KDE par défaut impossible.",
+          "Unable to verify the default KDE shortcut.",
       };
     }
     defaultKeys = keysFromResult(defaultReadResult);
@@ -216,9 +216,9 @@ export function syncKdeShortcut(
       ? {}
       : {
           error:
-            `KDE n’a pas appliqué le raccourci demandé ` +
-            `(attendu=${enabled ? qtKey : "aucun"}, actif=${registeredKeys.join(",") || "aucun"}` +
-            `${action === "main" ? `, défaut=${defaultKeys.join(",") || "aucun"}` : ""}).`,
+            `KDE did not apply the requested shortcut ` +
+            `(expected=${enabled ? qtKey : "none"}, active=${registeredKeys.join(",") || "none"}` +
+            `${action === "main" ? `, default=${defaultKeys.join(",") || "none"}` : ""}).`,
         }),
   };
 }

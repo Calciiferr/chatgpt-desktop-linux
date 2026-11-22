@@ -40,11 +40,11 @@ try {
 
   assert.throws(
     () => validateSettingsInput({ ...DEFAULT_SETTINGS, newTabShortcut: "Ctrl+1" }, { ...DEFAULT_SETTINGS }),
-    /réservés/,
+    /reserved/,
   );
   assert.throws(
     () => validateSettingsInput({ ...DEFAULT_SETTINGS, nextTabShortcut: "Shift+Ctrl+Tab" }, { ...DEFAULT_SETTINGS }),
-    /différents/,
+    /different/,
   );
   assert.throws(
     () => validateSettingsInput({ ...DEFAULT_SETTINGS, reloadShortcut: "Ctrl+Alt+G" }, { ...DEFAULT_SETTINGS }),
@@ -56,7 +56,7 @@ try {
         { ...DEFAULT_SETTINGS, companionPromptMaxLines },
         { ...DEFAULT_SETTINGS },
       ),
-      /nombre de lignes/,
+      /number of Magic Bar lines/,
     );
   }
   const { createProjectRecord } = require("../dist/chatgpt-projects.js");

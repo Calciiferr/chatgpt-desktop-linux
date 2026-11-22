@@ -81,6 +81,26 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
+    updInstalledVersion: "Version installée : {version}",
+    updConnectedAs: "✓ Connecté à GitHub : {login}.",
+    updSaved: "Connexion GitHub enregistrée.",
+    updNotConnected: "Non connecté à GitHub.",
+    updFailed: "L’opération n’a pas abouti. Réessayez.",
+    updOpeningLogin: "Ouverture de la connexion GitHub…",
+    updLoginCode: "Votre code GitHub : {code} — saisissez-le sur la page GitHub ouverte, puis autorisez l’application.",
+    updWaiting: "En attente de votre autorisation sur GitHub…",
+    updLoginSaved: "Connexion GitHub enregistrée. Vous pouvez rechercher les mises à jour.",
+    updLoggedOut: "Connexion GitHub supprimée de cet ordinateur.",
+    updChecking: "Recherche en cours…",
+    updAhead: "↗ Votre version {installed} est plus récente que la dernière version publiée ({latest}).",
+    updCurrent: "✓ À jour ({latest}).",
+    updAvailable: "↓ Version {latest} disponible — version installée : {installed}.",
+    updNoPackage: "Aucun paquet compatible dans les versions publiées.",
+    updDownloading: "Téléchargement et vérification du paquet…",
+    updInstalledOk: "Mise à jour installée et confirmée. Utilisez Redémarrer ChatGPT dans la fenêtre de suivi.",
+    updInfoUnavailable: "Informations de mise à jour indisponibles.",
+    updVerifying: "Vérification de la connexion GitHub…",
+    updVerified: "✓ Connexion vérifiée.",
     tabGeneral: "Général", tabTabs: "Onglets", tabShortcuts: "Raccourcis", tabWindow: "Fenêtre", tabExtensions: "Extensions", tabAbout: "À propos",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Onglets",
     extensionsHint: "Fonctions optionnelles. Une extension désactivée n’est pas chargée du tout. Les changements s’appliquent après un redémarrage.",
@@ -89,7 +109,7 @@ const translations = {
     extensionsRestartPrompt: "Les extensions ont changé. Redémarrer l’application maintenant pour appliquer le changement ?",
     extensionsRestartLater: "Extensions enregistrées. Le changement sera appliqué au prochain redémarrage.",
     aboutUnofficial: "Application non officielle, sans lien avec OpenAI.", aboutLicense: "Logiciel libre sous licence MIT.",
-    updatesHint: "Les versions sont téléchargées depuis le dépôt GitHub privé. L’installation passe par l’installateur système et nécessite votre confirmation.",
+    updatesHint: "Les versions sont téléchargées depuis les publications GitHub du projet. L’installation passe par l’installateur système et nécessite votre confirmation.",
     updatesLoginHint: "Connectez votre compte GitHub avec le code temporaire affiché. Autorisation sur la page officielle GitHub, aucun jeton à copier. La connexion reste chiffrée dans le trousseau système.",
     updatesConnect: "Se connecter à GitHub", updatesDisconnect: "Se déconnecter de GitHub", updatesInstall: "Télécharger et installer",
     updatesTitle: "Mises à jour", updatesAuto: "Rechercher les mises à jour au démarrage", updatesCheck: "Rechercher maintenant",
@@ -151,6 +171,29 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
+    updatesHint: "Versions are downloaded from the project's GitHub releases. Installation goes through the system installer and requires your confirmation.",
+    updatesLoginHint: "Sign in with GitHub using the temporary code shown here. Authorization happens on the official GitHub page; there is no token to copy. The sign-in is encrypted in the system keyring.",
+    updatesConnect: "Sign in to GitHub", updatesDisconnect: "Sign out of GitHub", updatesInstall: "Download and install",
+    updInstalledVersion: "Installed version: {version}",
+    updConnectedAs: "✓ Signed in to GitHub as {login}.",
+    updSaved: "GitHub sign-in saved.",
+    updNotConnected: "Not signed in to GitHub.",
+    updFailed: "The operation failed. Try again.",
+    updOpeningLogin: "Opening GitHub sign-in…",
+    updLoginCode: "Your GitHub code: {code} — enter it on the GitHub page that opened, then authorize the app.",
+    updWaiting: "Waiting for your authorization on GitHub…",
+    updLoginSaved: "GitHub sign-in saved. You can now check for updates.",
+    updLoggedOut: "GitHub sign-in removed from this computer.",
+    updChecking: "Checking…",
+    updAhead: "↗ Your version {installed} is newer than the latest published version ({latest}).",
+    updCurrent: "✓ Up to date ({latest}).",
+    updAvailable: "↓ Version {latest} is available — installed version: {installed}.",
+    updNoPackage: "No compatible package was found in the published releases.",
+    updDownloading: "Downloading and verifying the package…",
+    updInstalledOk: "Update installed and confirmed. Use Restart ChatGPT in the progress window.",
+    updInfoUnavailable: "Update information unavailable.",
+    updVerifying: "Checking the GitHub sign-in…",
+    updVerified: "✓ Sign-in verified.",
     tabGeneral: "General", tabTabs: "Tabs", tabShortcuts: "Shortcuts", tabWindow: "Window", tabExtensions: "Extensions", tabAbout: "About",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Tabs",
     extensionsHint: "Optional features. A disabled extension is not loaded at all. Changes apply after a restart.",
@@ -215,6 +258,29 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
+    updatesHint: "Las versiones se descargan desde las publicaciones de GitHub del proyecto. La instalación pasa por el instalador del sistema y requiere tu confirmación.",
+    updatesLoginHint: "Inicia sesión en GitHub con el código temporal que se muestra aquí. La autorización se hace en la página oficial de GitHub; no hay ningún token que copiar. La sesión se cifra en el llavero del sistema.",
+    updatesConnect: "Iniciar sesión en GitHub", updatesDisconnect: "Cerrar sesión de GitHub", updatesInstall: "Descargar e instalar",
+    updInstalledVersion: "Versión instalada: {version}",
+    updConnectedAs: "✓ Sesión de GitHub iniciada como {login}.",
+    updSaved: "Sesión de GitHub guardada.",
+    updNotConnected: "Sin sesión de GitHub.",
+    updFailed: "La operación falló. Vuelve a intentarlo.",
+    updOpeningLogin: "Abriendo el inicio de sesión de GitHub…",
+    updLoginCode: "Tu código de GitHub: {code}. Introdúcelo en la página de GitHub abierta y autoriza la aplicación.",
+    updWaiting: "Esperando tu autorización en GitHub…",
+    updLoginSaved: "Sesión de GitHub guardada. Ya puedes buscar actualizaciones.",
+    updLoggedOut: "Sesión de GitHub eliminada de este equipo.",
+    updChecking: "Buscando…",
+    updAhead: "↗ Tu versión {installed} es más reciente que la última versión publicada ({latest}).",
+    updCurrent: "✓ Actualizado ({latest}).",
+    updAvailable: "↓ Versión {latest} disponible. Versión instalada: {installed}.",
+    updNoPackage: "No se encontró ningún paquete compatible en las versiones publicadas.",
+    updDownloading: "Descargando y verificando el paquete…",
+    updInstalledOk: "Actualización instalada y confirmada. Usa Reiniciar ChatGPT en la ventana de progreso.",
+    updInfoUnavailable: "Información de actualización no disponible.",
+    updVerifying: "Comprobando la sesión de GitHub…",
+    updVerified: "✓ Sesión verificada.",
     tabGeneral: "General", tabTabs: "Pestañas", tabShortcuts: "Atajos", tabWindow: "Ventana", tabExtensions: "Extensiones", tabAbout: "Acerca de",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Pestañas",
     extensionsHint: "Funciones opcionales. Una extensión desactivada no se carga en absoluto. Los cambios se aplican tras reiniciar.",
@@ -339,6 +405,10 @@ const projectTranslations = {
     projectsReset: "Caché local de proyectos restablecida.",
   },
 };
+
+function trf(key, values) {
+  return tr(key).replace(/\{(\w+)\}/g, (match, name) => (name in values ? String(values[name]) : match));
+}
 
 function tr(key) {
   return translations[activeUiLanguage]?.[key] || projectTranslations[activeUiLanguage]?.[key] || translations.en[key] || projectTranslations.en[key] || key;
@@ -886,15 +956,15 @@ let updateCanInstall = false;
 async function refreshUpdateStatus(verify = false) {
   const status = await window.desktopApi.updateStatus(verify);
   if (!status) return;
-  document.querySelector("#update-version").textContent = `Version installée : ${status.version}`;
+  document.querySelector("#update-version").textContent = trf("updInstalledVersion", { version: status.version });
   document.querySelector("#updates-connect").hidden = status.configured;
   document.querySelector("#updates-disconnect").hidden = !status.configured;
   document.querySelector("#updates-verify").hidden = !status.configured;
   const accessStatus = document.querySelector("#update-access-status");
   accessStatus.dataset.state = status.verified ? "success" : status.error ? "warning" : "neutral";
   accessStatus.textContent = status.verified
-    ? `✓ Connecté à GitHub : ${status.login}.`
-    : status.configured ? "Connexion GitHub enregistrée." : "Non connecté à GitHub.";
+    ? trf("updConnectedAs", { login: status.login })
+    : status.configured ? tr("updSaved") : tr("updNotConnected");
   if (status.error) { updateMessage.dataset.state = "warning"; updateMessage.textContent = status.error; }
   updateCanInstall = status.deb;
   updateInstallButton.disabled = !updateCanInstall;
@@ -903,21 +973,21 @@ async function updateAction(action) {
   updateButtons.forEach(button => { button.disabled = true; });
   updateMessage.dataset.state = "neutral";
   try { await action(); }
-  catch { updateMessage.dataset.state = "error"; updateMessage.textContent = "L’opération n’a pas abouti. Réessayez."; }
+  catch { updateMessage.dataset.state = "error"; updateMessage.textContent = tr("updFailed"); }
   finally { updateButtons.forEach(button => { button.disabled = false; }); updateInstallButton.disabled = !updateCanInstall; }
 }
 document.querySelector("#updates-connect").addEventListener("click", () => updateAction(async () => {
-  updateMessage.textContent = "Ouverture de la connexion GitHub…";
+  updateMessage.textContent = tr("updOpeningLogin");
   updateInstallButton.hidden = true;
   const device = await window.desktopApi.connectUpdates();
   if (!device.ok) { updateMessage.textContent = device.error; return; }
-  updateLoginCode.textContent = `Votre code GitHub : ${device.code} — saisissez-le sur la page GitHub ouverte, puis autorisez Calciiferr Desktop Updates.`;
+  updateLoginCode.textContent = trf("updLoginCode", { code: device.code });
   updateLoginCode.hidden = false;
   updateCancelLogin.hidden = false;
-  updateMessage.textContent = "En attente de votre autorisation sur GitHub…";
+  updateMessage.textContent = tr("updWaiting");
   try {
     const result = await window.desktopApi.completeUpdateLogin();
-    updateMessage.textContent = result.ok ? "Connexion GitHub enregistrée. Vous pouvez rechercher les mises à jour." : result.error;
+    updateMessage.textContent = result.ok ? tr("updLoginSaved") : result.error;
   } finally {
     updateCancelLogin.hidden = true;
     updateLoginCode.hidden = true;
@@ -929,46 +999,46 @@ updateCancelLogin.addEventListener("click", () => { void window.desktopApi.cance
 document.querySelector("#updates-disconnect").addEventListener("click", () => updateAction(async () => {
   const result = await window.desktopApi.disconnectUpdates();
   updateInstallButton.hidden = true;
-  updateMessage.textContent = result.ok ? "Connexion GitHub supprimée de cet ordinateur." : result.error;
+  updateMessage.textContent = result.ok ? tr("updLoggedOut") : result.error;
   await refreshUpdateStatus();
 }));
 window.addEventListener("beforeunload", () => { void window.desktopApi.cancelUpdateLogin(); });
 document.querySelector("#updates-check").addEventListener("click", () => updateAction(async () => {
-  updateMessage.textContent = "Recherche en cours…";
+  updateMessage.textContent = tr("updChecking");
   updateInstallButton.hidden = true;
   const result = await window.desktopApi.checkUpdates();
   if (!result.ok) { updateMessage.dataset.state = "error"; updateMessage.textContent = result.error; return; }
   const comparison = result.comparison;
   if (comparison?.state === "ahead") {
     updateMessage.dataset.state = "info";
-    updateMessage.textContent = `↗ Votre version locale ${comparison.installed} est plus récente que la dernière version publiée sur GitHub (${comparison.latest}). Cette version locale n’est pas encore distribuée via les Releases.`;
+    updateMessage.textContent = trf("updAhead", { installed: comparison.installed, latest: comparison.latest });
   } else if (comparison?.state === "current") {
     updateMessage.dataset.state = "success";
-    updateMessage.textContent = `✓ À jour : version installée et dernière version publiée sur GitHub identiques (${comparison.latest}).`;
+    updateMessage.textContent = trf("updCurrent", { latest: comparison.latest });
   } else if (comparison?.state === "available") {
     updateMessage.dataset.state = "info";
-    updateMessage.textContent = `↓ Version ${comparison.latest} disponible sur GitHub — version installée : ${comparison.installed}.`;
+    updateMessage.textContent = trf("updAvailable", { latest: comparison.latest, installed: comparison.installed });
   } else {
     updateMessage.dataset.state = "warning";
-    updateMessage.textContent = "Aucun paquet compatible publié dans les Releases GitHub. Impossible de comparer les versions.";
+    updateMessage.textContent = tr("updNoPackage");
   }
   updateInstallButton.hidden = !result.release;
 }));
 updateInstallButton.addEventListener("click", () => updateAction(async () => {
-  updateMessage.textContent = "Téléchargement et vérification du paquet…";
+  updateMessage.textContent = tr("updDownloading");
   const cancel = document.querySelector("#updates-cancel");
   cancel.hidden = false;
   let result;
   try { result = await window.desktopApi.installUpdate(); }
   finally { cancel.hidden = true; }
-  updateMessage.textContent = result.ok ? "Mise à jour installée et confirmée. Utilisez Redémarrer ChatGPT dans la fenêtre de suivi." : result.error;
+  updateMessage.textContent = result.ok ? tr("updInstalledOk") : result.error;
 }));
-refreshUpdateStatus(true).catch(() => { updateMessage.textContent = "Informations de mise à jour indisponibles."; });
+refreshUpdateStatus(true).catch(() => { updateMessage.textContent = tr("updInfoUnavailable"); });
 
 document.querySelector("#updates-cancel").addEventListener("click", () => { void window.desktopApi.cancelUpdate(); });
 
 document.querySelector("#updates-verify").addEventListener("click", () => updateAction(async () => {
-  updateMessage.textContent = "Vérification de la connexion GitHub…";
+  updateMessage.textContent = tr("updVerifying");
   await refreshUpdateStatus(true);
-  if (updateMessage.textContent === "Vérification de la connexion GitHub…") { updateMessage.dataset.state = "success"; updateMessage.textContent = "✓ Connexion vérifiée."; }
+  if (updateMessage.textContent === tr("updVerifying")) { updateMessage.dataset.state = "success"; updateMessage.textContent = tr("updVerified"); }
 }));

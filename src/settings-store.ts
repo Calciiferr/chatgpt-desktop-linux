@@ -6,6 +6,7 @@ import {
   type ProjectSyncState,
   normalizeStoredProjects,
 } from "./chatgpt-projects";
+import { t } from "./i18n";
 
 export type CloseBehavior = "hide" | "quit";
 export type DisplayServerMode = "wayland" | "x11";
@@ -93,7 +94,7 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   closeBehavior: "hide",
   launchAtLogin: false,
   rememberWindowPosition: true,
-  language: "fr",
+  language: "en",
   displayServerMode: "wayland",
   defaultWidth: 520,
   defaultHeight: 760,
@@ -271,7 +272,7 @@ function normalizeStoredSettings(value: unknown): AppSettings {
     closeBehavior: value.closeBehavior === "quit" ? "quit" : "hide",
     launchAtLogin: value.launchAtLogin === true,
     rememberWindowPosition: value.rememberWindowPosition !== false,
-    language: value.language === "en" || value.language === "es" ? value.language : "fr",
+    language: value.language === "fr" || value.language === "es" ? value.language : "en",
     displayServerMode:
       value.displayServerMode === "x11" || value.displayServerMode === "wayland"
         ? value.displayServerMode
@@ -315,7 +316,7 @@ function normalizeStoredSettings(value: unknown): AppSettings {
 
 export function validateSettingsInput(input: unknown, current: AppSettings): AppSettings {
   if (!isRecord(input)) {
-    throw new Error("Paramètres invalides.");
+    throw new Error(t("settingsInvalid"));
   }
 
   const shortcut = typeof input.globalShortcut === "string" ? input.globalShortcut.trim() : "";
@@ -358,17 +359,17 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
   }
   const normalizedLocalShortcuts = localShortcuts.map(canonicalAccelerator);
   if (new Set(normalizedLocalShortcuts).size !== normalizedLocalShortcuts.length) {
-    throw new Error("Les raccourcis locaux doivent être différents.");
+    throw new Error(t("settingsLocalShortcutsDistinct"));
   }
   const fixedTabShortcuts = Array.from({ length: 9 }, (_value, index) => `ctrl+${index + 1}`);
   if (normalizedLocalShortcuts.some((value) => fixedTabShortcuts.includes(value))) {
-    throw new Error("Ctrl+1 à Ctrl+9 sont réservés à la sélection directe des onglets.");
+    throw new Error(t("settingsTabShortcutsReserved"));
   }
   if (typeof input.companionEnabled !== "boolean") {
-    throw new Error("Le réglage de la Magic Bar est invalide.");
+    throw new Error(t("settingsCompanionInvalid"));
   }
   if (typeof input.nestFoldersEnabled !== "boolean") {
-    throw new Error("Le réglage des dossiers est invalide.");
+    throw new Error(t("settingsNestFoldersInvalid"));
   }
   const companionShortcut =
     typeof input.companionShortcut === "string" ? input.companionShortcut.trim() : "";
@@ -382,28 +383,28 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     companionPromptMaxLines > MAX_COMPANION_PROMPT_LINES
   ) {
     throw new Error(
-      `Le nombre de lignes de la Magic Bar doit être compris entre ${MIN_COMPANION_PROMPT_LINES} et ${MAX_COMPANION_PROMPT_LINES}.`,
+      t("settingsCompanionLines", { min: MIN_COMPANION_PROMPT_LINES, max: MAX_COMPANION_PROMPT_LINES }),
     );
   }
   if (input.companionEnabled && companionShortcut === shortcut) {
-    throw new Error("Les deux raccourcis globaux doivent être différents.");
+    throw new Error(t("settingsGlobalShortcutsDistinct"));
   }
   const reservedGlobalShortcuts = [shortcut, ...(input.companionEnabled ? [companionShortcut] : [])]
     .map(canonicalAccelerator);
   if (normalizedLocalShortcuts.some((value) => reservedGlobalShortcuts.includes(value))) {
-    throw new Error("Les raccourcis locaux ne peuvent pas réutiliser un raccourci global.");
+    throw new Error(t("settingsLocalReusesGlobal"));
   }
   if (input.themeMode !== "system" && input.themeMode !== "light" && input.themeMode !== "dark") {
-    throw new Error("Le réglage d’apparence est invalide.");
+    throw new Error(t("settingsThemeInvalid"));
   }
   if (typeof input.pullToRefreshEnabled !== "boolean") {
-    throw new Error("Le réglage tirer pour actualiser est invalide.");
+    throw new Error(t("settingsPullToRefreshInvalid"));
   }
   if (input.tabBarMode !== "auto" && input.tabBarMode !== "always" && input.tabBarMode !== "hidden") {
-    throw new Error("Le réglage de visibilité des onglets est invalide.");
+    throw new Error(t("settingsTabBarInvalid"));
   }
   if (typeof input.restoreTabsOnStartup !== "boolean") {
-    throw new Error("Le réglage de restauration des onglets est invalide.");
+    throw new Error(t("settingsRestoreTabsInvalid"));
   }
   if (
     input.lastTabCloseBehavior !== "home" &&
@@ -413,38 +414,38 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     throw new Error("Le comportement du dernier onglet est invalide.");
   }
   if (typeof input.responseNotificationsEnabled !== "boolean") {
-    throw new Error("Le réglage des notifications est invalide.");
+    throw new Error(t("settingsNotificationsInvalid"));
   }
   if (
     input.windowDisplayMode !== "tray" &&
     input.windowDisplayMode !== "taskbar" &&
     input.windowDisplayMode !== "both"
   ) {
-    throw new Error("Le mode tray/barre des tâches est invalide.");
+    throw new Error(t("settingsDisplayModeInvalid"));
   }
   if (input.closeBehavior !== "hide" && input.closeBehavior !== "quit") {
     throw new Error("Le comportement de fermeture est invalide.");
   }
   if (typeof input.launchAtLogin !== "boolean") {
-    throw new Error("Le réglage de démarrage automatique est invalide.");
+    throw new Error(t("settingsAutostartInvalid"));
   }
   if (typeof input.rememberWindowPosition !== "boolean") {
-    throw new Error("Le réglage de mémorisation de la position est invalide.");
+    throw new Error(t("settingsPositionInvalid"));
   }
   if (input.language !== "fr" && input.language !== "en" && input.language !== "es") {
-    throw new Error("La langue sélectionnée est invalide.");
+    throw new Error(t("settingsLanguageInvalid"));
   }
   if (input.displayServerMode !== "wayland" && input.displayServerMode !== "x11") {
-    throw new Error("Le mode d’affichage est invalide.");
+    throw new Error(t("settingsDisplayServerInvalid"));
   }
 
   const width = Number(input.defaultWidth);
   const height = Number(input.defaultHeight);
   if (!Number.isInteger(width) || width < MIN_WIDTH || width > MAX_WIDTH) {
-    throw new Error(`La largeur doit être comprise entre ${MIN_WIDTH} et ${MAX_WIDTH} px.`);
+    throw new Error(t("settingsWidthRange", { min: MIN_WIDTH, max: MAX_WIDTH }));
   }
   if (!Number.isInteger(height) || height < MIN_HEIGHT || height > MAX_HEIGHT) {
-    throw new Error(`La hauteur doit être comprise entre ${MIN_HEIGHT} et ${MAX_HEIGHT} px.`);
+    throw new Error(t("settingsHeightRange", { min: MIN_HEIGHT, max: MAX_HEIGHT }));
   }
 
   return {
@@ -495,7 +496,7 @@ export class SettingsStore {
     } catch (error) {
       const errorCode = isRecord(error) && typeof error.code === "string" ? error.code : "";
       if (errorCode !== "ENOENT") {
-        log.warn("[settings] Fichier illisible, utilisation des valeurs par défaut.");
+        log.warn("[settings] Unreadable settings file, using defaults.");
       }
       return { ...DEFAULT_SETTINGS };
     }

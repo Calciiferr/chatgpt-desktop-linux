@@ -1,16 +1,16 @@
 const form = document.querySelector("#search-form");
 const queryInput = document.querySelector("#query");
 const matches = document.querySelector("#matches");
-const language = new URLSearchParams(window.location.search).get("lang") || "fr";
+const language = new URLSearchParams(window.location.search).get("lang") || "en";
 const translations = {
   fr: { placeholder: "Rechercher…", label: "Rechercher dans la conversation", previous: "Résultat précédent", next: "Résultat suivant", close: "Fermer" },
   en: { placeholder: "Find…", label: "Find in conversation", previous: "Previous result", next: "Next result", close: "Close" },
   es: { placeholder: "Buscar…", label: "Buscar en la conversación", previous: "Resultado anterior", next: "Resultado siguiente", close: "Cerrar" },
 };
-const text = translations[language] || translations.fr;
+const text = translations[language] || translations.en;
 let shortcuts = { open: "Ctrl+F", next: "Enter", previous: "Shift+Enter" };
 
-document.documentElement.lang = translations[language] ? language : "fr";
+document.documentElement.lang = translations[language] ? language : "en";
 queryInput.placeholder = text.placeholder;
 queryInput.setAttribute("aria-label", text.label);
 document.querySelector("#previous").setAttribute("aria-label", text.previous);

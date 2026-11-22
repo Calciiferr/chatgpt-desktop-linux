@@ -2,9 +2,14 @@ const bar = document.querySelector("#tab-bar");
 const tabs = document.querySelector("#tabs");
 const add = document.querySelector("#new-tab");
 
+const NEW_TAB_LABEL = { en: "New tab", fr: "Nouvel onglet", es: "Nueva pestaña" };
+const CLOSE_LABEL = { en: "Close", fr: "Fermer", es: "Cerrar" };
+
 function render(state) {
-  document.querySelector("#update-test-banner").hidden = !state.updateTest;
   document.documentElement.classList.toggle("light", !state.darkMode);
+  const newTabLabel = NEW_TAB_LABEL[state.language] || NEW_TAB_LABEL.en;
+  add.title = newTabLabel;
+  add.setAttribute("aria-label", newTabLabel);
   bar.hidden = !state.barVisible;
   tabs.replaceChildren();
   for (const item of state.tabs) {
@@ -26,7 +31,7 @@ function render(state) {
     close.type = "button";
     close.className = "close";
     close.textContent = "×";
-    close.title = "Fermer";
+    close.title = CLOSE_LABEL[state.language] || CLOSE_LABEL.en;
     close.addEventListener("click", (event) => {
       event.stopPropagation();
       window.browserShellApi.close(item.id);

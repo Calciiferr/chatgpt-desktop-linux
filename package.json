@@ -126,29 +126,41 @@
       "desktop": {
         "entry": {
           "Name": "ChatGPT",
-          "GenericName": "Assistant IA",
-          "Comment": "Utiliser ChatGPT dans une fenêtre dédiée",
-          "Keywords": "ChatGPT;OpenAI;IA;AI;Assistant;",
+          "GenericName": "AI Assistant",
+          "GenericName[fr]": "Assistant IA",
+          "GenericName[es]": "Asistente de IA",
+          "Comment": "Use ChatGPT in a dedicated window",
+          "Comment[fr]": "Utiliser ChatGPT dans une fenêtre dédiée",
+          "Comment[es]": "Usar ChatGPT en una ventana dedicada",
+          "Keywords": "ChatGPT;OpenAI;AI;IA;Assistant;Chat;",
           "Actions": "Toggle;Companion;Clipboard;Settings;",
           "Terminal": "false",
           "StartupNotify": "true"
         },
         "desktopActions": {
           "Toggle": {
-            "Name": "Afficher/masquer ChatGPT",
+            "Name": "Show or hide ChatGPT",
+            "Name[fr]": "Afficher ou masquer ChatGPT",
+            "Name[es]": "Mostrar u ocultar ChatGPT",
             "Exec": "chatgpt-desktop-linux --toggle",
             "X-KDE-Shortcuts": "Ctrl+Alt+G"
           },
           "Companion": {
-            "Name": "Ouvrir la Magic Bar",
+            "Name": "Open the Magic Bar",
+            "Name[fr]": "Ouvrir la Magic Bar",
+            "Name[es]": "Abrir Magic Bar",
             "Exec": "chatgpt-desktop-linux --companion"
           },
           "Clipboard": {
-            "Name": "Ouvrir avec le presse-papiers",
+            "Name": "Open with the clipboard",
+            "Name[fr]": "Ouvrir avec le presse-papiers",
+            "Name[es]": "Abrir con el portapapeles",
             "Exec": "chatgpt-desktop-linux --clipboard"
           },
           "Settings": {
-            "Name": "Paramètres",
+            "Name": "Settings",
+            "Name[fr]": "Paramètres",
+            "Name[es]": "Ajustes",
             "Exec": "chatgpt-desktop-linux --settings"
           }
         }

@@ -34,7 +34,7 @@ function kdeCommand(command: string, args: string[]): string {
     throw result.error;
   }
   if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || `${command} a échoué avec le code ${result.status}.`);
+    throw new Error(result.stderr.trim() || `${command} failed with code ${result.status}.`);
   }
   return result.stdout.trim();
 }
@@ -110,7 +110,7 @@ export function syncKWinPositionMemory(
         writeRuleIds([...ruleIds, RULE_ID]);
       }
 
-      writeConfig(RULE_ID, "Description", "ChatGPT — mémoriser la position");
+      writeConfig(RULE_ID, "Description", "ChatGPT — remember position");
       writeConfig(RULE_ID, "wmclass", "chatgpt-desktop-linux");
       writeConfig(RULE_ID, "wmclassmatch", "1");
       writeConfig(RULE_ID, "title", "ChatGPT");
@@ -141,7 +141,7 @@ export function syncKWinPositionMemory(
       available: false,
       enabled: false,
       changed: false,
-      error: error instanceof Error ? error.message : "Intégration KWin indisponible.",
+      error: error instanceof Error ? error.message : "KWin integration unavailable.",
     };
   }
 }

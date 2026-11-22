@@ -30,7 +30,7 @@ function write(level: "INFO" | "WARN" | "ERROR", values: unknown[]): void {
   try {
     fs.appendFileSync(logFilePath, line, { encoding: "utf8", mode: 0o600 });
   } catch {
-    // La journalisation ne doit jamais empêcher l’application de fonctionner.
+    // Logging must never prevent the application from working.
   }
 }
 

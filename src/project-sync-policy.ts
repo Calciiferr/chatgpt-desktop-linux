@@ -1,3 +1,5 @@
+import { t } from "./i18n";
+
 export type ProjectSyncTrigger = "settings" | "magic-bar" | "background";
 export type ProjectBackgroundSkipReason = "idle" | "hidden" | null;
 
@@ -8,7 +10,7 @@ export const PROJECT_BACKGROUND_HIDDEN_MS = 15 * 60 * 1000;
 
 export class ProjectSyncTimeoutError extends Error {
   public constructor(public readonly timeoutMs: number) {
-    super(`La synchronisation des projets a expiré après ${Math.round(timeoutMs / 60_000)} minute(s).`);
+    super(t("syncTimedOut", { minutes: Math.round(timeoutMs / 60_000) }));
     this.name = "ProjectSyncTimeoutError";
   }
 }
