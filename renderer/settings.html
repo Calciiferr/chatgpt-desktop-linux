@@ -253,6 +253,7 @@
               </span>
               <input id="companion-enabled" type="checkbox" />
             </label>
+            <p id="companion-unavailable" class="extension-unavailable" data-i18n="extensionUnavailable" hidden>Unavailable: this extension requires KDE Plasma.</p>
             <div class="extension-settings" data-extension-settings="companion">
               <label class="field" for="companion-shortcut">
                 <span data-i18n="companionShortcutLabel">Magic Bar shortcut</span>
@@ -270,6 +271,19 @@
               </label>
               <small><span data-i18n="companionFallback">Magic Bar fallback command</span> : <code id="companion-fallback-command"></code></small>
             </div>
+          </div>
+
+          <div class="card extension" id="extension-nestfolders">
+            <label class="toggle extension-header" for="nestfolders-enabled">
+              <span>
+                <strong data-i18n="nestFoldersTitle">Project folders (NestFolders)</strong>
+                <small data-i18n="nestFoldersHint">Folders and subfolders inside ChatGPT projects, with colors and drag and drop. Your folders are kept when the extension is disabled.</small>
+                <span class="badges">
+                  <span class="platform-badge" data-i18n="dependsOnChatGpt">Depends on the ChatGPT interface</span>
+                </span>
+              </span>
+              <input id="nestfolders-enabled" type="checkbox" />
+            </label>
           </div>
         </section>
 

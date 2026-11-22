@@ -61,7 +61,7 @@ import {
   reconcileProjectsFromSidebar,
   scanChatGptProjects,
 } from "./chatgpt-projects";
-import { syncKateTextIntegration } from "./text-integrations";
+import { syncMagicBarIntegrations } from "./text-integrations";
 import { parseClipboardFileUris } from "./clipboard-files";
 import {
   type ComposerAttachmentSnapshot,
@@ -202,6 +202,25 @@ let isWaylandSession = false;
 let activeDisplayServerMode: DisplayServerMode = "wayland";
 let logFilePath = "";
 let kwinPositionMemoryAvailable = false;
+// Extensions are enabled or disabled for the whole run; changes apply after a restart.
+let companionActive = false;
+let nestFoldersActive = false;
+
+function isKdeSession(): boolean {
+  return (process.env.XDG_CURRENT_DESKTOP ?? "")
+    .split(":")
+    .some((desktop) => desktop.trim().toUpperCase() === "KDE");
+}
+
+function companionSupported(): boolean {
+  return process.platform === "linux" && isKdeSession();
+}
+
+function integrationExecutablePath(): string | null {
+  if (process.env.APPIMAGE) return process.env.APPIMAGE;
+  if (!app.isPackaged) return null;
+  return fs.existsSync("/usr/bin/chatgpt-desktop-linux") ? "/usr/bin/chatgpt-desktop-linux" : process.execPath;
+}
 let activeLanguage: AppLanguage = "fr";
 const companionTestCapturePath = app.isPackaged ? "" : process.env.CHATGPT_MAGIC_BAR_TEST_CAPTURE || "";
 
@@ -390,7 +409,7 @@ function updateTrayMenu(): void {
   const menu = Menu.buildFromTemplate([
     {
       label: text.companion,
-      enabled: currentSettings.companionEnabled,
+      visible: companionActive,
       click: () => showCompanionWindow(),
     },
     { type: "separator" },
@@ -2108,7 +2127,7 @@ async function showCompanionWindow(
   incomingText?: string,
   options: { source?: string; clipboard?: boolean } = {},
 ): Promise<void> {
-  if (!currentSettings.companionEnabled) {
+  if (!companionActive) {
     showSettingsWindow();
     return;
   }
@@ -3449,6 +3468,10 @@ function settingsPayload(): {
     logFilePath: string;
     projectScanProgress: ProjectScanProgress | null;
     darkMode: boolean;
+    extensions: {
+      companion: { active: boolean; supported: boolean };
+      nestFolders: { active: boolean };
+    };
   };
 } {
   return {
@@ -3458,7 +3481,7 @@ function settingsPayload(): {
       isWaylandSession,
       shortcutRegistered: registeredShortcut === currentSettings.globalShortcut,
       companionShortcutRegistered:
-        !currentSettings.companionEnabled ||
+        !companionActive ||
         registeredCompanionShortcut === currentSettings.companionShortcut,
       kdeShortcutAvailable: usesKdeShortcutBackend(),
       positionMemoryAvailable: kwinPositionMemoryAvailable,
@@ -3468,6 +3491,10 @@ function settingsPayload(): {
       logFilePath,
       projectScanProgress: currentProjectScanProgress,
       darkMode: nativeTheme.shouldUseDarkColors,
+      extensions: {
+        companion: { active: companionActive, supported: companionSupported() },
+        nestFolders: { active: nestFoldersActive },
+      },
     },
   };
 }
@@ -4061,26 +4088,21 @@ function registerIpcHandlers(): void {
       };
     }
     const shouldRegisterCompanionShortcut =
-      proposedSettings.companionEnabled !== previousSettings.companionEnabled ||
       proposedSettings.companionShortcut !== previousSettings.companionShortcut ||
-      (proposedSettings.companionEnabled &&
+      (companionActive &&
         registeredCompanionShortcut !== proposedSettings.companionShortcut);
     if (
       shouldRegisterCompanionShortcut &&
       !applyCompanionShortcut(
         proposedSettings.companionShortcut,
-        proposedSettings.companionEnabled,
+        companionActive,
         false,
       )
     ) {
       if (shouldRegisterShortcut) {
         applyGlobalShortcut(previousSettings.globalShortcut, false);
       }
-      applyCompanionShortcut(
-        previousSettings.companionShortcut,
-        previousSettings.companionEnabled,
-        false,
-      );
+      applyCompanionShortcut(previousSettings.companionShortcut, companionActive, false);
       return {
         ok: false,
         error: "Le raccourci de la Magic Bar est invalide ou déjà utilisé.",
@@ -4110,15 +4132,8 @@ function registerIpcHandlers(): void {
       if (proposedSettings.globalShortcut !== previousSettings.globalShortcut) {
         applyGlobalShortcut(previousSettings.globalShortcut, false);
       }
-      if (
-        proposedSettings.companionShortcut !== previousSettings.companionShortcut ||
-        proposedSettings.companionEnabled !== previousSettings.companionEnabled
-      ) {
-        applyCompanionShortcut(
-          previousSettings.companionShortcut,
-          previousSettings.companionEnabled,
-          false,
-        );
+      if (proposedSettings.companionShortcut !== previousSettings.companionShortcut) {
+        applyCompanionShortcut(previousSettings.companionShortcut, companionActive, false);
       }
       return { ok: false, error: "Impossible d’enregistrer les paramètres sur le disque." };
     }
@@ -4132,13 +4147,16 @@ function registerIpcHandlers(): void {
     }
 
     const languageRestartRequired = currentSettings.language !== activeLanguage;
-    const restartRequired = languageRestartRequired;
+    const extensionsRestartRequired =
+      (currentSettings.companionEnabled && companionSupported()) !== companionActive ||
+      currentSettings.nestFoldersEnabled !== nestFoldersActive;
+    const restartRequired = languageRestartRequired || extensionsRestartRequired;
     log.info(
       restartRequired
         ? "[settings] Paramètres enregistrés, redémarrage requis pour appliquer la langue."
         : "[settings] Paramètres enregistrés.",
     );
-    return { ok: true, ...settingsPayload(), restartRequired, languageRestartRequired };
+    return { ok: true, ...settingsPayload(), restartRequired, languageRestartRequired, extensionsRestartRequired };
   });
 
   ipcMain.handle("session:reset", (event) => {
@@ -4400,6 +4418,8 @@ initializeLogger(logFilePath);
 settingsStore = new SettingsStore(path.join(app.getPath("userData"), "settings.json"));
 currentSettings = settingsStore.load();
 activeLanguage = currentSettings.language;
+companionActive = currentSettings.companionEnabled && companionSupported();
+nestFoldersActive = currentSettings.nestFoldersEnabled;
 app.commandLine.appendSwitch("lang", LANGUAGE_LOCALES[activeLanguage]);
 
 isWaylandSession =
@@ -4568,7 +4588,7 @@ if (!hasSingleInstanceLock) {
       registerIpcHandlers();
 
       applyKWinPositionMemory(currentSettings);
-      if (activeDisplayServerMode === "wayland") {
+      if (companionActive && activeDisplayServerMode === "wayland") {
         const companionController = startKWinCompanionController();
         if (companionController.available) {
           log.info("[kwin] Contrôleur de session Magic Bar chargé.");
@@ -4579,7 +4599,11 @@ if (!hasSingleInstanceLock) {
         }
       }
       configureChatLanguage();
-      await loadNestFoldersExtension();
+      if (nestFoldersActive) {
+        await loadNestFoldersExtension();
+      } else {
+        log.info("[extensions] NestFolders disabled.");
+      }
       applyThemeMode(currentSettings.themeMode);
 
       nativeTheme.on("updated", () => {
@@ -4596,9 +4620,7 @@ if (!hasSingleInstanceLock) {
         log.error("[autostart] Synchronisation impossible :", error);
       }
 
-      if (app.isPackaged && !process.env.APPIMAGE) {
-        syncKateTextIntegration("/usr/bin/chatgpt-desktop-linux");
-      }
+      syncMagicBarIntegrations(integrationExecutablePath(), companionActive, activeLanguage);
 
       createMainWindow(
         startupCommand === "hide" ||
@@ -4608,10 +4630,7 @@ if (!hasSingleInstanceLock) {
       setTimeout(() => { void checkUpdatesOnStartup(); }, 12_000);
       syncTray();
       applyGlobalShortcut(currentSettings.globalShortcut);
-      applyCompanionShortcut(
-        currentSettings.companionShortcut,
-        currentSettings.companionEnabled,
-      );
+      applyCompanionShortcut(currentSettings.companionShortcut, companionActive);
       projectSyncTimer = setInterval(() => {
         void synchronizeProjectsInBackground();
       }, PROJECT_SYNC_INTERVAL_MS);

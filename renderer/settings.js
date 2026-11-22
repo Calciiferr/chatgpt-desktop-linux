@@ -15,6 +15,8 @@ const tabBarModeInput = document.querySelector("#tab-bar-mode");
 const restoreTabsOnStartupInput = document.querySelector("#restore-tabs-on-startup");
 const lastTabCloseBehaviorInput = document.querySelector("#last-tab-close-behavior");
 const companionEnabledInput = document.querySelector("#companion-enabled");
+const nestFoldersEnabledInput = document.querySelector("#nestfolders-enabled");
+const companionUnavailable = document.querySelector("#companion-unavailable");
 const companionShortcutInput = document.querySelector("#companion-shortcut");
 const companionPromptMaxLinesInput = document.querySelector("#companion-prompt-max-lines");
 const themeModeInput = document.querySelector("#theme-mode");
@@ -66,6 +68,7 @@ let reopenTabShortcut = "Ctrl+Shift+T";
 let activeUiLanguage = "en";
 let storedLanguage = "en";
 let storedCompanionEnabled = false;
+let storedNestFoldersEnabled = true;
 let shortcutCaptureTarget = null;
 let currentProjects = [];
 let projectsExpanded = false;
@@ -81,6 +84,7 @@ const translations = {
     tabGeneral: "Général", tabTabs: "Onglets", tabShortcuts: "Raccourcis", tabWindow: "Fenêtre", tabExtensions: "Extensions", tabAbout: "À propos",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Onglets",
     extensionsHint: "Fonctions optionnelles. Une extension désactivée n’est pas chargée du tout. Les changements s’appliquent après un redémarrage.",
+    nestFoldersTitle: "Dossiers de projets (NestFolders)", nestFoldersHint: "Dossiers et sous-dossiers dans les projets ChatGPT, avec couleurs et glisser-déposer. Vos dossiers sont conservés si l’extension est désactivée.", dependsOnChatGpt: "Dépend de l’interface de ChatGPT",
     kdeOnly: "KDE Plasma uniquement", extensionUnavailable: "Indisponible : cette extension nécessite KDE Plasma.",
     extensionsRestartPrompt: "Les extensions ont changé. Redémarrer l’application maintenant pour appliquer le changement ?",
     extensionsRestartLater: "Extensions enregistrées. Le changement sera appliqué au prochain redémarrage.",
@@ -150,6 +154,7 @@ const translations = {
     tabGeneral: "General", tabTabs: "Tabs", tabShortcuts: "Shortcuts", tabWindow: "Window", tabExtensions: "Extensions", tabAbout: "About",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Tabs",
     extensionsHint: "Optional features. A disabled extension is not loaded at all. Changes apply after a restart.",
+    nestFoldersTitle: "Project folders (NestFolders)", nestFoldersHint: "Folders and subfolders inside ChatGPT projects, with colors and drag and drop. Your folders are kept when the extension is disabled.", dependsOnChatGpt: "Depends on the ChatGPT interface",
     kdeOnly: "KDE Plasma only", extensionUnavailable: "Unavailable: this extension requires KDE Plasma.",
     extensionsRestartPrompt: "Extensions changed. Restart the application now to apply the change?",
     extensionsRestartLater: "Extensions saved. The change will be applied on the next restart.",
@@ -213,6 +218,7 @@ const translations = {
     tabGeneral: "General", tabTabs: "Pestañas", tabShortcuts: "Atajos", tabWindow: "Ventana", tabExtensions: "Extensiones", tabAbout: "Acerca de",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Pestañas",
     extensionsHint: "Funciones opcionales. Una extensión desactivada no se carga en absoluto. Los cambios se aplican tras reiniciar.",
+    nestFoldersTitle: "Carpetas de proyectos (NestFolders)", nestFoldersHint: "Carpetas y subcarpetas dentro de los proyectos de ChatGPT, con colores y arrastrar y soltar. Tus carpetas se conservan si desactivas la extensión.", dependsOnChatGpt: "Depende de la interfaz de ChatGPT",
     kdeOnly: "Solo KDE Plasma", extensionUnavailable: "No disponible: esta extensión requiere KDE Plasma.",
     extensionsRestartPrompt: "Las extensiones han cambiado. ¿Reiniciar ahora para aplicar el cambio?",
     extensionsRestartLater: "Extensiones guardadas. El cambio se aplicará en el próximo reinicio.",
@@ -511,6 +517,11 @@ function fillForm(payload) {
   companionShortcutInput.value = companionShortcut;
   companionEnabledInput.checked = settings.companionEnabled;
   storedCompanionEnabled = settings.companionEnabled;
+  nestFoldersEnabledInput.checked = settings.nestFoldersEnabled !== false;
+  storedNestFoldersEnabled = nestFoldersEnabledInput.checked;
+  const companionSupported = runtime?.extensions?.companion?.supported !== false;
+  companionEnabledInput.disabled = !companionSupported;
+  companionUnavailable.hidden = companionSupported;
   updateExtensionSettingsVisibility();
   companionPromptMaxLinesInput.value = String(settings.companionPromptMaxLines || 3);
   themeModeInput.value = settings.themeMode || "system";
@@ -556,7 +567,8 @@ function fillForm(payload) {
 }
 
 function updateExtensionSettingsVisibility() {
-  document.querySelector('[data-extension-settings="companion"]').hidden = !companionEnabledInput.checked;
+  document.querySelector('[data-extension-settings="companion"]').hidden =
+    !companionEnabledInput.checked || companionEnabledInput.disabled;
 }
 
 function selectTab(name, focus = false) {
@@ -711,7 +723,8 @@ form.addEventListener("submit", async (event) => {
   setStatus(tr("saving"));
 
   const languageChanged = languageInput.value !== storedLanguage;
-  const extensionsChanged = companionEnabledInput.checked !== storedCompanionEnabled;
+  const extensionsChanged = companionEnabledInput.checked !== storedCompanionEnabled ||
+    nestFoldersEnabledInput.checked !== storedNestFoldersEnabled;
 
   const result = await window.desktopApi.saveSettings({
     globalShortcut: shortcut,
@@ -731,6 +744,7 @@ form.addEventListener("submit", async (event) => {
     restoreTabsOnStartup: restoreTabsOnStartupInput.checked,
     lastTabCloseBehavior: lastTabCloseBehaviorInput.value,
     companionEnabled: companionEnabledInput.checked,
+    nestFoldersEnabled: nestFoldersEnabledInput.checked,
     companionShortcut,
     companionPromptMaxLines: Number(companionPromptMaxLinesInput.value),
     themeMode: themeModeInput.value,
@@ -754,7 +768,7 @@ form.addEventListener("submit", async (event) => {
         return;
       }
       setStatus(tr("restartLater"), "success");
-    } else if (extensionsChanged) {
+    } else if (extensionsChanged && result.extensionsRestartRequired) {
       if (window.confirm(tr("extensionsRestartPrompt"))) {
         window.desktopApi.restartApplication();
         return;

@@ -42,6 +42,6 @@ assert.match(linux.desktop.entry.Actions, /(?:^|;)Toggle;/);
 assert.equal(linux.desktop.entry["X-KDE-Shortcuts"], undefined);
 assert.equal(linux.desktop.desktopActions.Toggle.Exec, "chatgpt-desktop-linux --toggle");
 assert.equal(linux.desktop.desktopActions.Toggle["X-KDE-Shortcuts"], "Ctrl+Alt+G");
-assert.equal(linux.desktop.desktopActions.Companion["X-KDE-Shortcuts"], "Ctrl+Shift+Space");
+assert.equal(linux.desktop.desktopActions.Companion["X-KDE-Shortcuts"], undefined, "the Magic Bar shortcut is only assigned while the extension is enabled");
 
 console.log("KDE shortcut conversion and registration tests passed.");

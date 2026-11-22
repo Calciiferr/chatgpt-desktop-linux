@@ -39,6 +39,7 @@ export interface AppSettings {
   restoreTabsOnStartup: boolean;
   lastTabCloseBehavior: LastTabCloseBehavior;
   companionEnabled: boolean;
+  nestFoldersEnabled: boolean;
   companionShortcut: string;
   companionPromptMaxLines: number;
   themeMode: ThemeMode;
@@ -82,7 +83,8 @@ export const DEFAULT_SETTINGS: Readonly<AppSettings> = {
   tabBarMode: "auto",
   restoreTabsOnStartup: false,
   lastTabCloseBehavior: "home",
-  companionEnabled: true,
+  companionEnabled: false,
+  nestFoldersEnabled: true,
   companionShortcut: "Ctrl+Shift+Space",
   companionPromptMaxLines: 3,
   themeMode: "system",
@@ -243,7 +245,9 @@ function normalizeStoredSettings(value: unknown): AppSettings {
       value.lastTabCloseBehavior === "hide" || value.lastTabCloseBehavior === "ignore"
         ? value.lastTabCloseBehavior
         : "home",
-    companionEnabled: value.companionEnabled !== false,
+    companionEnabled:
+      typeof value.companionEnabled === "boolean" ? value.companionEnabled : DEFAULT_SETTINGS.companionEnabled,
+    nestFoldersEnabled: value.nestFoldersEnabled !== false,
     companionShortcut:
       typeof value.companionShortcut === "string" && value.companionShortcut.trim()
         ? value.companionShortcut.trim()
@@ -363,6 +367,9 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
   if (typeof input.companionEnabled !== "boolean") {
     throw new Error("Le réglage de la Magic Bar est invalide.");
   }
+  if (typeof input.nestFoldersEnabled !== "boolean") {
+    throw new Error("Le réglage des dossiers est invalide.");
+  }
   const companionShortcut =
     typeof input.companionShortcut === "string" ? input.companionShortcut.trim() : "";
   if (!companionShortcut || companionShortcut.length > 64) {
@@ -462,6 +469,7 @@ export function validateSettingsInput(input: unknown, current: AppSettings): App
     restoreTabsOnStartup: input.restoreTabsOnStartup,
     lastTabCloseBehavior: input.lastTabCloseBehavior,
     companionEnabled: input.companionEnabled,
+    nestFoldersEnabled: input.nestFoldersEnabled,
     companionShortcut,
     companionPromptMaxLines,
     themeMode: input.themeMode,

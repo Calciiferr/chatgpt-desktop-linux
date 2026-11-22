@@ -43,10 +43,6 @@
     ],
     "extraResources": [
       {
-        "from": "build/chatgpt-desktop-linux-servicemenu.desktop",
-        "to": "chatgpt-desktop-linux-servicemenu.desktop"
-      },
-      {
         "from": "vendor/nestfolders",
         "to": "nestfolders",
         "filter": [
@@ -145,8 +141,7 @@
           },
           "Companion": {
             "Name": "Ouvrir la Magic Bar",
-            "Exec": "chatgpt-desktop-linux --companion",
-            "X-KDE-Shortcuts": "Ctrl+Shift+Space"
+            "Exec": "chatgpt-desktop-linux --companion"
           },
           "Clipboard": {
             "Name": "Ouvrir avec le presse-papiers",
