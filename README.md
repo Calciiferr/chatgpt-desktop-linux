@@ -70,8 +70,6 @@ Optional features you can turn on or off in **Settings → Extensions**. A disab
 - **Magic Bar** *(experimental, KDE Plasma)* — a floating bar to prepare text, files and screenshots, with Dolphin and Kate integrations
 - **Your own extensions** — install them from a `.zip`, or create one with ChatGPT in a few clicks
 
-[**→ More about extensions**](#extensions)
-
 </td>
 <td width="50%" valign="top">
 
