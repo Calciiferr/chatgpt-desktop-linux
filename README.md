@@ -68,6 +68,7 @@ Optional features you can turn on or off in **Settings → Extensions**. A disab
 
 - **Project folders** — folders and subfolders inside ChatGPT projects, with colors and drag and drop
 - **Magic Bar** *(experimental, KDE Plasma)* — a floating bar to prepare text, files and screenshots, with Dolphin and Kate integrations
+- **Your own extensions** — install them from a `.zip`, or create one with ChatGPT in a few clicks
 
 [**→ More about extensions**](#extensions)
 
@@ -87,7 +88,7 @@ Optional features you can turn on or off in **Settings → Extensions**. A disab
 
 ## Extensions
 
-Extensions are optional features. Turn them on or off in **Settings → Extensions**; the change applies after a restart. A disabled extension is not loaded at all, so ChatGPT runs exactly as it does without it.
+Extensions are optional features. Turn them on or off in **Settings → Extensions**. A disabled extension is not loaded at all, so ChatGPT runs exactly as it does without it. Built-in extensions change after a restart; your own extensions change immediately.
 
 ### 📁 Project folders (NestFolders)
 
@@ -117,11 +118,18 @@ A floating bar, opened from anywhere with `Ctrl+Shift+Space`, to prepare a messa
 
 The message is prepared in ChatGPT and waits for you to send it.
 
-### 🛠️ Custom extensions
+### 🛠️ Your own extensions
 
-*Planned*
+*All desktops*
 
-You will be able to create and add your own extensions. A guide for developers is on the way.
+Add extensions made by you or by others, as a `.zip` file, from **Settings → Extensions → Add an extension**. They work like NestFolders: they can change the ChatGPT page, but never your files or the application itself. Before installing, the application checks the extension's rules and asks for your confirmation.
+
+- **Create with ChatGPT** opens a new tab with instructions ready: describe the extension you want, then install the `.zip` you get.
+- **Copy the AI prompt** puts the same instructions on your clipboard, to use with another assistant such as Claude or Codex.
+- **Developers** can edit installed extensions directly in their folder and reload them. See the [extension guide](docs/EXTENSIONS.md).
+
+> [!WARNING]
+> An extension can read everything shown on ChatGPT, including your conversations. Only install extensions from people you trust.
 
 ## Installation
 

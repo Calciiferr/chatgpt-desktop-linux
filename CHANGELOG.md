@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- **Your own extensions**: install extensions from a `.zip` in **Settings → Extensions**. They are limited to the ChatGPT page (Manifest V3 content scripts on chatgpt.com, storage only), are checked before installation, and can be turned off, removed or reloaded without restarting.
+- **Create with ChatGPT**: opens a new tab with instructions ready to describe the extension you want. **Copy the AI prompt** does the same for another assistant. The instructions exist in English, French and Spanish and follow the application language.
+- **Developer guide** in [docs/EXTENSIONS.md](docs/EXTENSIONS.md); installed extensions can be edited in place and reloaded.
+
 ## 0.8.0
 
 First public release.
