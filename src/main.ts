@@ -1,5 +1,6 @@
 import { installDebianPackage } from "./debian-update";
 import { loadNestFoldersExtension } from "./nestfolders-extension";
+import { resolveUserDataDirectory } from "./data-migration";
 import { installContextMenu } from "./context-menu";
 import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
 import { GitHubUpdater } from "./github-updater";
@@ -4393,6 +4394,7 @@ function registerIpcHandlers(): void {
 }
 
 app.setName(APP_TITLE);
+app.setPath("userData", resolveUserDataDirectory(app.getPath("appData")));
 logFilePath = path.join(app.getPath("userData"), "app.log");
 initializeLogger(logFilePath);
 settingsStore = new SettingsStore(path.join(app.getPath("userData"), "settings.json"));

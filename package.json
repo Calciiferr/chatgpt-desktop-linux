@@ -1,9 +1,17 @@
 {
   "name": "chatgpt-desktop-linux",
   "version": "0.7.8",
-  "private": true,
-  "description": "Personal ChatGPT desktop wrapper for Linux, KDE Plasma and Wayland",
-  "homepage": "https://chatgpt.com/",
+  "description": "Unofficial ChatGPT desktop app for Linux, with tabs, global shortcuts and KDE Plasma integration",
+  "homepage": "https://github.com/Calciiferr/chatgpt-desktop-linux",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Calciiferr/chatgpt-desktop-linux.git"
+  },
+  "author": {
+    "name": "Calciiferr",
+    "url": "https://github.com/Calciiferr"
+  },
+  "license": "MIT",
   "main": "dist/main.js",
   "desktopName": "chatgpt-desktop-linux.desktop",
   "scripts": {
@@ -15,11 +23,6 @@
     "dist:deb": "npm run build && electron-builder --linux deb",
     "dist:appimage": "npm run build && electron-builder --linux AppImage"
   },
-  "author": {
-    "name": "Calciiferr",
-    "email": "158118428+Calciiferr@users.noreply.github.com"
-  },
-  "license": "MIT",
   "devDependencies": {
     "electron": "42.5.0",
     "electron-builder": "26.15.3",
@@ -155,8 +158,8 @@
           }
         }
       },
-      "synopsis": "ChatGPT dans une fenêtre Linux dédiée",
-      "description": "Application personnelle pour utiliser chatgpt.com sous KDE, avec une icône de notification et un raccourci global."
+      "synopsis": "Unofficial ChatGPT desktop app for Linux",
+      "description": "Use chatgpt.com in a dedicated window with tabs, a tray icon and global shortcuts. Unofficial, not affiliated with OpenAI."
     }
   }
 }
