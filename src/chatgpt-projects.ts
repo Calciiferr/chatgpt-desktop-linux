@@ -106,8 +106,8 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
   const exactProjectText = (element) =>
     ['Projets', 'Projects', 'Proyectos'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
   const exactPinnedText = (element) =>
-    ['Épinglés', 'Epinglés', 'Pinned', 'Fijados', 'Anclados'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
-  const projectHomeLabels = ['ouvrir l’accueil du projet', 'open project home', 'open project homepage', 'abrir el inicio del proyecto', 'abrir la página de inicio del proyecto'];
+    ['Épinglés', 'Epinglés', 'Pinned', 'Fijados'].includes((element?.textContent || '').replace(/\s+/g, ' ').trim());
+  const projectHomeLabels = ['ouvrir l’accueil du projet', 'open project home', 'open project homepage'];
   const isProjectHomeButton = (button) =>
     button instanceof HTMLButtonElement && projectHomeLabels.includes(
       (button.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim().toLowerCase()
@@ -126,9 +126,9 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     ];
     const option = labelledButtons
       .map((button) => button.getAttribute('aria-label') || '')
-      .find((label) => /^(Ouvrir les options du projet pour|Open options for project|Abrir (?:las )?opciones del proyecto)\s+/i.test(label));
+      .find((label) => /^(Ouvrir les options du projet pour|Open options for project|Acciones para el proyecto)\s+/i.test(label));
     if (option) {
-      return option.replace(/^(Ouvrir les options du projet pour|Open options for project|Abrir (?:las )?opciones del proyecto)\s+/i, '').trim();
+      return option.replace(/^(Ouvrir les options du projet pour|Open options for project|Acciones para el proyecto)\s+/i, '').trim();
     }
     return (container?.innerText || container?.textContent || button?.innerText || button?.textContent || '')
       .split('\n').map((part) => part.trim()).find(Boolean) || '';
@@ -174,7 +174,7 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
     })).filter((entry) => entry.name);
   };
   const findActiveSidebar = () => {
-    const markers = ['nouveau chat', 'new chat', 'nuevo chat', 'bibliothèque', 'library', 'biblioteca', 'planification', 'scheduling', 'programación', 'applications', 'aplicaciones'];
+    const markers = ['nouveau chat', 'new chat', 'nuevo chat', 'bibliothèque', 'library', 'planification', 'scheduling', 'tareas programadas', 'applications', 'complementos'];
     const candidates = [...document.querySelectorAll('nav, aside, [class*="sidebar"]')]
       .filter(intersectsViewport)
       .map((element) => {
@@ -185,7 +185,7 @@ const ACTIVE_PROJECT_SCOPE_HELPERS = String.raw`
         const projectHeader = [...element.querySelectorAll('[class*="sidebar-expando-section-header"], button')]
           .some(exactProjectText);
         let score = markerCount * 30 + (projectHeader ? 80 : 0);
-        if (/historique de chat|chat history|historial de chats?|sidebar|barre latérale|barra lateral/.test(label)) score += 60;
+        if (/historique de chat|chat history|sidebar|barre latérale|barra lateral/.test(label)) score += 60;
         if (rect.left < Math.max(120, innerWidth * 0.25)) score += 35;
         if (rect.width >= 170 && rect.width <= Math.max(520, innerWidth * 0.55)) score += 30;
         if (rect.height >= innerHeight * 0.45) score += 35;
@@ -549,13 +549,13 @@ async function probeSidebar(webContents: WebContents, clickToggle: boolean): Pro
         rect.bottom > 0 && rect.right > 0 && rect.top < innerHeight && rect.left < innerWidth;
     };
     const normalize = (value) => (value || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const markers = ['nouveau chat', 'new chat', 'nuevo chat', 'bibliothèque', 'library', 'biblioteca', 'planification', 'scheduling', 'programación', 'applications', 'aplicaciones'];
+    const markers = ['nouveau chat', 'new chat', 'nuevo chat', 'bibliothèque', 'library', 'planification', 'scheduling', 'tareas programadas', 'applications', 'complementos'];
     const candidates = [...document.querySelectorAll('nav, aside, [class*="sidebar"]')].filter(visible);
     const open = candidates.some((candidate) => {
       const rect = candidate.getBoundingClientRect();
       const label = normalize(candidate.getAttribute('aria-label'));
       const text = normalize(candidate.textContent);
-      const knownNav = /historique de chat|chat history|historial de chats?|sidebar|barre latérale|barra lateral/.test(label);
+      const knownNav = /historique de chat|chat history|sidebar|barre latérale|barra lateral/.test(label);
       const markerCount = markers.filter((marker) => text.includes(marker)).length;
       const containsProjects = /(^|\s)(projets|projects)(\s|$)/.test(text);
       return rect.left < Math.max(80, innerWidth * 0.22) && rect.width >= 170 &&
@@ -577,7 +577,7 @@ async function probeSidebar(webContents: WebContents, clickToggle: boolean): Pro
       if (rect.left >= 0 && rect.left < 120 && rect.top >= 0 && rect.top < 120) score += 25;
       if (button.querySelector('svg')) score += 12;
       if (text.length <= 2) score += 8;
-      if (/nouveau chat|new chat|nuevo chat|recherche|search|buscar|fermer|close|cerrar|retour|back|volver|paramètres|settings|configuración/.test(hint + ' ' + text)) score -= 160;
+      if (/nouveau chat|new chat|nuevo chat|recherche|search|buscar|fermer|close|cerrar|retour|back|paramètres|settings/.test(hint + ' ' + text)) score -= 160;
       return { button, score, left: rect.left, top: rect.top };
     }).sort((left, right) => right.score - left.score || left.top - right.top || left.left - right.left);
     const toggle = scored[0];
@@ -1272,7 +1272,7 @@ export async function createChatGptProject(
     filled = (await webContents.executeJavaScript(`(() => {
       const projectName = ${JSON.stringify(name)};
       const dialogs = [...document.querySelectorAll('[role="dialog"], dialog')];
-      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project|Crear (?:un )?proyecto/i.test(candidate.textContent || ''));
+      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project|Crear proyecto/i.test(candidate.textContent || ''));
       if (!dialog) return false;
       const input = [...dialog.querySelectorAll('input')].find((candidate) => {
         const label = (candidate.getAttribute('aria-label') || candidate.getAttribute('placeholder') || '').trim();
@@ -1292,7 +1292,7 @@ export async function createChatGptProject(
   await delay(250);
   const submitted = (await webContents.executeJavaScript(`(() => {
       const dialogs = [...document.querySelectorAll('[role="dialog"], dialog')];
-      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project|Crear (?:un )?proyecto/i.test(candidate.textContent || ''));
+      const dialog = dialogs.find((candidate) => /Créer un projet|Create (?:a )?project|Crear proyecto/i.test(candidate.textContent || ''));
       if (!dialog) return false;
       const input = dialog.querySelector('input');
       const submit = [...dialog.querySelectorAll('button')].find((candidate) =>
