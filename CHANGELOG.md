@@ -1,5 +1,10 @@
 # Notes de version
 
+## 0.7.8
+
+- Correction de la barre latérale inutilisable avec la nouvelle interface de ChatGPT : quand la barre était épinglée ouverte, elle se réduisait à une fine bande et le contenu de la page la recouvrait, empêchant d'ouvrir les projets et les conversations.
+- La poignée de redimensionnement ajoutée par les dossiers est retirée : ChatGPT gère désormais lui-même la largeur de sa barre latérale. Les dossiers ne changent pas.
+
 ## 0.7.7
 
 - Les **onglets** se réorganisent par glisser-déposer : l'ordre est conservé au redémarrage, et le texte des titres n'est plus sélectionné pendant le déplacement.
