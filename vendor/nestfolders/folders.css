@@ -328,6 +328,10 @@ html.glyn-drag-active .glyn-folder-hover-band {
   user-select: none;
 }
 
+html.glyn-sidebar-closed #glyn-sidebar-resizer {
+  display: none !important;
+}
+
 html:not(.glyn-sidebar-handle-visible) #glyn-sidebar-resizer {
   width: 6px;
   background: transparent;

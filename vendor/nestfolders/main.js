@@ -53,6 +53,7 @@
     let sidebarContainer = null;
     let sidebarResizerEl = null;
     let sidebarResizeSession = null;
+    let sidebarSyncBound = false;
     let shortcutHandlerBound = false;
     let themeObserver = null;
     let themeMediaQuery = null;
@@ -122,6 +123,11 @@
             }
         }
         sidebarContainer = null;
+        sidebarExpandedState = null;
+        if (document.documentElement) {
+            document.documentElement.classList.remove("glyn-sidebar-closed");
+            if (SIDEBAR_WIDTH_VAR) document.documentElement.style.removeProperty(SIDEBAR_WIDTH_VAR);
+        }
     }
 
     function setupSidebarResizer() {
@@ -157,8 +163,64 @@
             container.appendChild(handle);
             sidebarResizerEl = handle;
         }
-        const storedWidth = globalSettings ? globalSettings.getSidebarWidth() : null;
-        applySidebarWidth(typeof storedWidth === "number" ? storedWidth : null);
+        sidebarExpandedState = null;
+        syncSidebarResizerState();
+    }
+
+    /**
+     * The resizer pins ChatGPT's --sidebar-width on <html>, pads the container and keeps a
+     * 12px grip on it. All of that only makes sense while the sidebar is expanded: once the
+     * host collapses it to its icon rail, the pinned width and the grip used to stay behind
+     * (a dark bar, a header shifted to the left, a layout that stays off after reopening).
+     * So the whole override follows the real open/closed state of the sidebar.
+     */
+    function isSidebarExpanded() {
+        const lists = [];
+        scopes.forEach((scope) => {
+            if (scope && scope.historyDiv) lists.push(scope.historyDiv);
+        });
+        if (!lists.length && sidebarContainer) lists.push(sidebarContainer);
+        return lists.some((el) => {
+            if (!el.isConnected) return false;
+            if (el.closest('[inert], [aria-hidden="true"]')) return false;
+            const rect = el.getBoundingClientRect();
+            if (rect.width < 100 || rect.height < 20) return false;
+            if (rect.right <= 8 || rect.left >= window.innerWidth) return false;
+            const style = window.getComputedStyle(el);
+            return style.visibility !== "hidden" && style.display !== "none";
+        });
+    }
+
+    let sidebarExpandedState = null;
+    let sidebarSyncTimer = null;
+
+    function syncSidebarResizerState() {
+        if (!ENABLE_SIDEBAR_RESIZER || !sidebarContainer || sidebarResizeSession) return;
+        const root = document.documentElement;
+        if (!root) return;
+        const expanded = isSidebarExpanded();
+        if (expanded === sidebarExpandedState) return;
+        sidebarExpandedState = expanded;
+        root.classList.toggle("glyn-sidebar-closed", !expanded);
+        if (expanded) {
+            sidebarContainer.style.paddingRight = "14px";
+            const storedWidth = globalSettings ? globalSettings.getSidebarWidth() : null;
+            applySidebarWidth(typeof storedWidth === "number" ? storedWidth : null);
+        } else {
+            const prevPad = sidebarContainer.dataset
+                ? sidebarContainer.dataset.glynSidebarPrevPad
+                : "";
+            sidebarContainer.style.paddingRight = prevPad || "";
+            applySidebarWidth(null);
+        }
+    }
+
+    function scheduleSidebarSync() {
+        if (sidebarSyncTimer) clearTimeout(sidebarSyncTimer);
+        sidebarSyncTimer = setTimeout(() => {
+            sidebarSyncTimer = null;
+            syncSidebarResizerState();
+        }, 60);
     }
 
     function onSidebarResizeStart(event) {
@@ -223,8 +285,8 @@
             root.classList.toggle("glyn-sidebar-handle-visible", !!showHandle);
         }
         if (ENABLE_SIDEBAR_RESIZER) {
-            const savedWidth = globalSettings ? globalSettings.getSidebarWidth() : null;
-            applySidebarWidth(typeof savedWidth === "number" ? savedWidth : null);
+            sidebarExpandedState = null;
+            syncSidebarResizerState();
         }
     }
 
@@ -978,7 +1040,17 @@
                 }
             }
             reconcileProjectScopes();
+            if (ENABLE_SIDEBAR_RESIZER) {
+                if (!sidebarContainer && sidebarScope) setupSidebarResizer();
+                syncSidebarResizerState();
+            }
         }, 1000);
+        if (ENABLE_SIDEBAR_RESIZER && !sidebarSyncBound) {
+            sidebarSyncBound = true;
+            document.addEventListener("click", scheduleSidebarSync, true);
+            document.addEventListener("transitionend", scheduleSidebarSync, true);
+            window.addEventListener("resize", scheduleSidebarSync);
+        }
     }
 
     function stopContainerMonitor() {
