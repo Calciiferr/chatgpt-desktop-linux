@@ -4,8 +4,7 @@ import { resolveUserDataDirectory } from "./data-migration";
 import { setLanguage, t } from "./i18n";
 import { cleanDisplayName, SYSTEM_LAUNCHER_PATH, syncLauncherName } from "./display-name";
 import { installContextMenu } from "./context-menu";
-import { GitHubDeviceAuth, GitHubLoginExpiredError, type GitHubSession } from "./github-device-auth";
-import { GitHubUpdater } from "./github-updater";
+import { GitHubUpdater, RELEASES_PAGE } from "./github-updater";
 import { installAuthNavigation } from "./auth-navigation";
 import {
   app,
@@ -23,7 +22,6 @@ import {
   type Rectangle,
   screen,
   session,
-  safeStorage,
   shell,
   Tray,
   type WebContents,
@@ -3776,28 +3774,12 @@ function isTrustedSearchSender(url: string): boolean {
 }
 
 let githubUpdater: GitHubUpdater | null = null;
-function updateTokenPath(): string { return path.join(app.getPath("userData"), "github-update-access.bin"); }
-function loadUpdateSession(): GitHubSession | null {
-  if (!fs.existsSync(updateTokenPath())) return null;
-  try {
-    const session = JSON.parse(safeStorage.decryptString(fs.readFileSync(updateTokenPath())));
-    return typeof session.accessToken === "string" && typeof session.refreshToken === "string" &&
-      Number.isFinite(session.expiresAt) && Number.isFinite(session.refreshExpiresAt) ? session : null;
-  } catch { return null; }
+/** Versions up to 0.7.x stored a GitHub sign-in for the private repository; it is no longer used. */
+function removeLegacyUpdateSession(): void {
+  fs.rmSync(path.join(app.getPath("userData"), "github-update-access.bin"), { force: true });
 }
-function assertUpdateKeyring(): void {
-  if (!safeStorage.isEncryptionAvailable() || safeStorage.getSelectedStorageBackend() === "basic_text") throw new Error(t("updateKeyringLocked"));
-}
-function saveUpdateSession(session: GitHubSession | null): void {
-  if (!session) { fs.rmSync(updateTokenPath(), { force: true }); return; }
-  assertUpdateKeyring();
-  const temporary = updateTokenPath() + ".tmp";
-  fs.writeFileSync(temporary, safeStorage.encryptString(JSON.stringify(session)), { mode: 0o600 });
-  fs.renameSync(temporary, updateTokenPath());
-}
-const updateAuth = new GitHubDeviceAuth(loadUpdateSession, saveUpdateSession);
 function updater(): GitHubUpdater {
-  return githubUpdater ??= new GitHubUpdater(path.join(app.getPath("userData"), "updates"), () => updateAuth.token());
+  return githubUpdater ??= new GitHubUpdater(path.join(app.getPath("userData"), "updates"));
 }
 let updateProgressWindow: BrowserWindow | null = null;
 let updateInProgress = false;
@@ -3860,7 +3842,7 @@ async function installAvailableUpdate(): Promise<void> {
   } finally { updateInProgress = false; }
 }
 async function checkUpdatesOnStartup(): Promise<void> {
-  if (!app.isPackaged || !currentSettings.checkUpdatesOnStartup || !fs.existsSync(updateTokenPath())) return;
+  if (!app.isPackaged || !currentSettings.checkUpdatesOnStartup) return;
   try {
     const release = await updater().check(app.getVersion());
     if (!release) return;
@@ -3969,38 +3951,13 @@ function registerIpcHandlers(): void {
   ipcMain.handle("updates:cancel", (event) => {
     if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) githubUpdater?.cancel();
   });
-  ipcMain.handle("updates:connect", async (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
-    try {
-      assertUpdateKeyring();
-      const device = await updateAuth.start();
-      await shell.openExternal(device.url);
-      return { ok: true, ...device };
-    } catch (error) { updateAuth.cancel(); return { ok: false, error: error instanceof Error ? error.message : t("updateSignInFailed") }; }
-  });
-  ipcMain.handle("updates:complete-login", async (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
-    try { await updateAuth.complete(); return { ok: true }; }
-    catch (error) { return { ok: false, error: error instanceof Error ? error.message : t("updateSignInInterrupted") }; }
-  });
-  ipcMain.handle("updates:cancel-login", (event) => {
-    if (event.senderFrame && isTrustedSettingsSender(event.senderFrame.url)) updateAuth.cancel();
-  });
-  ipcMain.handle("updates:disconnect", (event) => {
-    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
-    try { githubUpdater?.cancel(); updateAuth.disconnect(); return { ok: true }; }
-    catch { return { ok: false, error: t("updateDisconnectFailed") }; }
-  });
-  ipcMain.handle("updates:status", async (event, verify: unknown) => {
+  ipcMain.handle("updates:status", (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return null;
-    const base = { version: app.getVersion(), deb: isDebInstall() };
-    if (!loadUpdateSession()) return { ...base, configured: false };
-    if (verify !== true) return { ...base, configured: true };
-    try { return { ...base, configured: true, verified: true, login: await updateAuth.verify() }; }
-    catch (error) {
-      if (error instanceof GitHubLoginExpiredError) updateAuth.disconnect();
-      return { ...base, configured: Boolean(loadUpdateSession()), error: error instanceof Error ? error.message : t("updateCheckFailed") };
-    }
+    return { version: app.getVersion(), deb: isDebInstall() };
+  });
+  ipcMain.handle("updates:open-page", (event) => {
+    if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return;
+    void shell.openExternal(githubUpdater?.comparison?.pageUrl ?? RELEASES_PAGE);
   });
   ipcMain.handle("updates:check", async (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
@@ -4679,6 +4636,7 @@ if (!hasSingleInstanceLock) {
     void app.whenReady().then(async () => {
       fs.rmSync(COMPANION_TEMP_DIR, { recursive: true, force: true });
       fs.mkdirSync(COMPANION_TEMP_DIR, { recursive: true, mode: 0o700 });
+      removeLegacyUpdateSession();
       registerIpcHandlers();
 
       applyKWinPositionMemory(currentSettings);

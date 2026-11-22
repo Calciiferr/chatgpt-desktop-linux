@@ -82,18 +82,11 @@ function applySettingsTheme(state) {
 
 const translations = {
   fr: {
+    updatesOpenPage: "Ouvrir la page de téléchargement", updManual: "Téléchargez le nouveau paquet depuis la page de la version.",
     displayNameLabel: "Nom de l’application", displayNameHint: "Affiché dans le menu des applications, la recherche, la barre des tâches et les fenêtres de l’application. La commande du terminal reste chatgpt-desktop-linux.", displayNameUnavailable: "Le renommage n’est disponible que pour les installations .deb et .rpm.",
     trayUnavailable: "Aucune zone de notification n’a été trouvée : la fenêtre est réduite dans la barre des tâches à la place. Sous GNOME, installez l’extension AppIndicator pour avoir l’icône.",
     updInstalledVersion: "Version installée : {version}",
-    updConnectedAs: "✓ Connecté à GitHub : {login}.",
-    updSaved: "Connexion GitHub enregistrée.",
-    updNotConnected: "Non connecté à GitHub.",
     updFailed: "L’opération n’a pas abouti. Réessayez.",
-    updOpeningLogin: "Ouverture de la connexion GitHub…",
-    updLoginCode: "Votre code GitHub : {code} — saisissez-le sur la page GitHub ouverte, puis autorisez l’application.",
-    updWaiting: "En attente de votre autorisation sur GitHub…",
-    updLoginSaved: "Connexion GitHub enregistrée. Vous pouvez rechercher les mises à jour.",
-    updLoggedOut: "Connexion GitHub supprimée de cet ordinateur.",
     updChecking: "Recherche en cours…",
     updAhead: "↗ Votre version {installed} est plus récente que la dernière version publiée ({latest}).",
     updCurrent: "✓ À jour ({latest}).",
@@ -102,8 +95,6 @@ const translations = {
     updDownloading: "Téléchargement et vérification du paquet…",
     updInstalledOk: "Mise à jour installée et confirmée. Utilisez Redémarrer ChatGPT dans la fenêtre de suivi.",
     updInfoUnavailable: "Informations de mise à jour indisponibles.",
-    updVerifying: "Vérification de la connexion GitHub…",
-    updVerified: "✓ Connexion vérifiée.",
     tabGeneral: "Général", tabTabs: "Onglets", tabShortcuts: "Raccourcis", tabWindow: "Fenêtre", tabExtensions: "Extensions", tabAbout: "À propos",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Onglets",
     extensionsHint: "Fonctions optionnelles. Une extension désactivée n’est pas chargée du tout. Les changements s’appliquent après un redémarrage.",
@@ -112,9 +103,8 @@ const translations = {
     extensionsRestartPrompt: "Les extensions ont changé. Redémarrer l’application maintenant pour appliquer le changement ?",
     extensionsRestartLater: "Extensions enregistrées. Le changement sera appliqué au prochain redémarrage.",
     aboutUnofficial: "Application non officielle, sans lien avec OpenAI.", aboutLicense: "Logiciel libre sous licence MIT.",
-    updatesHint: "Les versions sont téléchargées depuis les publications GitHub du projet. L’installation passe par l’installateur système et nécessite votre confirmation.",
-    updatesLoginHint: "Connectez votre compte GitHub avec le code temporaire affiché. Autorisation sur la page officielle GitHub, aucun jeton à copier. La connexion reste chiffrée dans le trousseau système.",
-    updatesConnect: "Se connecter à GitHub", updatesDisconnect: "Se déconnecter de GitHub", updatesInstall: "Télécharger et installer",
+    updatesHint: "Les versions sont téléchargées depuis les publications GitHub du projet. Avec le paquet .deb, l’installation passe par l’installateur système et nécessite votre confirmation.",
+      updatesInstall: "Télécharger et installer",
     updatesTitle: "Mises à jour", updatesAuto: "Rechercher les mises à jour au démarrage", updatesCheck: "Rechercher maintenant",
     settingsTitle: "Paramètres", behaviorTitle: "Comportement",
     languageLabel: "Langue de l’application et de ChatGPT",
@@ -174,21 +164,13 @@ const translations = {
     sessionReset: "Session réinitialisée.", resetCancelled: "Réinitialisation annulée.", loadError: "Impossible de charger les paramètres.",
   },
   en: {
+    updatesOpenPage: "Open the download page", updManual: "Download the new package from the release page.",
     displayNameLabel: "Application name", displayNameHint: "Shown in your applications menu, search and taskbar, and in the application's windows. The terminal command stays chatgpt-desktop-linux.", displayNameUnavailable: "Renaming is only available for .deb and .rpm installations.",
     trayUnavailable: "No system tray was found, so the window is minimized to the taskbar instead. On GNOME, install the AppIndicator extension to get the tray icon.",
-    updatesHint: "Versions are downloaded from the project's GitHub releases. Installation goes through the system installer and requires your confirmation.",
-    updatesLoginHint: "Sign in with GitHub using the temporary code shown here. Authorization happens on the official GitHub page; there is no token to copy. The sign-in is encrypted in the system keyring.",
-    updatesConnect: "Sign in to GitHub", updatesDisconnect: "Sign out of GitHub", updatesInstall: "Download and install",
+    updatesHint: "Versions are downloaded from the project's GitHub releases. With the .deb package, installation goes through the system installer and requires your confirmation.",
+      updatesInstall: "Download and install",
     updInstalledVersion: "Installed version: {version}",
-    updConnectedAs: "✓ Signed in to GitHub as {login}.",
-    updSaved: "GitHub sign-in saved.",
-    updNotConnected: "Not signed in to GitHub.",
     updFailed: "The operation failed. Try again.",
-    updOpeningLogin: "Opening GitHub sign-in…",
-    updLoginCode: "Your GitHub code: {code} — enter it on the GitHub page that opened, then authorize the app.",
-    updWaiting: "Waiting for your authorization on GitHub…",
-    updLoginSaved: "GitHub sign-in saved. You can now check for updates.",
-    updLoggedOut: "GitHub sign-in removed from this computer.",
     updChecking: "Checking…",
     updAhead: "↗ Your version {installed} is newer than the latest published version ({latest}).",
     updCurrent: "✓ Up to date ({latest}).",
@@ -197,8 +179,6 @@ const translations = {
     updDownloading: "Downloading and verifying the package…",
     updInstalledOk: "Update installed and confirmed. Use Restart ChatGPT in the progress window.",
     updInfoUnavailable: "Update information unavailable.",
-    updVerifying: "Checking the GitHub sign-in…",
-    updVerified: "✓ Sign-in verified.",
     tabGeneral: "General", tabTabs: "Tabs", tabShortcuts: "Shortcuts", tabWindow: "Window", tabExtensions: "Extensions", tabAbout: "About",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Tabs",
     extensionsHint: "Optional features. A disabled extension is not loaded at all. Changes apply after a restart.",
@@ -263,21 +243,13 @@ const translations = {
     resetCancelled: "Reset cancelled.", loadError: "Unable to load settings.",
   },
   es: {
+    updatesOpenPage: "Abrir la página de descarga", updManual: "Descarga el nuevo paquete desde la página de la versión.",
     displayNameLabel: "Nombre de la aplicación", displayNameHint: "Se muestra en el menú de aplicaciones, la búsqueda, la barra de tareas y las ventanas de la aplicación. El comando de terminal sigue siendo chatgpt-desktop-linux.", displayNameUnavailable: "El cambio de nombre solo está disponible en instalaciones .deb y .rpm.",
     trayUnavailable: "No se encontró ninguna bandeja del sistema, así que la ventana se minimiza en la barra de tareas. En GNOME, instala la extensión AppIndicator para tener el icono.",
-    updatesHint: "Las versiones se descargan desde las publicaciones de GitHub del proyecto. La instalación pasa por el instalador del sistema y requiere tu confirmación.",
-    updatesLoginHint: "Inicia sesión en GitHub con el código temporal que se muestra aquí. La autorización se hace en la página oficial de GitHub; no hay ningún token que copiar. La sesión se cifra en el llavero del sistema.",
-    updatesConnect: "Iniciar sesión en GitHub", updatesDisconnect: "Cerrar sesión de GitHub", updatesInstall: "Descargar e instalar",
+    updatesHint: "Las versiones se descargan desde las publicaciones de GitHub del proyecto. Con el paquete .deb, la instalación pasa por el instalador del sistema y requiere tu confirmación.",
+      updatesInstall: "Descargar e instalar",
     updInstalledVersion: "Versión instalada: {version}",
-    updConnectedAs: "✓ Sesión de GitHub iniciada como {login}.",
-    updSaved: "Sesión de GitHub guardada.",
-    updNotConnected: "Sin sesión de GitHub.",
     updFailed: "La operación falló. Vuelve a intentarlo.",
-    updOpeningLogin: "Abriendo el inicio de sesión de GitHub…",
-    updLoginCode: "Tu código de GitHub: {code}. Introdúcelo en la página de GitHub abierta y autoriza la aplicación.",
-    updWaiting: "Esperando tu autorización en GitHub…",
-    updLoginSaved: "Sesión de GitHub guardada. Ya puedes buscar actualizaciones.",
-    updLoggedOut: "Sesión de GitHub eliminada de este equipo.",
     updChecking: "Buscando…",
     updAhead: "↗ Tu versión {installed} es más reciente que la última versión publicada ({latest}).",
     updCurrent: "✓ Actualizado ({latest}).",
@@ -286,8 +258,6 @@ const translations = {
     updDownloading: "Descargando y verificando el paquete…",
     updInstalledOk: "Actualización instalada y confirmada. Usa Reiniciar ChatGPT en la ventana de progreso.",
     updInfoUnavailable: "Información de actualización no disponible.",
-    updVerifying: "Comprobando la sesión de GitHub…",
-    updVerified: "✓ Sesión verificada.",
     tabGeneral: "General", tabTabs: "Pestañas", tabShortcuts: "Atajos", tabWindow: "Ventana", tabExtensions: "Extensiones", tabAbout: "Acerca de",
     globalShortcutTitle: "Global", tabsShortcutsTitle: "Pestañas",
     extensionsHint: "Funciones opcionales. Una extensión desactivada no se carga en absoluto. Los cambios se aplican tras reiniciar.",
@@ -962,64 +932,27 @@ window.desktopApi.onProjectScanProgress(renderProjectProgress);
 window.desktopApi.onSettingsTheme(applySettingsTheme);
 
 const updateMessage = document.querySelector("#update-status");
-const updateLoginCode = document.querySelector("#update-login-code");
-const updateCancelLogin = document.querySelector("#updates-cancel-login");
 const updateInstallButton = document.querySelector("#updates-install");
-const updateButtons = [...document.querySelectorAll("#updates-connect, #updates-disconnect, #updates-verify, #updates-check, #updates-install")];
+const updateOpenPageButton = document.querySelector("#updates-open-page");
+const updateButtons = [...document.querySelectorAll("#updates-check, #updates-install")];
 let updateCanInstall = false;
-async function refreshUpdateStatus(verify = false) {
-  const status = await window.desktopApi.updateStatus(verify);
+async function refreshUpdateStatus() {
+  const status = await window.desktopApi.updateStatus();
   if (!status) return;
   document.querySelector("#update-version").textContent = trf("updInstalledVersion", { version: status.version });
-  document.querySelector("#updates-connect").hidden = status.configured;
-  document.querySelector("#updates-disconnect").hidden = !status.configured;
-  document.querySelector("#updates-verify").hidden = !status.configured;
-  const accessStatus = document.querySelector("#update-access-status");
-  accessStatus.dataset.state = status.verified ? "success" : status.error ? "warning" : "neutral";
-  accessStatus.textContent = status.verified
-    ? trf("updConnectedAs", { login: status.login })
-    : status.configured ? tr("updSaved") : tr("updNotConnected");
-  if (status.error) { updateMessage.dataset.state = "warning"; updateMessage.textContent = status.error; }
   updateCanInstall = status.deb;
-  updateInstallButton.disabled = !updateCanInstall;
 }
 async function updateAction(action) {
   updateButtons.forEach(button => { button.disabled = true; });
   updateMessage.dataset.state = "neutral";
   try { await action(); }
   catch { updateMessage.dataset.state = "error"; updateMessage.textContent = tr("updFailed"); }
-  finally { updateButtons.forEach(button => { button.disabled = false; }); updateInstallButton.disabled = !updateCanInstall; }
+  finally { updateButtons.forEach(button => { button.disabled = false; }); }
 }
-document.querySelector("#updates-connect").addEventListener("click", () => updateAction(async () => {
-  updateMessage.textContent = tr("updOpeningLogin");
-  updateInstallButton.hidden = true;
-  const device = await window.desktopApi.connectUpdates();
-  if (!device.ok) { updateMessage.textContent = device.error; return; }
-  updateLoginCode.textContent = trf("updLoginCode", { code: device.code });
-  updateLoginCode.hidden = false;
-  updateCancelLogin.hidden = false;
-  updateMessage.textContent = tr("updWaiting");
-  try {
-    const result = await window.desktopApi.completeUpdateLogin();
-    updateMessage.textContent = result.ok ? tr("updLoginSaved") : result.error;
-  } finally {
-    updateCancelLogin.hidden = true;
-    updateLoginCode.hidden = true;
-    updateLoginCode.textContent = "";
-    await refreshUpdateStatus(true);
-  }
-}));
-updateCancelLogin.addEventListener("click", () => { void window.desktopApi.cancelUpdateLogin(); });
-document.querySelector("#updates-disconnect").addEventListener("click", () => updateAction(async () => {
-  const result = await window.desktopApi.disconnectUpdates();
-  updateInstallButton.hidden = true;
-  updateMessage.textContent = result.ok ? tr("updLoggedOut") : result.error;
-  await refreshUpdateStatus();
-}));
-window.addEventListener("beforeunload", () => { void window.desktopApi.cancelUpdateLogin(); });
 document.querySelector("#updates-check").addEventListener("click", () => updateAction(async () => {
   updateMessage.textContent = tr("updChecking");
   updateInstallButton.hidden = true;
+  updateOpenPageButton.hidden = true;
   const result = await window.desktopApi.checkUpdates();
   if (!result.ok) { updateMessage.dataset.state = "error"; updateMessage.textContent = result.error; return; }
   const comparison = result.comparison;
@@ -1031,13 +964,17 @@ document.querySelector("#updates-check").addEventListener("click", () => updateA
     updateMessage.textContent = trf("updCurrent", { latest: comparison.latest });
   } else if (comparison?.state === "available") {
     updateMessage.dataset.state = "info";
-    updateMessage.textContent = trf("updAvailable", { latest: comparison.latest, installed: comparison.installed });
+    updateMessage.textContent = trf("updAvailable", { latest: comparison.latest, installed: comparison.installed })
+      + (updateCanInstall ? "" : ` ${tr("updManual")}`);
   } else {
     updateMessage.dataset.state = "warning";
     updateMessage.textContent = tr("updNoPackage");
   }
-  updateInstallButton.hidden = !result.release;
+  // .deb installations update from here; the other formats point to the release page.
+  updateInstallButton.hidden = !result.release || !updateCanInstall;
+  updateOpenPageButton.hidden = !result.release || updateCanInstall;
 }));
+updateOpenPageButton.addEventListener("click", () => { void window.desktopApi.openUpdatePage(); });
 updateInstallButton.addEventListener("click", () => updateAction(async () => {
   updateMessage.textContent = tr("updDownloading");
   const cancel = document.querySelector("#updates-cancel");
@@ -1047,12 +984,6 @@ updateInstallButton.addEventListener("click", () => updateAction(async () => {
   finally { cancel.hidden = true; }
   updateMessage.textContent = result.ok ? tr("updInstalledOk") : result.error;
 }));
-refreshUpdateStatus(true).catch(() => { updateMessage.textContent = tr("updInfoUnavailable"); });
+refreshUpdateStatus().catch(() => { updateMessage.textContent = tr("updInfoUnavailable"); });
 
 document.querySelector("#updates-cancel").addEventListener("click", () => { void window.desktopApi.cancelUpdate(); });
-
-document.querySelector("#updates-verify").addEventListener("click", () => updateAction(async () => {
-  updateMessage.textContent = tr("updVerifying");
-  await refreshUpdateStatus(true);
-  if (updateMessage.textContent === tr("updVerifying")) { updateMessage.dataset.state = "success"; updateMessage.textContent = tr("updVerified"); }
-}));
