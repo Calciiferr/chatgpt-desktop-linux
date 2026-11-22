@@ -11,6 +11,13 @@
     <form id="welcome-form">
       <img src="../assets/icon.png" alt="" width="56" height="56" />
       <h1 data-i18n="heading">Welcome</h1>
+      <label for="language" data-i18n="languageLabel">Language</label>
+      <select id="language">
+        <option value="en">English</option>
+        <option value="fr">Français</option>
+        <option value="es">Español</option>
+      </select>
+      <p id="restart-note" data-i18n="restartNote" hidden>The application will restart once to apply the language.</p>
       <label for="display-name" data-i18n="label">Application name</label>
       <input id="display-name" type="text" maxlength="40" spellcheck="false" autocomplete="off" required />
       <p data-i18n="hint">This is the name shown in your applications menu, search and taskbar. The terminal command stays chatgpt-desktop-linux.</p>

@@ -3888,7 +3888,7 @@ function showWelcomeWindow(): void {
   }
   const window = new BrowserWindow({
     width: 460,
-    height: 470,
+    height: 580,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -3934,10 +3934,12 @@ function registerIpcHandlers(): void {
 
   ipcMain.handle("welcome:submit", (event, input: unknown) => {
     if (!event.senderFrame || !isTrustedWelcomeSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
-    const name = cleanDisplayName(input);
+    const choice = (typeof input === "object" && input !== null ? input : {}) as { name?: unknown; language?: unknown };
+    const name = cleanDisplayName(choice.name);
     if (name === null) return { ok: false, error: t("settingsDisplayNameInvalid") };
+    const language: AppLanguage = choice.language === "fr" || choice.language === "es" ? choice.language : "en";
     try {
-      const nextSettings = { ...currentSettings, displayName: name };
+      const nextSettings = { ...currentSettings, displayName: name, language };
       settingsStore?.save(nextSettings);
       currentSettings = nextSettings;
     } catch (error) {
@@ -3946,6 +3948,10 @@ function registerIpcHandlers(): void {
     }
     applyDisplayName();
     welcomeWindow?.close();
+    if (language !== activeLanguage) {
+      // The interface and ChatGPT language are set when the application starts.
+      setTimeout(() => restartApplication(), 300);
+    }
     return { ok: true };
   });
 

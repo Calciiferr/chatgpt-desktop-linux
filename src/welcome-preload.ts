@@ -4,7 +4,7 @@ contextBridge.exposeInMainWorld("welcome", {
   state(): Promise<unknown> {
     return ipcRenderer.invoke("welcome:state");
   },
-  submit(name: string): Promise<unknown> {
-    return ipcRenderer.invoke("welcome:submit", name);
+  submit(choice: { name: string; language: string }): Promise<unknown> {
+    return ipcRenderer.invoke("welcome:submit", choice);
   },
 });
