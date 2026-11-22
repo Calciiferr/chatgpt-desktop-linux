@@ -785,6 +785,17 @@ function activateChatTab(id: string): void {
   scheduleTabStateSave();
 }
 
+function moveChatTab(id: string, toIndex: number): void {
+  const from = chatTabs.findIndex((candidate) => candidate.id === id);
+  if (from < 0 || !Number.isInteger(toIndex)) return;
+  const target = Math.max(0, Math.min(chatTabs.length - 1, toIndex));
+  if (target === from) return;
+  const [tab] = chatTabs.splice(from, 1);
+  chatTabs.splice(target, 0, tab);
+  sendTabState();
+  scheduleTabStateSave();
+}
+
 function normalizeTabTitle(title: string): string {
   const clean = title.replace(/\s*[|—-]\s*ChatGPT\s*$/i, "").trim();
   return (clean || APP_TITLE).slice(0, 120);
@@ -3896,6 +3907,12 @@ function registerIpcHandlers(): void {
   ipcMain.on("tabs:close", (event, id: unknown) => {
     if (event.senderFrame && isTrustedBrowserShellSender(event.senderFrame.url) && typeof id === "string") {
       void closeChatTab(id);
+    }
+  });
+  ipcMain.on("tabs:reorder", (event, id: unknown, toIndex: unknown) => {
+    if (event.senderFrame && isTrustedBrowserShellSender(event.senderFrame.url) &&
+        typeof id === "string" && typeof toIndex === "number") {
+      moveChatTab(id, toIndex);
     }
   });
   ipcMain.on("tabs:create", (event) => {

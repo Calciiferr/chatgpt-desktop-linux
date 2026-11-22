@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld("browserShellApi", {
   close(id: string): void {
     ipcRenderer.send("tabs:close", id);
   },
+  reorder(id: string, toIndex: number): void {
+    ipcRenderer.send("tabs:reorder", id, toIndex);
+  },
   create(): void {
     ipcRenderer.send("tabs:create");
   },
