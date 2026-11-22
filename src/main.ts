@@ -228,6 +228,8 @@ function renameSupported(): boolean {
 
 function applyDisplayName(): void {
   if (renameSupported()) syncLauncherName(appDisplayName());
+  // The KWin window rule matches the main window by its title.
+  applyKWinPositionMemory(currentSettings);
   tray?.setToolTip(appDisplayName());
   mainWindow?.setTitle(appDisplayName());
   sendTabState();
@@ -3608,6 +3610,7 @@ function applyKWinPositionMemory(settings: AppSettings): boolean {
   const result = syncKWinPositionMemory(
     settings.rememberWindowPosition,
     initialKWinPosition(settings),
+    settings.displayName,
   );
   kwinPositionMemoryAvailable = result.available;
 

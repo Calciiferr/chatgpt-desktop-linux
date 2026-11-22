@@ -96,6 +96,7 @@ function reloadKWinRules(): void {
 export function syncKWinPositionMemory(
   enabled: boolean,
   initialPosition: Position,
+  windowTitle = "ChatGPT",
 ): KWinPositionMemoryResult {
   if (process.platform !== "linux") {
     return { available: false, enabled: false, changed: false };
@@ -113,7 +114,8 @@ export function syncKWinPositionMemory(
       writeConfig(RULE_ID, "Description", "ChatGPT — remember position");
       writeConfig(RULE_ID, "wmclass", "chatgpt-desktop-linux");
       writeConfig(RULE_ID, "wmclassmatch", "1");
-      writeConfig(RULE_ID, "title", "ChatGPT");
+      // The exact title keeps the rule off the Magic Bar and settings windows, which share the class.
+      writeConfig(RULE_ID, "title", windowTitle);
       writeConfig(RULE_ID, "titlematch", "1");
       writeConfig(RULE_ID, "positionrule", "4");
 
