@@ -31,7 +31,7 @@ git switch --track origin/feature/nestfolders-electron
 npm ci
 npm test
 npm run dist:deb
-sudo apt install ./release/ChatGPT-Desktop-Linux-0.7.5-amd64.deb
+sudo apt install ./release/ChatGPT-Desktop-Linux-0.7.7-amd64.deb
 ```
 
 Si la branche existe déjà localement, utiliser `git switch feature/nestfolders-electron` puis `git pull --ff-only`.

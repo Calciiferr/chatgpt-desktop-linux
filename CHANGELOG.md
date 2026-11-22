@@ -1,5 +1,10 @@
 # Notes de version
 
+## 0.7.7
+
+- Les **onglets** se réorganisent par glisser-déposer : l'ordre est conservé au redémarrage, et le texte des titres n'est plus sélectionné pendant le déplacement.
+- Correction de la barre latérale : en la repliant, la barre résiduelle et le décalage du titre du projet disparaissent, et l'interface reste correcte à la réouverture.
+
 ## 0.7.5
 
 - Nouveaux **dossiers** dans les projets ChatGPT : dossiers et sous-dossiers sans limite de profondeur, avec couleurs et renommage.
