@@ -654,7 +654,10 @@ function fillForm(payload) {
     applyTranslations(runtime.activeLanguage);
     // The prompt follows the application language until the user picks another one.
     const promptLanguage = document.querySelector("#extension-prompt-language");
-    if (promptLanguage && !promptLanguage.dataset.chosen) promptLanguage.value = runtime.activeLanguage;
+    if (promptLanguage && !promptLanguage.dataset.chosen) {
+      const radio = promptLanguage.querySelector(`input[value="${runtime.activeLanguage}"]`);
+      if (radio) radio.checked = true;
+    }
     shortcutStatus.textContent = runtime.shortcutRegistered
       ? `${tr("shortcutActive")} : ${settings.globalShortcut}`
       : tr("shortcutUnavailable");
@@ -1060,8 +1063,9 @@ document.querySelector("#updates-cancel").addEventListener("click", () => { void
 // ---------- Custom extensions ----------
 
 const userExtensionList = document.querySelector("#user-extension-list");
-const promptLanguageInput = document.querySelector("#extension-prompt-language");
-promptLanguageInput.addEventListener("change", () => { promptLanguageInput.dataset.chosen = "true"; });
+const promptLanguageGroup = document.querySelector("#extension-prompt-language");
+promptLanguageGroup.addEventListener("change", () => { promptLanguageGroup.dataset.chosen = "true"; });
+const selectedPromptLanguage = () => promptLanguageGroup.querySelector("input:checked")?.value || activeUiLanguage;
 const userExtensionEmpty = document.querySelector("#user-extension-empty");
 
 function renderUserExtensions(extensions) {
@@ -1142,11 +1146,11 @@ document.querySelector("#extension-reload").addEventListener("click", async () =
   if (result?.ok) { renderUserExtensions(result.extensions); setStatus(tr("extReloaded"), "success"); }
 });
 document.querySelector("#extension-create").addEventListener("click", async () => {
-  const result = await window.desktopApi.createExtensionWithChatGpt(promptLanguageInput.value);
+  const result = await window.desktopApi.createExtensionWithChatGpt(selectedPromptLanguage());
   setStatus(result?.ok ? tr("extPromptOpened") : result?.error || "", result?.ok ? "success" : "error");
 });
 document.querySelector("#extension-copy-prompt").addEventListener("click", async () => {
-  const result = await window.desktopApi.copyExtensionPrompt(promptLanguageInput.value);
+  const result = await window.desktopApi.copyExtensionPrompt(selectedPromptLanguage());
   setStatus(result?.ok ? tr("extPromptCopied") : result?.error || "", result?.ok ? "success" : "error");
 });
 

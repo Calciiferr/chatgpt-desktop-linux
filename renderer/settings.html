@@ -309,15 +309,6 @@
           <h3 class="section-title" data-i18n="extCreateTitle">Create your own</h3>
           <div class="card">
             <p class="card-copy" data-i18n="extCreateIntro">Describe the extension you want to an AI, then install the .zip it gives you. Extensions can only change the ChatGPT page.</p>
-            <label class="field prompt-language" for="extension-prompt-language">
-              <span data-i18n="extPromptLanguage">Prompt language</span>
-              <select id="extension-prompt-language">
-                <option value="en">English</option>
-                <option value="fr">Français</option>
-                <option value="es">Español</option>
-              </select>
-              <small data-i18n="extPromptLanguageHint">Language of the instructions given to the AI. Technical terms stay in English.</small>
-            </label>
             <div class="create-options">
               <div class="create-option">
                 <button id="extension-create" type="button" data-i18n="extCreate">Create with ChatGPT</button>
@@ -328,6 +319,13 @@
                 <small data-i18n="extCopyHint">Copies the instructions to paste into another AI, such as Claude or Codex.</small>
               </div>
             </div>
+            <fieldset class="prompt-language" id="extension-prompt-language">
+              <legend data-i18n="extPromptLanguage">Prompt language</legend>
+              <label><input type="radio" name="prompt-language" value="en" /> English</label>
+              <label><input type="radio" name="prompt-language" value="fr" /> Français</label>
+              <label><input type="radio" name="prompt-language" value="es" /> Español</label>
+              <small data-i18n="extPromptLanguageHint">Language of the instructions given to the AI. Technical terms stay in English.</small>
+            </fieldset>
             <small data-i18n="extDevHint">Developers: edit your extensions directly in the extensions folder, then reload them. The full guide is docs/EXTENSIONS.md in the project repository.</small>
           </div>
         </section>

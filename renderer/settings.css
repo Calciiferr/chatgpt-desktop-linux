@@ -635,5 +635,37 @@ small[hidden] {
 }
 
 .prompt-language {
-  max-width: 260px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.prompt-language legend {
+  float: left;
+  margin-right: 4px;
+  color: var(--field-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.prompt-language label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--field-text);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.prompt-language input {
+  margin: 0;
+  accent-color: #84aaf0;
+}
+
+.prompt-language small {
+  flex-basis: 100%;
 }
