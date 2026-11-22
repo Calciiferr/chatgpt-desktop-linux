@@ -572,3 +572,8 @@ code {
 #update-status:empty {
   display: none;
 }
+
+.toggle[hidden],
+small[hidden] {
+  display: none;
+}

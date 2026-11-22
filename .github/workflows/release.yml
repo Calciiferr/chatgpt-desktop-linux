@@ -1,4 +1,4 @@
-name: Publish Debian release
+name: Publish release
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: write
     env:
@@ -37,22 +37,29 @@ jobs:
         run: node -e 'if (process.env.RELEASE_TAG !== "v" + require("./package.json").version) throw new Error("Tag and package version differ")'
       - name: Validate release changelog
         run: node scripts/release-notes.cjs > "$RUNNER_TEMP/release-notes.md"
+      - name: Install rpm packaging tools
+        run: sudo apt-get update && sudo apt-get install -y rpm
       - run: npm ci
       - run: npm test
-      - run: npm run dist:deb -- --publish never
+      - run: npm run dist -- --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Publish installer and checksum
+      - name: Publish installers and checksums
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           version=$(node -p 'require("./package.json").version')
-          package="ChatGPT-Desktop-Linux-${version}-amd64.deb"
+          packages=(
+            "ChatGPT-Desktop-Linux-${version}-amd64.deb"
+            "ChatGPT-Desktop-Linux-${version}-x86_64.rpm"
+            "ChatGPT-Desktop-Linux-${version}-x86_64.AppImage"
+          )
           cd release
-          sha256sum "$package" > SHA256SUMS.txt
+          ls "${packages[@]}"
+          sha256sum "${packages[@]}" > SHA256SUMS.txt
           args=()
           if [[ "$version" == *-* ]]; then args+=(--prerelease); fi
-          gh release create "$RELEASE_TAG" "$package" SHA256SUMS.txt \
+          gh release create "$RELEASE_TAG" "${packages[@]}" SHA256SUMS.txt \
             --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "ChatGPT Desktop Linux $version" --notes-file "$RUNNER_TEMP/release-notes.md" "${args[@]}"

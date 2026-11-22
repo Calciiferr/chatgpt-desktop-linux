@@ -32,7 +32,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { randomUUID } from "node:crypto";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { syncAutostart } from "./autostart";
 import {
@@ -205,6 +205,7 @@ let kwinPositionMemoryAvailable = false;
 // Extensions are enabled or disabled for the whole run; changes apply after a restart.
 let companionActive = false;
 let nestFoldersActive = false;
+let trayHostAvailable = true;
 
 function isKdeSession(): boolean {
   return (process.env.XDG_CURRENT_DESKTOP ?? "")
@@ -214,6 +215,16 @@ function isKdeSession(): boolean {
 
 function companionSupported(): boolean {
   return process.platform === "linux" && isKdeSession();
+}
+
+let debInstall: boolean | null = null;
+/** Built-in updates install .deb packages, so they are only offered when the app came from one. */
+function isDebInstall(): boolean {
+  if (debInstall !== null) return debInstall;
+  if (!app.isPackaged || process.env.APPIMAGE) return (debInstall = false);
+  const result = spawnSync("dpkg-query", ["-W", "-f=${Status}", "chatgpt-desktop-linux"], { encoding: "utf8", timeout: 2_000 });
+  debInstall = !result.error && result.status === 0 && result.stdout.includes("install ok installed");
+  return debInstall;
 }
 
 function integrationExecutablePath(): string | null {
@@ -448,12 +459,35 @@ function updateTrayMenu(): void {
   tray.setContextMenu(menu);
 }
 
-function displayModeUsesTray(mode: WindowDisplayMode = currentSettings.windowDisplayMode): boolean {
+/** Without a tray host (e.g. GNOME without AppIndicator), hiding to the tray would make the window unreachable. */
+function effectiveDisplayMode(): WindowDisplayMode {
+  return trayHostAvailable ? currentSettings.windowDisplayMode : "taskbar";
+}
+
+function detectTrayHost(): boolean {
+  if (process.platform !== "linux") return true;
+  if (isKdeSession()) return true;
+  const result = spawnSync(
+    "gdbus",
+    [
+      "call", "--session",
+      "--dest", "org.freedesktop.DBus",
+      "--object-path", "/org/freedesktop/DBus",
+      "--method", "org.freedesktop.DBus.NameHasOwner", "org.kde.StatusNotifierWatcher",
+    ],
+    { encoding: "utf8", timeout: 2_000 },
+  );
+  // If the check itself cannot run, keep the tray rather than guessing.
+  if (result.error || result.status !== 0) return true;
+  return result.stdout.includes("true");
+}
+
+function displayModeUsesTray(mode: WindowDisplayMode = effectiveDisplayMode()): boolean {
   return mode === "tray" || mode === "both";
 }
 
 function visibleWindowUsesTaskbar(
-  mode: WindowDisplayMode = currentSettings.windowDisplayMode,
+  mode: WindowDisplayMode = effectiveDisplayMode(),
 ): boolean {
   return mode === "taskbar" || mode === "both";
 }
@@ -561,7 +595,7 @@ function hideWindow(notify = false): void {
   }
   persistWindowBounds();
   if (mainWindow) {
-    if (currentSettings.windowDisplayMode === "taskbar") {
+    if (effectiveDisplayMode() === "taskbar") {
       mainWindow.setSkipTaskbar(false);
       mainWindow.minimize();
       log.info("[window] Window minimized to the taskbar.");
@@ -3059,7 +3093,7 @@ function initializeChatTabs(): void {
 function createMainWindow(startHidden: boolean): void {
   showWhenReady = !startHidden;
   mainWindowHiddenSince = startHidden ? Date.now() : null;
-  const startMinimized = startHidden && currentSettings.windowDisplayMode === "taskbar";
+  const startMinimized = startHidden && effectiveDisplayMode() === "taskbar";
   shellReady = false;
 
   const savedBounds = currentSettings.windowBounds;
@@ -3241,7 +3275,7 @@ function applyWindowDisplayMode(): void {
   if (!mainWindow || mainWindow.isDestroyed()) {
     return;
   }
-  if (currentSettings.windowDisplayMode === "taskbar" && !mainWindow.isVisible()) {
+  if (effectiveDisplayMode() === "taskbar" && !mainWindow.isVisible()) {
     mainWindow.setSkipTaskbar(false);
     mainWindow.showInactive();
     mainWindow.minimize();
@@ -3264,6 +3298,7 @@ function fallbackShortcutCommand(command: "toggle" | "companion" = "toggle"): st
 function usesKdeShortcutBackend(): boolean {
   return (
     process.platform === "linux" &&
+    isKdeSession() &&
     app.isPackaged &&
     !process.env.APPIMAGE
   );
@@ -3426,6 +3461,8 @@ function settingsPayload(): {
     logFilePath: string;
     projectScanProgress: ProjectScanProgress | null;
     darkMode: boolean;
+    trayAvailable: boolean;
+    kdeSession: boolean;
     extensions: {
       companion: { active: boolean; supported: boolean };
       nestFolders: { active: boolean };
@@ -3449,6 +3486,8 @@ function settingsPayload(): {
       logFilePath,
       projectScanProgress: currentProjectScanProgress,
       darkMode: nativeTheme.shouldUseDarkColors,
+      trayAvailable: trayHostAvailable,
+      kdeSession: isKdeSession(),
       extensions: {
         companion: { active: companionActive, supported: companionSupported() },
         nestFolders: { active: nestFoldersActive },
@@ -3539,6 +3578,10 @@ function initialKWinPosition(settings: AppSettings): { x: number; y: number } {
 }
 
 function applyKWinPositionMemory(settings: AppSettings): boolean {
+  if (!isKdeSession()) {
+    kwinPositionMemoryAvailable = false;
+    return true;
+  }
   if (activeDisplayServerMode !== "wayland") {
     kwinPositionMemoryAvailable = true;
     return true;
@@ -3751,7 +3794,7 @@ function sendUpdateProgress(phase: string, title: string, detail: string, percen
 }
 async function installAvailableUpdate(): Promise<void> {
   if (updateInProgress) { updateProgressWindow?.show(); updateProgressWindow?.focus(); throw new Error(t("updateAlreadyRunning")); }
-  if (!app.isPackaged || process.env.APPIMAGE) throw new Error(t("updateRequiresPackage"));
+  if (!isDebInstall()) throw new Error(t("updateRequiresPackage"));
   updateInProgress = true;
   updateCancellationRequested = false;
   const version = updater().comparison?.latest;
@@ -3862,7 +3905,7 @@ function registerIpcHandlers(): void {
   });
   ipcMain.handle("updates:status", async (event, verify: unknown) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return null;
-    const base = { version: app.getVersion(), deb: app.isPackaged && !process.env.APPIMAGE };
+    const base = { version: app.getVersion(), deb: isDebInstall() };
     if (!loadUpdateSession()) return { ...base, configured: false };
     if (verify !== true) return { ...base, configured: true };
     try { return { ...base, configured: true, verified: true, login: await updateAuth.verify() }; }
@@ -3879,7 +3922,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle("updates:install", async (event) => {
     if (!event.senderFrame || !isTrustedSettingsSender(event.senderFrame.url)) return { ok: false, error: t("unauthorizedSource") };
     try {
-      if (!app.isPackaged || process.env.APPIMAGE) throw new Error(t("updateRequiresPackage"));
+      if (!isDebInstall()) throw new Error(t("updateRequiresPackage"));
       await installAvailableUpdate();
       return { ok: true };
     } catch (error) { return { ok: false, error: error instanceof Error ? error.message : t("updateDownloadFailed") }; }
@@ -4378,6 +4421,7 @@ currentSettings = settingsStore.load();
 activeLanguage = currentSettings.language;
 setLanguage(activeLanguage);
 companionActive = currentSettings.companionEnabled && companionSupported();
+trayHostAvailable = detectTrayHost();
 nestFoldersActive = currentSettings.nestFoldersEnabled;
 app.commandLine.appendSwitch("lang", LANGUAGE_LOCALES[activeLanguage]);
 

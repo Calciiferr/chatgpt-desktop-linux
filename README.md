@@ -1,92 +1,102 @@
 # ChatGPT Desktop Linux
 
-ChatGPT dans une fenêtre dédiée sous Linux, avec des onglets, des raccourcis clavier et une Magic Bar pour préparer ses messages. L'application est conçue pour KDE Plasma et Wayland.
+ChatGPT in its own window on Linux, with tabs, keyboard shortcuts and a tray icon. Built for KDE Plasma on Wayland, and usable on other desktops such as GNOME.
 
-Client non officiel, indépendant d'OpenAI. Un compte ChatGPT est nécessaire ; aucun abonnement API n'est requis.
+Unofficial client, not affiliated with OpenAI. A ChatGPT account is required; no API key or subscription is needed.
 
-[**Télécharger l'application**](https://github.com/Calciiferr/chatgpt-desktop-linux/releases) · [Notes de version](CHANGELOG.md)
+[**Download**](https://github.com/Calciiferr/chatgpt-desktop-linux/releases/latest) · [Changelog](CHANGELOG.md)
 
-## Fonctionnalités
+## Features
 
-### Navigation
+### Tabs and navigation
 
-- Plusieurs conversations ouvertes dans des onglets.
-- Raccourcis pour ouvrir, fermer et retrouver ses onglets.
-- Recherche dans la conversation avec `Ctrl+F`.
-- Ouverture des nouveaux onglets dans ChatGPT ou dans le projet de son choix.
-- Restauration des onglets au démarrage, en option.
+- Several conversations open side by side in tabs, reorderable by drag and drop.
+- Shortcuts to open, close, cycle through and reopen tabs.
+- Find in conversation with `Ctrl+F`.
+- New tabs open in regular ChatGPT or in the project of your choice.
+- Optional restore of your tabs at startup.
 
-### Magic Bar
+### Desktop integration
 
-La Magic Bar s'ouvre avec `Ctrl+Shift+Espace`. Elle permet de préparer un message, d'y joindre des fichiers, des images du presse-papiers ou des captures d'écran, puis de transférer le tout vers ChatGPT.
+- Tray icon to show or hide the window, and a global shortcut (`Ctrl+Alt+G`).
+- Launch at login.
+- Notification when a response finishes while the window is hidden.
+- Light, dark or automatic theme.
+- Interface in English, French and Spanish. ChatGPT itself follows the selected language.
 
-- Choix d'un projet et synchronisation de la liste depuis ChatGPT.
-- Projets épinglés regroupés en tête de liste.
-- Aperçu des images jointes.
-- Capture d'une zone, d'une fenêtre ou de l'écran avec Spectacle.
+### Extensions
 
-### Personnalisation
+Optional features, enabled or disabled in **Settings → Extensions**. A disabled extension is not loaded at all.
 
-- Thèmes clair, sombre ou automatique.
-- Dossiers et sous-dossiers virtuels dans les projets ChatGPT : création via « + » sur la ligne du projet, couleurs des dossiers, glisser-déposer des conversations.
-- Raccourcis, dimensions de fenêtre et comportement de fermeture configurables.
-- Interface en français, anglais et espagnol.
-
-### Intégration au bureau
-
-- Icône dans la zone de notification pour afficher ou masquer l'application.
-- Raccourcis globaux KDE et lancement à l'ouverture de session.
-- Intégrations avec Dolphin et Kate pour envoyer du contenu vers ChatGPT.
-- Notifications de fin de réponse.
+| Extension | What it does | Availability |
+| --- | --- | --- |
+| **Project folders** (based on NestFolders) | Folders and subfolders inside ChatGPT projects, with colors and drag and drop. | All desktops, enabled by default |
+| **Magic Bar** (experimental) | A floating bar to prepare text, files and screenshots before sending them to ChatGPT, with Dolphin and Kate integrations. | KDE Plasma only, disabled by default |
 
 ## Installation
 
-Le paquet `.deb` est destiné aux systèmes **Kubuntu / KDE Plasma 6 en amd64**.
+Packages are available for **x86_64 (amd64)** on the [Releases](https://github.com/Calciiferr/chatgpt-desktop-linux/releases/latest) page.
 
-1. Télécharger le fichier `.deb` depuis les [Releases](https://github.com/Calciiferr/chatgpt-desktop-linux/releases).
-2. Depuis le dossier du téléchargement, l'installer avec APT :
+**Debian, Ubuntu, Kubuntu, Linux Mint, Pop!_OS** — download the `.deb` file, then from the download folder:
 
 ```bash
-sudo apt install ./ChatGPT-Desktop-Linux-VERSION-amd64.deb
+sudo apt install ./ChatGPT-Desktop-Linux-*-amd64.deb
 ```
 
-Remplacer `VERSION` par la version téléchargée. APT installe les dépendances nécessaires. L'application apparaît ensuite sous le nom **ChatGPT** dans le menu des applications.
+**Fedora, openSUSE** — download the `.rpm` file, then:
 
-Au premier lancement, se connecter à son compte ChatGPT dans la fenêtre de l'application.
+```bash
+sudo dnf install ./ChatGPT-Desktop-Linux-*-x86_64.rpm
+```
 
-## Raccourcis par défaut
+**Any other distribution** — download the `.AppImage` file, make it executable and run it:
 
-| Action | Raccourci |
+```bash
+chmod +x ChatGPT-Desktop-Linux-*.AppImage
+./ChatGPT-Desktop-Linux-*.AppImage
+```
+
+The application appears as **ChatGPT** in your applications menu. Sign in to your ChatGPT account in the application window on first launch.
+
+### Desktop support
+
+| | KDE Plasma 6 | GNOME | Other desktops |
+| --- | --- | --- | --- |
+| Window, tabs, settings | ✓ | ✓ | ✓ |
+| Global shortcut | ✓ | ✓ (GNOME 48 or later) | depends on the desktop |
+| Tray icon | ✓ | with the [AppIndicator](https://extensions.gnome.org/extension/615/appindicator-support/) extension (preinstalled on Ubuntu) | depends on the desktop |
+| Magic Bar | ✓ | — | — |
+
+## Default shortcuts
+
+| Action | Shortcut |
 | --- | --- |
-| Afficher ou masquer ChatGPT | `Ctrl+Alt+G` |
-| Ouvrir la Magic Bar | `Ctrl+Shift+Espace` |
-| Nouvel onglet | `Ctrl+T` |
-| Fermer l'onglet | `Ctrl+W` |
-| Onglet suivant / précédent | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
-| Rouvrir le dernier onglet fermé | `Ctrl+Shift+T` |
-| Rechercher dans la conversation | `Ctrl+F` |
+| Show or hide ChatGPT | `Ctrl+Alt+G` |
+| New tab | `Ctrl+T` |
+| Close tab | `Ctrl+W` |
+| Next / previous tab | `Ctrl+Tab` / `Ctrl+Shift+Tab` |
+| Go to tab 1–8 / last tab | `Ctrl+1`–`Ctrl+8` / `Ctrl+9` |
+| Reopen last closed tab | `Ctrl+Shift+T` |
+| Find in conversation | `Ctrl+F` |
+| Reload | `F5` |
 
-Les raccourcis se modifient dans les paramètres.
+Shortcuts can be changed in **Settings → Shortcuts**.
 
-## Mises à jour
+## Updates
 
-L'application peut rechercher les nouvelles versions au démarrage. Une recherche manuelle est également disponible dans **Paramètres → Mises à jour → Rechercher maintenant**.
+The application checks for new versions at startup; this can be turned off in **Settings → About**. With the `.deb` package, updates can be downloaded and installed from the application, after confirming with your system password.
 
-Pour accéder aux versions du dépôt privé, cliquer sur **Se connecter à GitHub**, saisir le code affiché sur la page GitHub qui s'ouvre, puis autoriser l'application. Le compte utilisé doit avoir accès au dépôt.
+## Privacy
 
-Lorsqu'une mise à jour est disponible, une fenêtre suit le téléchargement et l'installation. KDE peut demander une autorisation système. À la fin, cliquer sur **Redémarrer ChatGPT** pour utiliser la nouvelle version.
+The application loads chatgpt.com and keeps your session, settings and tabs locally in `~/.config/chatgpt-desktop-linux`. It sends nothing anywhere else, apart from checking this repository's releases for updates.
 
-Les mises à jour conservent la session et les réglages. La recherche automatique peut être désactivée dans les paramètres. Les installations beta reçoivent les préversions.
+## Good to know
 
-## À savoir
+The application relies on the ChatGPT website. Some features, such as project synchronization and project folders, depend on its interface and may need an update when ChatGPT changes.
 
-L'application utilise le site ChatGPT. Certaines fonctions, comme la synchronisation des projets ou les dossiers NestFolders, dépendent de son interface et peuvent nécessiter une adaptation lorsque celle-ci évolue.
+## Development
 
-L'intégration au bureau est conçue pour KDE Plasma. Les autres environnements Linux ne sont pas la cible principale du projet.
-
-## Développement
-
-Le projet utilise Electron, TypeScript et electron-builder.
+The project uses Electron, TypeScript and electron-builder.
 
 ```bash
 npm ci
@@ -95,9 +105,12 @@ npm run dev
 
 ```bash
 npm test                 # Tests
-npm run build            # Compilation
-npm run dist:deb         # Paquet Debian
-npm run dist:appimage    # AppImage
+npm run build            # Compile TypeScript
+npm run dist             # Build .deb, .rpm and AppImage packages into release/
 ```
 
-Les paquets sont générés dans `release/`. Chaque version publiée possède une entrée dans le [changelog](CHANGELOG.md), reprise dans sa Release GitHub.
+Bug reports and suggestions are welcome in the [issues](https://github.com/Calciiferr/chatgpt-desktop-linux/issues).
+
+## License
+
+[MIT](LICENSE). The project folders extension includes [NestFolders](vendor/nestfolders/LICENSE), also under the MIT license.

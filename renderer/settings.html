@@ -194,6 +194,7 @@
                 <option value="both" data-i18n="windowDisplayBoth">Both</option>
               </select>
               <small data-i18n="windowDisplayModeHint">In taskbar-only mode, closing with X minimizes the window so it remains accessible.</small>
+              <small id="tray-unavailable" class="extension-unavailable" data-i18n="trayUnavailable" hidden>No system tray was found, so the window is minimized to the taskbar instead. On GNOME, install the AppIndicator extension to get the tray icon.</small>
             </label>
             <label class="field" for="close-behavior">
               <span data-i18n="closeLabel">When I close the window</span>
@@ -218,7 +219,7 @@
             <button id="reset-window" class="secondary fit" type="button">
               <span data-i18n="resetWindow">Recenter and restore this size</span>
             </button>
-            <label class="toggle" for="remember-window-position">
+            <label class="toggle" for="remember-window-position" id="remember-window-position-row">
               <span>
                 <strong data-i18n="rememberPositionLabel">Remember window position</strong>
                 <small data-i18n="rememberPositionHint">Asks KWin to restore the last known position after hiding to the tray.</small>
