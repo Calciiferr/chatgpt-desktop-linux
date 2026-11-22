@@ -70,7 +70,10 @@
                 '[data-testid="left-panel"]',
                 "aside"
             ],
-            enableSidebarResizer: true,
+            // Off: ChatGPT's app shell sizes its own left panel (inline `width: var(--app-shell-left-panel-width)`
+            // on the <aside>). The resizer removed that inline width when it adopted the aside, collapsing
+            // the panel to its 14px padding and letting the page content cover the whole sidebar.
+            enableSidebarResizer: false,
             sidebarWidthVar: "--sidebar-width"
         },
         claude: {
